@@ -32,4 +32,5 @@ fn t03_solar_specturm() {
         pix.blend_color_hspan(0, i, w, &span, 0);
     }
     write_ppm(&pix.rbuf.data, pix.rbuf.width, pix.rbuf.height, "agg_test_03.ppm").unwrap();
+    agg::compare_ppm("agg_test_03.ppm", "tests/agg_test_03.ppm");
 }

@@ -18,5 +18,6 @@ fn t07_subpixel_line() {
     }
     agg::write_ppm(&pix.rbuf.data, w, h,
                    "agg_test_07.ppm").unwrap();
+    agg::compare_ppm("agg_test_07.ppm", "tests/agg_test_07.ppm");
 
 }

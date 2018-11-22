@@ -16,4 +16,5 @@ fn t10_simple_lines() {
         pix.line_sp_aa(x0,y0, x1, y1, black);
     }
     agg::write_ppm(&pix.rbuf.data, w, h, "agg_test_10.ppm").unwrap();
+    agg::compare_ppm("agg_test_10.ppm", "tests/agg_test_10.ppm");
 }

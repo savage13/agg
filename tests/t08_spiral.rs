@@ -22,5 +22,6 @@ fn t08_spiral() {
     }
     agg::write_ppm(&pix.rbuf.data, w, h,
                    "agg_test_08.ppm").unwrap();
+    agg::compare_ppm("agg_test_08.ppm", "tests/agg_test_08.ppm");
 
 }

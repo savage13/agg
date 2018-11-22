@@ -33,4 +33,5 @@ fn t02_pixel_formats() {
     }
 
     write_ppm(&pix.rbuf.data, pix.rbuf.width, pix.rbuf.height, "agg_test_02.ppm").unwrap();
+    agg::compare_ppm("agg_test_02.ppm", "tests/agg_test_02.ppm");
 }

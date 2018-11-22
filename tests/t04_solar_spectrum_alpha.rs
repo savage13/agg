@@ -29,6 +29,7 @@ fn t04_solar_spectrum_alpha() {
     agg::write_ppm(&mix.rgb.rbuf.data, w, h,
               "agg_test_04.ppm").unwrap();
 
+    agg::compare_ppm("agg_test_04.ppm", "tests/agg_test_04.ppm");
 
 }
 
