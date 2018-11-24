@@ -9,6 +9,11 @@ use std::collections::HashMap;
 use std::cmp::min;
 use std::cmp::max;
 
+pub mod path_storage;
+pub mod conv_stroke;
+pub use path_storage::*;
+pub use conv_stroke::*;
+
 const POLY_SUBPIXEL_SHIFT : i64 = 8;
 const POLY_SUBPIXEL_SCALE : i64 = 1<<POLY_SUBPIXEL_SHIFT;
 const POLY_SUBPIXEL_MASK  : i64 = POLY_SUBPIXEL_SCALE - 1;
@@ -26,10 +31,9 @@ pub trait Color: std::fmt::Debug {
     fn alpha(&self) -> f64;
     fn is_transparent(&self) -> bool { self.alpha() == 0.0 }
     fn is_opaque(&self) -> bool { self.alpha() >= 1.0 }
-
 }
 
-#[derive(Debug,Copy,Clone)]
+#[derive(Debug,Default,Copy,Clone)]
 pub struct Rgb8([u8;3]);
 impl Deref for Rgb8 {
     type Target = [u8];
@@ -118,7 +122,7 @@ impl Gray8 {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug,Default,Copy,Clone)]
 pub struct Rgba8([u8;4]);
 
 impl Deref for Rgba8 {
@@ -158,6 +162,7 @@ impl From<Rgba8> for Rgb8 {
 }
 
 
+#[derive(Debug,Default)]
 pub struct RenderingBuffer {
     pub data: Vec<u8>,
     pub width: usize,
@@ -179,10 +184,11 @@ impl RenderingBuffer {
         self.data.iter_mut().for_each(|v| *v = 255);
     }
     pub fn fill(&mut self) {
-        
+
     }
 }
 
+#[derive(Debug,Default)]
 pub struct PixfmtRgb24 {
     pub rbuf: RenderingBuffer,
 }
@@ -276,9 +282,10 @@ impl PixfmtRgb24 {
     pub fn fill(&mut self, c: Rgb8) {
         let w = self.rbuf.width;
         let h = self.rbuf.height;
-        let b = self.rbuf.bpp;
-        for i in (0 .. w * h * b).step_by(b) {
-            self.rbuf.data[i..i+3].copy_from_slice(&*c);
+        for i in 0 .. w {
+            for j in 0 .. h {
+                self.set((i,j), &c);
+            }
         }
     }
     pub fn new(width: usize, height: usize, bpp: usize) -> Self {
@@ -287,41 +294,43 @@ impl PixfmtRgb24 {
     pub fn from(rbuf: RenderingBuffer) -> Self {
         Self { rbuf }
     }
-    pub fn blend_hline<C: Color>(&mut self, _x: i64, _y: i64, _len: i64, _c: &C, _cover: u64) {
-        unimplemented!("oh no");
-    }
-    pub fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, covers: &[u64]) {
-        let x = x as usize;
-        let y = y as usize;
-        let covers_mask = 255;
-        assert_eq!(len as usize, covers.len());
-        eprintln!("SET PIXELS: ({}, {}) -> {} {:?}", x,y,len,c);
-        if ! c.is_transparent() {
-            for (i, &cover) in covers.iter().enumerate() {
-            //eprintln!("BLEND SOLID HSPAN: {} {} {}", i, len, covers.len());
-                eprintln!("SET PIX: ({}, {}): {:?} covers {}", x+i,y,c, covers[i]);
-                if c.is_opaque() && cover == covers_mask {
-                    self.set((x+i, y), c);
-                } else {
-                    let p = self.get((x+i, y));
-                    let p = blend_pix(&p, c, cover);
-                    self.set((x+i,y), &p);
-                }
+    pub fn blend_hline<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, cover: u64) {
+        if c.is_transparent() {
+            return;
+        }
+        let (x,y,len) = (x as usize, y as usize, len as usize);
+        let cover_mask = 255;
+        if c.is_opaque() && cover == cover_mask {
+            for i in 0 .. len {
+                self.set((x+i,y), c);
+            }
+        } else {
+            for i in 0 .. len {
+                let pix = self.get((x+i, y));
+                let pix = blend_pix(&pix, c, cover);
+                self.set((x+i,y), &pix);
             }
         }
-        eprintln!("BLEND SOLID HSPAN: DONE");
+    }
+    pub fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, _len: i64, c: &C, covers: &[u64]) {
+        if c.is_transparent() {
+            return;
+        }
+        for (i, &cover) in covers.iter().enumerate() {
+            self.blend_hline(x+i as i64,y,1,c,cover);
+        }
     }
     pub fn copy_pixel(&mut self, x: usize, y: usize, c: Rgb8) {
-        self.rbuf[(x,y)][..3].copy_from_slice(&*c);
+        self.set((x,y), &c);
     }
     pub fn copy_hline(&mut self, x: usize, y: usize, n: usize, c: Rgb8) {
         for i in 0 .. n {
-            self.rbuf[(x+i,y)][..3].copy_from_slice(&*c);
+            self.set((x+i,y), &c);
         }
     }
     pub fn copy_vline(&mut self, x: usize, y: usize, n: usize, c: Rgb8) {
         for i in 0 .. n {
-            self.rbuf[(x,y+i)][..3].copy_from_slice(&*c);
+            self.set((x,y+i), &c);
         }
     }
 
@@ -333,7 +342,6 @@ impl PixfmtRgb24 {
     }
 
     pub fn set<C: Color>(&mut self, id: (usize, usize), c: &C) {
-        //self.rbuf[id][..3].copy_from_slice(&*c);
         self.rbuf[id][0] = (c.red()   * 255.0) as u8;
         self.rbuf[id][1] = (c.green() * 255.0) as u8;
         self.rbuf[id][2] = (c.blue()  * 255.0) as u8;
@@ -420,9 +428,9 @@ impl PixfmtRgb24 {
 
         for x in x1..x2 {
             if steep {
-                self.rbuf[(y as usize,x as usize)][..3].copy_from_slice(&*c);
+                self.set((y as usize, x as usize), &c);
             } else {
-                self.rbuf[(x as usize,y as usize)][..3].copy_from_slice(&*c);
+                self.set((x as usize, y as usize), &c);
             }
             xmod += rem;
             y += left;
@@ -449,9 +457,9 @@ impl PixfmtRgb24 {
         let x2    = x2.floor() as usize;
         for x in x1 .. x2 {
             if steep {
-                self.rbuf[(y,x)][..3].copy_from_slice(&*c);
+                self.set((y,x), &c);
             } else {
-                self.rbuf[(x,y)][..3].copy_from_slice(&*c);
+                self.set((x,y), &c);
             }
             error -= dy;
             if error <= 0.0 {
@@ -504,10 +512,11 @@ impl AlphaMaskAdaptor {
         }
     }
 }
-
+#[derive(Debug,Default)]
 pub struct RenderingBase {
     pub pixf: PixfmtRgb24,
 }
+
 
 impl RenderingBase {
     pub fn with_rgb24(pixf: PixfmtRgb24) -> RenderingBase {
@@ -547,26 +556,47 @@ impl RenderingBase {
             x = xmin;
         }
         if x + len > xmax {
+            eprintln!("X+LEN > XMAX");
             len = xmax - x + 1;
             if len <= 0 {
                 return;
             }
         }
         eprintln!("RENBASE BLEND SOLID HSPAN x,y {} {} OFF {} LEN {} {}", x, y, off, len, covers.len() );
-        assert_eq!(len as usize, covers[off as usize ..].len());
+        //assert_eq!(len as usize, covers[off as usize ..].len());
         self.pixf.blend_solid_hspan(x, y, len, c, &covers[off as usize ..]);
         eprintln!("RENBASE BLEND SOLID HSPAN DONE");
     }
 }
 
+
+#[derive(Debug, Default)]
+pub struct RenderingScanlineBinSolid {
+    pub base: RenderingBase,
+    pub color: Rgba8,
+}
+
+#[derive(Debug, Default)]
 pub struct RenderingScanlineAASolid {
     pub base: RenderingBase,
     pub color: Rgba8,
 }
 
+pub fn render_scanline_bin_solid<C: Color>(sl: &ScanlineU8,
+                                           ren: &mut RenderingBase,
+                                           color: &C) {
+    let cover_full = 255;
+    for span in &sl.spans {
+        eprintln!("RENDER SCANLINE BIN SOLID: Span x,y,len {} {} {} {}",
+                  span.x, sl.y, span.len, span.covers.len());
+        ren.blend_hline(span.x, sl.y, span.x - 1 + span.len.abs(),
+                        color, cover_full);
+    }
+}
+
 pub fn render_scanline_aa_solid<C: Color>(sl: &ScanlineU8,
-                                ren: &mut RenderingBase,
-                                color: &C) {
+                                          ren: &mut RenderingBase,
+                                          color: &C) {
     let y = sl.y;
     for span in & sl.spans {
         eprintln!("RENDER SCANLINE AA SOLID: Span x,y,len {} {} {} {}", span.x, y, span.len, span.covers.len());
@@ -580,6 +610,31 @@ pub fn render_scanline_aa_solid<C: Color>(sl: &ScanlineU8,
     }
 }
 
+pub trait RenderingScanline {
+    fn render(&mut self, sl: &ScanlineU8);
+    fn prepare(&self) {
+    }
+}
+
+impl RenderingScanline for RenderingScanlineAASolid {
+    fn render(&mut self, sl: &ScanlineU8) {
+        render_scanline_aa_solid(sl, &mut self.base, &self.color);
+    }
+}
+impl RenderingScanline for RenderingScanlineBinSolid {
+    fn render(&mut self, sl: &ScanlineU8) {
+        render_scanline_bin_solid(sl, &mut self.base, &self.color);
+    }
+}
+impl RenderingScanlineBinSolid {
+    pub fn with_base(base: RenderingBase) -> Self {
+        let color = Rgba8::black();
+        Self { base, color }
+    }
+    pub fn color(&mut self, color: Rgba8) {
+        self.color = color;
+    }
+}
 impl RenderingScanlineAASolid {
     pub fn with_base(base: RenderingBase) -> Self {
         let color = Rgba8::black();
@@ -588,13 +643,13 @@ impl RenderingScanlineAASolid {
     pub fn color(&mut self, color: Rgba8) {
         self.color = color;
     }
-    pub fn prepare(&self) {
-    }
-    pub fn render(&mut self, sl: &ScanlineU8) {
-        render_scanline_aa_solid(sl, &mut self.base, &self.color);
-    }
 }
 impl<'a> PixelData<'a> for RenderingScanlineAASolid {
+    fn pixeldata(&'a self) -> &'a [u8] {
+        & self.base.pixf.rbuf.data
+    }
+}
+impl<'a> PixelData<'a> for RenderingScanlineBinSolid {
     fn pixeldata(&'a self) -> &'a [u8] {
         & self.base.pixf.rbuf.data
     }
@@ -846,29 +901,41 @@ pub struct RasterizerCell {
 impl RasterizerCell {
     pub fn new() -> Self {
         Self { cells: vec![],
-               min_x : std::i64::MAX,
-               min_y : std::i64::MAX,
-               max_x : std::i64::MIN,
-               max_y : std::i64::MIN,
+               min_x: std::i64::MAX,
+               min_y: std::i64::MAX,
+               max_x: std::i64::MIN,
+               max_y: std::i64::MIN,
                sorted_y: vec![],
         }
     }
+    pub fn reset(&mut self) {
+        self.max_x = std::i64::MIN;
+        self.max_y = std::i64::MIN;
+        self.min_x = std::i64::MAX;
+        self.min_y = std::i64::MAX;
+        self.sorted_y.clear(); // Not sure if this should be cleared
+        self.cells.clear();    // Not sure if this should be cleared
+    }
+
     pub fn total_cells(&self) -> usize {
         self.cells.len()
     }
     pub fn sort_cells(&mut self) {
-        eprintln!("SORT_CELLS MAX_Y: {}", self.max_y);
+        eprintln!("SORT_CELLS MAX_Y: {} N: {}", self.max_y, self.cells.len());
         if ! self.sorted_y.is_empty() || self.max_y < 0 {
             return;
         }
+        // Distribute into 
         self.sorted_y = vec![vec![]; (self.max_y+1) as usize];
         for c in self.cells.iter() {
             let y = c.y as usize;
             eprintln!("SORT_CELLS SORTING {:?}", c);
             self.sorted_y[y].push(c.clone());
         }
+        // Sort by the x value
         for i in 0 .. self.sorted_y.len() {
             eprintln!("SORT_CELLS: y: {} len: {}", i, self.sorted_y[i].len());
+            self.sorted_y[i].sort_by(|a,b| (a.x).cmp(&b.x));
         }
     }
     pub fn scanline_num_cells(&self, y: i64) -> usize {
@@ -878,9 +945,9 @@ impl RasterizerCell {
         & self.sorted_y[y as usize]
     }
 
-    pub fn add_curr_cell(&mut self, new_cell: Cell) {
-        self.cells.push( new_cell );
-    }
+    //pub fn add_curr_cell(&mut self, new_cell: Cell) {
+    //    self.cells.push( new_cell );
+    //}
     pub fn curr_cell_is_set(&self, x: i64, y: i64) -> bool {
         match self.cells.last() {
             None      => true,
@@ -894,17 +961,34 @@ impl RasterizerCell {
         match self.cells.last() {
             None      => true,
             Some(cur) => {
-                eprintln!("XXXX {:?}", cur);
+                //eprintln!("XXXX {:?}", cur);
                 ! cur.equal(x,y)
 
             }
         }
     }
 
+    pub fn pop_last_cell_if_empty(&mut self) {
+        let n = self.cells.len();
+        if n == 0 {
+            return;
+        }
+        if self.cells[n-1].area == 0 && self.cells[n-1].cover == 0 {
+            self.cells.pop();
+        } else {
+            self.show_last_cell();
+        }
+    }
+    pub fn show_last_cell(&self) {
+        if let Some(c) = self.cells.last() {
+            eprintln!("ADD_CURR_CELL: {} {} area {} cover {} len {}", c.x,c.y,c.area,c.cover, self.cells.len());
+        }
+    }
     pub fn set_curr_cell(&mut self, x: i64, y: i64)  {
-        eprintln!("SET_CURR_CELL: {} {}", x,y);
+        //eprintln!("SET_CURR_CELL: {} {}", x,y);
         if self.curr_cell_not_equal(x, y) {
-            eprintln!("SET_CURR_CELL: {} {} ADDING", x,y);
+            //eprintln!("ADD_CURR_CELL: {} {} {} ", x,y, self.cells.len()+1);
+            self.pop_last_cell_if_empty();
             self.cells.push( Cell::at(x,y) );
         }
     }
@@ -923,7 +1007,7 @@ impl RasterizerCell {
 
         // Single Cell
         if ex1 == ex2 {
-            eprintln!("RENDER_HLINE LEN: {}", self.cells.len());
+            //eprintln!("RENDER_HLINE LEN: {}", self.cells.len());
             let m_curr_cell = self.cells.last_mut().unwrap();
             m_curr_cell.cover += y2-y1;
             m_curr_cell.area  += (fx1 + fx2) * (y2-y1);
@@ -934,7 +1018,7 @@ impl RasterizerCell {
                       (fx1 + fx2) * (y2-y1), m_curr_cell.x, m_curr_cell.y);
             return;
         }
-        eprintln!("RENDER_HLINE ADJCENT CELLS SAME LINE {} {}", x1,x2);
+        //eprintln!("RENDER_HLINE ADJCENT CELLS SAME LINE {} {}", x1,x2);
         // Adjacent Cells on Same Line
         let (mut p, first, incr, dx) = if x2-x1 < 0 {
             (fx1 * (y2-y1), 0,-1, x1-x2)
@@ -1033,11 +1117,16 @@ impl RasterizerCell {
         self.max_y = max(ey2, max(ey1, self.max_y));
 
         self.set_curr_cell(ex1, ey1);
-
+        //eprintln!("EY1, EY2: {} {}", ey1, ey2);
         // Horizontal Line
         if ey1 == ey2 {
-            eprintln!("LINE EY1 = EY2");
+            //eprintln!("LINE EY1 = EY2");
             self.render_hline(ey1, x1, fy1, x2, fy2);
+            let n = self.cells.len();
+            if self.cells[n-1].area == 0 && self.cells[n-1].cover == 0 {
+                self.cells.pop();
+            }
+            return;
         }
 
         if dx == 0 {
@@ -1079,7 +1168,7 @@ impl RasterizerCell {
             }
             return;
         }
-        eprintln!("LINE RENDER MULTPLE LINES");
+        eprintln!("LINE RENDER MULTPLE LINES {} {}", dx, dy);
         // Render Multiple Lines
         let (p,first,incr, dy) = if dy < 0 {
             (fy1 * dx, 0, -1, -dy)
@@ -1120,6 +1209,7 @@ impl RasterizerCell {
             }
         }
         self.render_hline(ey1, x_from, POLY_SUBPIXEL_SCALE - first, x2, fy2);
+        self.pop_last_cell_if_empty();
     }
 }
 
@@ -1142,52 +1232,30 @@ impl RasConvInt {
     }
 }
 
+pub trait RasterizerScanline {
+    fn rewind_scanlines(&mut self) -> bool;
+    fn sweep_scanline(&mut self, sl: &mut ScanlineU8) -> bool;
+    fn max_x(&self) -> i64;
+    fn min_x(&self) -> i64;
+}
 
 #[derive(Debug, Default)]
 pub struct RasterizerScanlineAA {
     pub clipper: Clip,
     pub outline: RasterizerCell,
     pub status: PathStatus,
-    pub x0: i64,  // State !!!
-    pub y0: i64,  // State !!!
+    pub x0: i64,
+    pub y0: i64,
     scan_y: i64,
-    filling_rule: FillingRule
+    filling_rule: FillingRule,
+    gamma: Vec<u64>,
 }
 
-impl RasterizerScanlineAA {
-    pub fn new() -> Self {
-        Self { clipper: Clip::new(), status: PathStatus::Initial,
-               outline: RasterizerCell::new(),
-               x0: 0, y0: 0, scan_y: 0,
-               filling_rule: FillingRule::NonZero,
-        }
-    }
-    pub fn min_x(&self) -> i64 {
-        self.outline.min_x
-    }
-    pub fn max_x(&self) -> i64 {
-        self.outline.max_x
-    }
-    pub fn clip_box(&mut self, x1: f64, y1: f64, x2: f64, y2: f64) {
-        self.clipper.clip_box(RasConvInt::upscale(x1),
-                              RasConvInt::upscale(y1),
-                              RasConvInt::upscale(x2),
-                              RasConvInt::upscale(y2));
-    }
-    pub fn move_to_d(&mut self, x: f64, y: f64) {
-        self.x0 = RasConvInt::upscale( x );
-        self.y0 = RasConvInt::upscale( y );
-        self.clipper.move_to(self.x0,self.y0);
-        self.status = PathStatus::MoveTo;
-    }
-    pub fn line_to_d(&mut self, x: f64, y: f64) {
-        let x = RasConvInt::upscale( x );
-        let y = RasConvInt::upscale( y );
-        self.clipper.line_to(&mut self.outline, x,y);
-        self.status = PathStatus::LineTo;
-    }
-    pub fn rewind_scanlines(&mut self) -> bool {
-        // close polygon if auto close
+
+impl RasterizerScanline for RasterizerScanlineAA {
+    fn rewind_scanlines(&mut self) -> bool {
+
+        self.close_polygon();
         self.outline.sort_cells();
         if self.outline.total_cells() == 0 {
             false
@@ -1196,27 +1264,7 @@ impl RasterizerScanlineAA {
             true
         }
     }
-    pub fn calculate_alpha(&self, area: i64) -> u64 {
-        let aa_shift  = 8;
-        let aa_scale  = 1 << aa_shift;
-        let aa_scale2 = aa_scale * 2;
-        let aa_mask   = aa_scale  - 1;
-        let aa_mask2  = aa_scale2 - 1;
-
-        let mut cover = area >> (POLY_SUBPIXEL_SHIFT*2 + 1 - aa_shift);
-        cover = cover.abs();
-        if self.filling_rule == FillingRule::EvenOdd {
-            cover *= aa_mask2;
-            if cover > aa_scale {
-                cover = aa_scale2 - cover;
-            }
-        }
-        cover = min(cover, aa_mask);
-        cover as u64
-    }
-
-
-    pub fn sweep_scanline(&mut self, sl: &mut ScanlineU8) -> bool {
+    fn sweep_scanline(&mut self, sl: &mut ScanlineU8) -> bool {
         loop {
             eprintln!("SWEEP SCANLINES: Y: {}", self.scan_y);
             if self.scan_y > self.outline.max_y {
@@ -1236,15 +1284,18 @@ impl RasterizerScanlineAA {
                     //eprintln!("SWEEP SCANLINES: ITER: {:?} N {}", iter, num_cells);
                     //let cur_cell = iter.next().unwrap();
                     //num_cells -= 1;
+
                     let mut x = cur_cell.x;
                     let mut area = cur_cell.area;
 
                     cover  += cur_cell.cover;
+                    eprintln!("SWEEP SCANLINES: {:?} outside cover {} area {}", cur_cell, cover, area);
                     num_cells -= 1;
                     //eprintln!("SWEEP SCANLINES: N(A): {}", num_cells); 
                     //accumulate all cells with the same X
                     while num_cells > 0 {
                         cur_cell = iter.next().unwrap();
+                        eprintln!("SWEEP SCANLINES: {:?} inside cover {} area {}", cur_cell, cover, area);
                         if cur_cell.x != x {
                             break;
                         }
@@ -1253,6 +1304,7 @@ impl RasterizerScanlineAA {
                         num_cells -= 1;
                         //eprintln!("SWEEP SCANLINES: N(B): {}", num_cells); 
                     }
+                    eprintln!("SWEEP SCANLINES: {:?} DONE cover {} area {}", cur_cell, cover, area);
                     //eprintln!("SWEEP SCANLINES: ADDING CHECK AREA: {} NUM_CELLS {} x,y {} {}", area, num_cells, x, self.scan_y);
                     if area != 0 {
                         eprintln!("SWEEP SCANLINES: ADDING CELL: x {} y {} area {} cover {}", x,self.scan_y, area, cover);
@@ -1275,12 +1327,100 @@ impl RasterizerScanlineAA {
                 break;
             }
             self.scan_y += 1;
-            //eprintln!("SWEEP SCANLINES: ADDING ---------------------");
+            eprintln!("SWEEP SCANLINES:  ---------------------");
         }
         sl.finalize(self.scan_y);
         self.scan_y += 1;
         true
     }
+    fn min_x(&self) -> i64 {
+        self.outline.min_x
+    }
+    fn max_x(&self) -> i64 {
+        self.outline.max_x
+    }
+}
+
+impl RasterizerScanlineAA {
+    pub fn new() -> Self {
+        return Self::new_with_gamma(|v| v as u64)
+    }
+    pub fn new_with_gamma<F>(gfunc: F) -> Self
+        where F: Fn(f64) -> u64
+    {
+        let gamma : Vec<_> = (0..256).map(|i| gfunc(i as f64)).collect();
+        Self { clipper: Clip::new(), status: PathStatus::Initial,
+               outline: RasterizerCell::new(),
+               x0: 0, y0: 0, scan_y: 0,
+               filling_rule: FillingRule::NonZero,
+               gamma: gamma,
+        }
+    }
+    pub fn clip_box(&mut self, x1: f64, y1: f64, x2: f64, y2: f64) {
+        self.clipper.clip_box(RasConvInt::upscale(x1),
+                              RasConvInt::upscale(y1),
+                              RasConvInt::upscale(x2),
+                              RasConvInt::upscale(y2));
+    }
+    pub fn move_to_d(&mut self, x: f64, y: f64) {
+        self.x0 = RasConvInt::upscale( x );
+        self.y0 = RasConvInt::upscale( y );
+        self.clipper.move_to(self.x0,self.y0);
+        self.status = PathStatus::MoveTo;
+    }
+    pub fn line_to_d(&mut self, x: f64, y: f64) {
+        let x = RasConvInt::upscale( x );
+        let y = RasConvInt::upscale( y );
+        self.clipper.line_to(&mut self.outline, x,y);
+        self.status = PathStatus::LineTo;
+    }
+    pub fn close_polygon(&mut self) {
+        if self.status == PathStatus::LineTo {
+            self.clipper.line_to(&mut self.outline, self.x0, self.y0);
+            self.status = PathStatus::Closed;
+        }
+    }
+    pub fn reset(&mut self) {
+        self.outline.reset();
+        self.status = PathStatus::Initial;
+    }
+    pub fn add_path<VS: VertexSource>(&mut self, path: &mut VS) {
+        path.rewind();
+        if ! self.outline.sorted_y.is_empty() {
+            self.reset();
+        }
+        for seg in path.convert() {
+            eprintln!("ADD_PATH: {} {} {:?} ", seg.x, seg.y, seg.cmd);
+            if seg.cmd == PathCommand::LineTo {
+                self.line_to_d(seg.x, seg.y);
+            } else if seg.cmd == PathCommand::MoveTo {
+                self.move_to_d(seg.x, seg.y);
+            } else if seg.cmd == PathCommand::Close {
+                self.close_polygon();
+            }
+            eprintln!("ADD_PATH: {} {} {:?} DONE", seg.x, seg.y, seg.cmd);
+        }
+    }
+    pub fn calculate_alpha(&self, area: i64) -> u64 {
+        let aa_shift  = 8;
+        let aa_scale  = 1 << aa_shift;
+        let aa_scale2 = aa_scale * 2;
+        let aa_mask   = aa_scale  - 1;
+        let aa_mask2  = aa_scale2 - 1;
+
+        let mut cover = area >> (POLY_SUBPIXEL_SHIFT*2 + 1 - aa_shift);
+        cover = cover.abs();
+        if self.filling_rule == FillingRule::EvenOdd {
+            cover *= aa_mask2;
+            if cover > aa_scale {
+                cover = aa_scale2 - cover;
+            }
+        }
+        cover = max(0, min(cover, aa_mask));
+        self.gamma[cover as usize]
+    }
+
+
 }
 
 #[derive(Debug,Default)]
@@ -1355,9 +1495,27 @@ impl ScanlineU8 {
     }
 }
 
-pub fn render_scanlines(ras: &mut RasterizerScanlineAA,
-                        sl: &mut ScanlineU8,
-                        ren: &mut RenderingScanlineAASolid) {
+pub fn render_scanlines_aa_solid<RAS,C>(ras: &mut RAS,
+                                            sl: &mut ScanlineU8,
+                                            ren: &mut RenderingBase,
+                                            color: C) 
+    where RAS: RasterizerScanline,
+          C: Color
+{
+    if ras.rewind_scanlines() {
+        sl.reset(ras.min_x(), ras.max_x());
+        while ras.sweep_scanline(sl) {
+            render_scanline_aa_solid(sl, ren, &color);
+        }
+    }
+}
+
+pub fn render_scanlines<REN, RAS>(ras: &mut RAS,
+                                  sl: &mut ScanlineU8,
+                                  ren: &mut REN)
+    where REN: RenderingScanline,
+          RAS: RasterizerScanline
+{
     eprintln!("RENDER SCANLINES");
     if ras.rewind_scanlines() {
         eprintln!("RENDER RESET");
@@ -1376,7 +1534,9 @@ pub fn render_scanlines(ras: &mut RasterizerScanlineAA,
 pub fn compare_ppm<P: AsRef<Path>>(f1: P, f2: P) {
     let d1 = fs::read(f1).expect("Unable to read file");
     let d2 = fs::read(f2).expect("Unable to read file");
-    assert_eq!(d1,d2);
+    for (v1,v2) in d1.iter().zip(d2.iter()) {
+        assert_eq!(v1,v2);
+    }
 }
 
 pub fn write_ppm<P: AsRef<Path>>(buf: &[u8], width: usize, height: usize, filename: P) -> Result<(),std::io::Error> {
@@ -1386,10 +1546,3 @@ pub fn write_ppm<P: AsRef<Path>>(buf: &[u8], width: usize, height: usize, filena
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}

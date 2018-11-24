@@ -39,3 +39,4 @@ fn t01_rendering_buffer() {
     write_ppm(&rbuf.data, rbuf.width, rbuf.height, "agg_test_01.ppm").unwrap();
     agg::compare_ppm("agg_test_01.ppm", "tests/agg_test_01.ppm");
 }
+
