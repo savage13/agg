@@ -222,19 +222,19 @@ impl ConvStroke {
         let dy12 = p2.y - p1.y;
         let len1 = len(p1,p0);
         let len2 = len(p2,p1);
-        eprintln!("LINE: JOIN: V0: {} {}", p0.x, p0.y);
-        eprintln!("JOIN: V1: {} {}", p1.x, p1.y);
-        eprintln!("JOIN: V2: {} {}", p2.x, p2.y);
-        eprintln!("JOIN: LEN1,LEN2: {} {} {} {}", len1,len2, self.width, self.width_abs);
+        //eprintln!("LINE: JOIN: V0: {} {}", p0.x, p0.y);
+        //eprintln!("JOIN: V1: {} {}", p1.x, p1.y);
+        //eprintln!("JOIN: V2: {} {}", p2.x, p2.y);
+        //eprintln!("JOIN: LEN1,LEN2: {} {} {} {}", len1,len2, self.width, self.width_abs);
         let dx1 = self.width * (p1.y-p0.y) / len1;
         let dy1 = self.width * (p1.x-p0.x) / len1;
         let dx2 = self.width * (p2.y-p1.y) / len2;
         let dy2 = self.width * (p2.x-p1.x) / len2;
-        eprintln!("JOIN: {} {} {} {}", dx1, dy1, dx2, dy2);
+        //eprintln!("JOIN: {} {} {} {}", dx1, dy1, dx2, dy2);
 
         let cp = cross(p0, p1, p2);
         if cp != 0.0 && cp.is_sign_positive() == self.width.is_sign_positive() {
-            println!("LINE: INNER JOIN");
+            //println!("LINE: INNER JOIN");
             // Inner Join
             let mut limit = if len1 < len2 {
                 len1 / self.width_abs
@@ -275,7 +275,7 @@ impl ConvStroke {
                 }
             }
         } else {
-            println!("LINE: OUTER JOIN");
+            //println!("LINE: OUTER JOIN");
             // Outer Join
             let dx = (dx1 + dx2) / 2.0;
             let dy = (dy1 + dy2) / 2.0;
@@ -309,11 +309,11 @@ impl ConvStroke {
                         } else {
                             out.push(Vertex::xy(p1.x + dx1, p1.y - dy1));
                         }
-                    eprintln!("LINE: RETURN APPROX");
+                    //eprintln!("LINE: RETURN APPROX");
                     return out ;
                 }
             }
-            eprintln!("LINE: RETURN NON APPROX {:?}", self.line_join);
+            //eprintln!("LINE: RETURN NON APPROX {:?}", self.line_join);
             match self.line_join {
                 LineJoin::Miter |
                 LineJoin::MiterRevert |
@@ -337,22 +337,22 @@ impl ConvStroke {
         let mut out = vec![];
         let v = self.source.vertices();
         let n = v.len();
-        eprintln!("LINE: JOIN: BEGIN CAP {}", n);
+        //eprintln!("LINE: JOIN: BEGIN CAP {}", n);
         out.extend( self.calc_cap(&v[0], &v[1]) ); // Begin Cap
-        eprintln!("LINE: JOIN: FORWARD PATH");
+        //eprintln!("LINE: JOIN: FORWARD PATH");
         for i in 1 .. n-1 { // Forward Path
             out.extend(
                 self.calc_join(&v[prev!(i,n)], &v[curr!(i,n)], &v[next!(i,n)])
             );
         }
-        eprintln!("LINE: JOIN: END CAP");
+        //eprintln!("LINE: JOIN: END CAP");
         out.extend( self.calc_cap(&v[n-1], &v[n-2]) ); // End Cap
-        eprintln!("LINE: JOIN: BACKWARD PATH");
+        //eprintln!("LINE: JOIN: BACKWARD PATH");
         for i in (1 .. n-1).rev() { // Backward Path
             out.extend(
                 self.calc_join(&v[next!(i,n)], &v[curr!(i,n)], &v[prev!(i,n)])
             );
-            eprintln!("LINE: BACKWARDS: {}/{}", i,out.len());
+            //eprintln!("LINE: BACKWARDS: {}/{}", i,out.len());
         }
         
         out.iter_mut().for_each(|x| x.cmd = PathCommand::LineTo);

@@ -3,7 +3,7 @@ extern crate agg;
 use agg::PixelData;
 
 #[test]
-fn t15_path_stroke() {
+fn t16_path_stroke_no_clip() {
     let (w,h,bpp) = (100,100,3);
 
     let pixf = agg::PixfmtRgb24::new(w,h,bpp);
@@ -19,7 +19,7 @@ fn t15_path_stroke() {
     let mut ras = agg::RasterizerScanlineAA::new_with_gamma(|v| v as u64);
     let mut sl = agg::ScanlineU8::new();
 
-    ras.clip_box(40.0, 0.0, w as f64-40.0, h as f64);
+    //ras.clip_box(40.0, 0.0, w as f64-40.0, h as f64);
 
     ras.reset();
     ras.move_to_d(10.0, 10.0);
@@ -27,23 +27,6 @@ fn t15_path_stroke() {
     ras.line_to_d(90.0, 10.0);
 
     agg::render_scanlines(&mut ras, &mut sl, &mut ren);
-
-    // ras.reset();
-    // ren.color( agg::Rgba8::new([0,0,0,255]) );
-    // ras.line_to_d(40. , 10.);
-    // ras.line_to_d(40. , 9.);
-    // ras.line_to_d(40. , 67.);
-    // ras.line_to_d(50. , 87.);
-    // ras.line_to_d(60. , 67.);
-    // ras.line_to_d(60. , 11.);
-    // ras.line_to_d(40. , 11.);
-    // ras.line_to_d(40. , 9.);
-    // ras.line_to_d(60. , 9.);
-    // ras.line_to_d(60. , 72.);
-    // ras.line_to_d(50. , 92.);
-    // ras.line_to_d(40. , 72.);
-    // ras.line_to_d(50. , 10.);
-    // agg::render_scanlines(&mut ras, &mut sl, &mut ren);
 
     let ps = agg::PathStorage::new();
     let mut pg = agg::ConvStroke::new(ps);
@@ -57,10 +40,10 @@ fn t15_path_stroke() {
     ras.add_path(&mut pg);
 
     agg::render_scanlines_aa_solid(&mut ras, &mut sl, &mut ren.base,
-                                   agg::Rgba8::new([0,0,0,255]));
+                                  agg::Rgba8::new([0,0,0,255]));
 
-    agg::write_ppm(&ren.pixeldata(), w, h, "agg_test_15.ppm").unwrap();
+    agg::write_ppm(&ren.pixeldata(), w, h, "agg_test_16.ppm").unwrap();
 
-    agg::compare_ppm("agg_test_15.ppm", "tests/agg_test_15.ppm");
+    agg::compare_ppm("agg_test_16.ppm", "tests/agg_test_16.ppm");
 }
 

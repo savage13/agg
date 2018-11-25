@@ -720,6 +720,8 @@ impl Clip {
         let f2 = f2 & (TOP|BOTTOM);
         // Fully Visible in y
         if f1 == INSIDE && f2 == INSIDE {
+            eprintln!("ras.line_to_d({:.2} , {:.2});//1", x1>>8,y1>>8);
+            eprintln!("ras.line_to_d({:.2} , {:.2});//2", x2>>8,y2>>8);
             ras.line(x1,y1,x2,y2);
         } else {
             // Both points above or below clip box
@@ -743,11 +745,15 @@ impl Clip {
                 tx2 = x1 + mul_div(b.y2-y1, x2-x1, y2-y1);
                 ty2 = b.y2;
             }
+            eprintln!("ras.line_to_d({:.2} , {:.2}); //3", tx1>>8,ty1>>8);
+            eprintln!("ras.line_to_d({:.2} , {:.2}); //4", tx2>>8,ty2>>8);
             ras.line(tx1,tx2,ty1,ty2);
         }
     }
     pub fn line_to(&mut self, ras: &mut RasterizerCell, x2: i64, y2: i64) {
-        eprintln!("LINE TO: {} {}", x2, y2);
+        //eprintln!("ras.line_to_d({}, {}); // LINE TO: {} {}",
+        //          x2 / POLY_SUBPIXEL_SCALE, y2 / POLY_SUBPIXEL_SCALE,
+        //          x2, y2);
         if let Some(ref b) = self.clip_box {
             eprintln!("LINE CLIPPING ON");
             let f2 = b.clip_flags(x2,y2);
@@ -764,6 +770,8 @@ impl Clip {
                 return;
             }
             let (x1,y1,f1) = (self.x1, self.y1, self.clip_flag);
+            eprintln!("LINE CLIP: L {} R {} T {} B {} -- {} {}", f1 & LEFT, f1 & RIGHT, f1 & TOP, f1 & BOTTOM, x1>>8, y1>>8);
+            eprintln!("LINE CLIP: L {} R {} T {} B {} -- {} {}", f2 & LEFT, f2 & RIGHT, f2 & TOP, f2 & BOTTOM, x2>>8, y2>>8);
             match (f1 & (LEFT|RIGHT), f2 & (LEFT|RIGHT)) {
                 (INSIDE,INSIDE) => self.line_clip_y(ras, x1,y1,x2,y2,f1,f2),
                 (INSIDE,RIGHT) => {
@@ -782,7 +790,7 @@ impl Clip {
                     let y3 = y1 + mul_div(b.x1-x1, y2-y1, x2-x1);
                     let f3 = b.clip_flags(b.x1, y3);
                     self.line_clip_y(ras, x1,   y1, b.x1, y3, f1, f3);
-                    self.line_clip_y(ras, b.x1, y3,   x1, y2, f3, f2);
+                    self.line_clip_y(ras, b.x1, y3, b.x1, y2, f3, f2);
                 },
                 (RIGHT,LEFT) => {
                     let y3 = y1 + mul_div(b.x2-x1, y2-y1, x2-x1);
@@ -821,7 +829,7 @@ impl Clip {
         self.y1 = y2;
     }
     pub fn move_to(&mut self, x2: i64, y2: i64) {
-        eprintln!("MOVE TO: {} {}", x2, y2);
+        eprintln!("//ras.move_to_d({}, {}); // MOVE TO: {} {}", x2/POLY_SUBPIXEL_SCALE, y2/POLY_SUBPIXEL_SCALE, x2, y2);
         self.x1 = x2;
         self.y1 = y2;
         if let Some(ref b) = self.clip_box {
@@ -1375,7 +1383,9 @@ impl RasterizerScanlineAA {
         self.status = PathStatus::LineTo;
     }
     pub fn close_polygon(&mut self) {
+        eprintln!("CLOSE POLYGON?");
         if self.status == PathStatus::LineTo {
+            eprintln!("CLOSE POLYGON: CLOSED {} {}",self.x0>>8, self.y0>>8);
             self.clipper.line_to(&mut self.outline, self.x0, self.y0);
             self.status = PathStatus::Closed;
         }
