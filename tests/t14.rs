@@ -1,7 +1,7 @@
 
 extern crate agg;
 use agg::PixelData;
-
+use agg::RenderingScanline;
 #[test]
 fn t14_with_gamma() {
     let (w,h,bpp) = (100,100,3);
@@ -14,7 +14,7 @@ fn t14_with_gamma() {
 
     let mut ren = agg::RenderingScanlineAASolid::with_base(ren_base);
 
-    ren.color( agg::Rgba8::new([255,0,0,255]) );
+    ren.color( &agg::Rgba8::new([255,0,0,255]) );
 
     let mut ras = agg::RasterizerScanlineAA::new_with_gamma(|v| v as u64);
     let mut sl = agg::ScanlineU8::new();

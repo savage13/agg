@@ -11,14 +11,14 @@ use std::cmp::max;
 
 pub mod path_storage;
 pub mod conv_stroke;
+pub mod affine_transform;
 pub use path_storage::*;
 pub use conv_stroke::*;
+pub use affine_transform::*;
 
 const POLY_SUBPIXEL_SHIFT : i64 = 8;
 const POLY_SUBPIXEL_SCALE : i64 = 1<<POLY_SUBPIXEL_SHIFT;
 const POLY_SUBPIXEL_MASK  : i64 = POLY_SUBPIXEL_SCALE - 1;
-
-
 
 pub trait PixelData<'a> {
     fn pixeldata(&'a self) -> &'a [u8];
@@ -31,6 +31,16 @@ pub trait Color: std::fmt::Debug {
     fn alpha(&self) -> f64;
     fn is_transparent(&self) -> bool { self.alpha() == 0.0 }
     fn is_opaque(&self) -> bool { self.alpha() >= 1.0 }
+}
+
+pub fn cu8r<C: Color>(c: &C) -> u8 {
+    (c.red() / 255.0) as u8
+}
+pub fn cu8g<C: Color>(c: &C) -> u8 {
+    (c.red() / 255.0) as u8
+}
+pub fn cu8b<C: Color>(c: &C) -> u8 {
+    (c.red() / 255.0) as u8
 }
 
 #[derive(Debug,Default,Copy,Clone)]
@@ -302,11 +312,13 @@ impl PixfmtRgb24 {
         let cover_mask = 255;
         if c.is_opaque() && cover == cover_mask {
             for i in 0 .. len {
+                eprintln!("BLEND_HLINE (SET): {:3} {:3} c: {:?} cover: {:3}", x+i, y, c, cover);
                 self.set((x+i,y), c);
             }
         } else {
             for i in 0 .. len {
                 let pix = self.get((x+i, y));
+                eprintln!("BLEND_HLINE (SET): {:3} {:3} c: {:?} cover: {:3} {:?}", x+i, y, c, cover,pix);
                 let pix = blend_pix(&pix, c, cover);
                 self.set((x+i,y), &pix);
             }
@@ -503,6 +515,7 @@ impl AlphaMaskAdaptor {
     pub fn blend_color_hspan(&mut self, x: usize, y: usize, n: usize,
                              colors: &[Rgb8], _cover: usize) {
         //for i in 0 .. n {
+        //assert!(1==2);
         assert_eq!(n, colors.len());
         for (i, color) in colors.iter().enumerate() {
             let pix = &mut self.rgb.get((x+i,y));
@@ -612,18 +625,32 @@ pub fn render_scanline_aa_solid<C: Color>(sl: &ScanlineU8,
 
 pub trait RenderingScanline {
     fn render(&mut self, sl: &ScanlineU8);
-    fn prepare(&self) {
-    }
+    fn prepare(&self) { }
+    fn color<C: Color>(&mut self, color: &C);
 }
 
 impl RenderingScanline for RenderingScanlineAASolid {
     fn render(&mut self, sl: &ScanlineU8) {
         render_scanline_aa_solid(sl, &mut self.base, &self.color);
     }
+    fn color<C: Color>(&mut self, color: &C) {
+        self.color = Rgba8::new([(color.red() *255.0) as u8,
+                                 (color.green() *255.0) as u8,
+                                 (color.blue() *255.0) as u8,
+                                 (color.alpha() *255.0) as u8]);
+        
+    }
+
 }
 impl RenderingScanline for RenderingScanlineBinSolid {
     fn render(&mut self, sl: &ScanlineU8) {
         render_scanline_bin_solid(sl, &mut self.base, &self.color);
+    }
+    fn color<C: Color>(&mut self, color: &C) {
+        self.color = Rgba8::new([(color.red() *255.0) as u8,
+                                 (color.green() *255.0) as u8,
+                                 (color.blue() *255.0) as u8,
+                                 (color.alpha() *255.0) as u8]);
     }
 }
 impl RenderingScanlineBinSolid {
@@ -631,17 +658,11 @@ impl RenderingScanlineBinSolid {
         let color = Rgba8::black();
         Self { base, color }
     }
-    pub fn color(&mut self, color: Rgba8) {
-        self.color = color;
-    }
 }
 impl RenderingScanlineAASolid {
     pub fn with_base(base: RenderingBase) -> Self {
         let color = Rgba8::black();
         Self { base, color }
-    }
-    pub fn color(&mut self, color: Rgba8) {
-        self.color = color;
     }
 }
 impl<'a> PixelData<'a> for RenderingScanlineAASolid {
@@ -656,22 +677,33 @@ impl<'a> PixelData<'a> for RenderingScanlineBinSolid {
 }
 
 #[derive(Debug,Default)]
-pub struct Rectangle {
-    x1: i64,
-    y1: i64,
-    x2: i64,
-    y2: i64,
+pub struct Rectangle<T: std::cmp::PartialOrd + Copy> {
+    pub x1: T,
+    pub y1: T,
+    pub x2: T,
+    pub y2: T,
 }
-impl Rectangle {
-    pub fn new(x1: i64, y1: i64, x2: i64, y2: i64) -> Self {
+impl<T> Rectangle<T> where T: std::cmp::PartialOrd + Copy {
+    pub fn new(x1: T, y1: T, x2: T, y2: T) -> Self {
         let (x1, x2) = if x1 > x2 { (x2,x1) } else { (x1,x2) };
         let (y1, y2) = if y1 > x2 { (y2,y1) } else { (y1,y2) };
         Self { x1,y1,x2,y2 }
     }
-    pub fn clip_flags(&self, x: i64, y: i64) -> u8 {
+    pub fn clip_flags(&self, x: T, y: T) -> u8 {
         clip_flags(x,y, self.x1, self.y1, self.x2, self.y2)
     }
+    pub fn expand(&mut self, x: T, y: T) {
+        if x < self.x1 { self.x1 = x; }
+        if x > self.x2 { self.x2 = x; }
+        if y < self.y1 { self.y1 = y; }
+        if y > self.y2 { self.y2 = y; }
+    }
+    pub fn expand_rect(&mut self, r: Rectangle<T>) {
+        self.expand(r.x1, r.y1);
+        self.expand(r.x2, r.y2);
+    }
 }
+
 
 /// See https://en.wikipedia.org/wiki/Liang-Barsky_algorithm
 /// See https://en.wikipedia.org/wiki/Cyrus-Beck_algorithm
@@ -681,7 +713,7 @@ const LEFT   : u8 = 0b0001;
 const RIGHT  : u8 = 0b0010;
 const BOTTOM : u8 = 0b0100;
 const TOP    : u8 = 0b1000;
-pub fn clip_flags(x: i64, y: i64, x1: i64, y1: i64, x2: i64, y2: i64) -> u8 {
+pub fn clip_flags<T: std::cmp::PartialOrd>(x: T, y: T, x1: T, y1: T, x2: T, y2: T) -> u8 {
     let mut code = INSIDE;
     if x < x1 { code |= LEFT; }
     if x > x2 { code |= RIGHT; }
@@ -694,7 +726,7 @@ pub fn clip_flags(x: i64, y: i64, x1: i64, y1: i64, x2: i64, y2: i64) -> u8 {
 pub struct Clip {
     x1: i64,
     y1: i64,
-    clip_box: Option<Rectangle>,
+    clip_box: Option<Rectangle<i64>>,
     clip_flag: u8,
 }
 
@@ -1044,7 +1076,7 @@ impl RasterizerCell {
             let m_curr_cell = self.cells.last_mut().unwrap();
             m_curr_cell.cover += delta;
             m_curr_cell.area  += (fx1 + first) * delta;
-            eprintln!("INCR1 cover {} area {} dcover {} darea {} x,y {} {} ",
+            eprintln!("INCR1 cover {} area {} dcover {} darea {} x,y {} {}",
                       m_curr_cell.cover,
                       m_curr_cell.area,
                       delta,
@@ -1112,6 +1144,7 @@ impl RasterizerCell {
             self.line(cx, cy, x2, y2);
         }
         let dy = y2-y1;
+        // Downshift
         let ex1 = x1 >> POLY_SUBPIXEL_SHIFT;
         let ex2 = x2 >> POLY_SUBPIXEL_SHIFT;
         let ey1 = y1 >> POLY_SUBPIXEL_SHIFT;
@@ -1245,6 +1278,8 @@ pub trait RasterizerScanline {
     fn sweep_scanline(&mut self, sl: &mut ScanlineU8) -> bool;
     fn max_x(&self) -> i64;
     fn min_x(&self) -> i64;
+    fn reset(&mut self);
+    fn add_path<VS: VertexSource>(&mut self, path: &VS);
 }
 
 #[derive(Debug, Default)]
@@ -1261,6 +1296,28 @@ pub struct RasterizerScanlineAA {
 
 
 impl RasterizerScanline for RasterizerScanlineAA {
+    fn reset(&mut self) {
+        self.outline.reset();
+        self.status = PathStatus::Initial;
+    }
+    fn add_path<VS: VertexSource>(&mut self, path: &VS) {
+        //path.rewind();
+        if ! self.outline.sorted_y.is_empty() {
+            self.reset();
+        }
+        for seg in path.convert() {
+            eprintln!("ADD_PATH: {} {} {:?} ", seg.x, seg.y, seg.cmd);
+            if seg.cmd == PathCommand::LineTo {
+                self.line_to_d(seg.x, seg.y);
+            } else if seg.cmd == PathCommand::MoveTo {
+                self.move_to_d(seg.x, seg.y);
+            } else if seg.cmd == PathCommand::Close {
+                self.close_polygon();
+            }
+            eprintln!("ADD_PATH: {} {} {:?} DONE", seg.x, seg.y, seg.cmd);
+        }
+    }
+
     fn rewind_scanlines(&mut self) -> bool {
 
         self.close_polygon();
@@ -1390,27 +1447,6 @@ impl RasterizerScanlineAA {
             self.status = PathStatus::Closed;
         }
     }
-    pub fn reset(&mut self) {
-        self.outline.reset();
-        self.status = PathStatus::Initial;
-    }
-    pub fn add_path<VS: VertexSource>(&mut self, path: &mut VS) {
-        path.rewind();
-        if ! self.outline.sorted_y.is_empty() {
-            self.reset();
-        }
-        for seg in path.convert() {
-            eprintln!("ADD_PATH: {} {} {:?} ", seg.x, seg.y, seg.cmd);
-            if seg.cmd == PathCommand::LineTo {
-                self.line_to_d(seg.x, seg.y);
-            } else if seg.cmd == PathCommand::MoveTo {
-                self.move_to_d(seg.x, seg.y);
-            } else if seg.cmd == PathCommand::Close {
-                self.close_polygon();
-            }
-            eprintln!("ADD_PATH: {} {} {:?} DONE", seg.x, seg.y, seg.cmd);
-        }
-    }
     pub fn calculate_alpha(&self, area: i64) -> u64 {
         let aa_shift  = 8;
         let aa_scale  = 1 << aa_shift;
@@ -1429,8 +1465,6 @@ impl RasterizerScanlineAA {
         cover = max(0, min(cover, aa_mask));
         self.gamma[cover as usize]
     }
-
-
 }
 
 #[derive(Debug,Default)]
@@ -1541,11 +1575,34 @@ pub fn render_scanlines<REN, RAS>(ras: &mut RAS,
     }
 }
 
+pub fn render_all_paths<REN,RAS,VS,C>(ras: &mut RAS,
+                                      sl: &mut ScanlineU8,
+                                      ren: &mut REN,
+                                      paths: &[VS],
+                                      colors: &[C])
+    where C: Color,
+          REN: RenderingScanline,
+          RAS: RasterizerScanline,
+          VS: VertexSource
+{
+    debug_assert!(paths.len() == colors.len());
+    for (path, color) in paths.iter().zip(colors.iter()) {
+        ras.reset();
+        ras.add_path(path);
+        ren.color(color);
+        render_scanlines(ras, sl, ren);
+    }
+
+}
+
 pub fn compare_ppm<P: AsRef<Path>>(f1: P, f2: P) {
     let d1 = fs::read(f1).expect("Unable to read file");
     let d2 = fs::read(f2).expect("Unable to read file");
-    for (v1,v2) in d1.iter().zip(d2.iter()) {
-        assert_eq!(v1,v2);
+    for (i,(v1,v2)) in d1.iter().zip(d2.iter()).enumerate() {
+        if v1 != v2 {
+            eprintln!("{}: {} {}", i, v1, v2);
+            assert_eq!(v1,v2);
+        }
     }
 }
 

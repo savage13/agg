@@ -101,7 +101,7 @@ impl ConvStroke {
         }
         out
     }
-    pub fn calc_arc(&self, x: f64, y: f64, dx1: f64, dy1: f64, dx2: f64, dy2: f64) -> Vec<Vertex<f64>> {
+    pub fn calc_arc(&self, _x: f64, _y: f64, _dx1: f64, _dy1: f64, _dx2: f64, _dy2: f64) -> Vec<Vertex<f64>> {
         unimplemented!("calc_arc");
     }
     pub fn calc_miter(&self,
@@ -216,10 +216,10 @@ impl ConvStroke {
                      p1: &Vertex<f64>,
                      p2: &Vertex<f64>) -> Vec<Vertex<f64>> {
         let mut out = vec![];
-        let dx01 = p1.x - p0.x;
-        let dx12 = p2.x - p1.x;
-        let dy01 = p1.y - p0.y;
-        let dy12 = p2.y - p1.y;
+        //let dx01 = p1.x - p0.x;
+        //let dx12 = p2.x - p1.x;
+        //let dy01 = p1.y - p0.y;
+        //let dy12 = p2.y - p1.y;
         let len1 = len(p1,p0);
         let len2 = len(p2,p1);
         //eprintln!("LINE: JOIN: V0: {} {}", p0.x, p0.y);

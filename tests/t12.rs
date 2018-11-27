@@ -1,7 +1,7 @@
 
 extern crate agg;
 use agg::PixelData;
-
+use agg::RenderingScanline;
 #[test]
 fn t12_clip_box() {
     let (w,h,bpp) = (100,100,3);
@@ -14,7 +14,7 @@ fn t12_clip_box() {
 
     let mut ren = agg::RenderingScanlineAASolid::with_base(ren_base);
 
-    ren.color( agg::Rgba8::new([255,0,0,255]) );
+    ren.color( &agg::Rgba8::new([255,0,0,255]) );
 
     let mut ras = agg::RasterizerScanlineAA::new();
     let mut sl = agg::ScanlineU8::new();
