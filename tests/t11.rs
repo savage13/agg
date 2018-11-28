@@ -10,11 +10,11 @@ fn t11_full() {
 
     let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
 
-    ren_base.clear( agg::Rgba8::new([255, 255, 255, 255]) );
+    ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
 
     let mut ren = agg::RenderingScanlineAASolid::with_base(ren_base);
 
-    ren.color( &agg::Rgba8::new([255,0,0,255]) );
+    ren.color( &agg::Rgba8::new(255,0,0,255) );
 
     let mut ras = agg::RasterizerScanlineAA::new();
     let mut sl = agg::ScanlineU8::new();

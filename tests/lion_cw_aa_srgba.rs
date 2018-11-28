@@ -5,27 +5,13 @@ use std::fs;
 use agg::RenderingScanline;
 use agg::PixelData;
 
-fn srgb_to_rgb(x: f64) -> f64 {
-    if x <= 0.04045 {
-        x / 12.92
-    } else {
-        ((x + 0.055) / 1.055).powf(2.4)
-    }
-}
-fn rgb_to_srgb(x: f64) -> f64 {
-    if x <= 0.0031308 {
-        x * 12.92
-    } else {
-        1.055 * x.powf(1.0/2.4) - 0.055
-    }
-}
-
-fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Rgba8>){
+fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Srgba8>){
     let txt = fs::read_to_string("tests/lion.txt").unwrap();
     let mut paths = vec![];
     let mut colors = vec![];
     let mut path = agg::PathStorage::new();
-    let mut color = agg::Srgba8::black();
+    //let mut color = agg::Srgba8::black();
+    let mut color = agg::Srgba8::new(0,0,0,255);
     let mut cmd = agg::PathCommand::Stop;
 
     for line in txt.lines() {
@@ -42,7 +28,9 @@ fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Rgba8>){
                 colors.push(color);
             }
             path = agg::PathStorage::new();
-            color =  agg::Srgba8::new([r,g,b,255]);
+            let rgb = agg::Rgba8::new(r,g,b,255);
+            color =  rgb.into();
+            //color =  agg::Rgba8::new(r,g,b,255);
         } else {
             for val in v {
                 if val == "M" {
@@ -84,9 +72,11 @@ fn lion_cw_aa_srgba() {
     let (paths, colors) = parse_lion();
     let pixf = agg::PixfmtRgb24::new(w,h,bpp);
     let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
-    ren_base.clear( agg::Srgba8::new([255, 255, 255, 255]) );
+    //ren_base.clear( agg::Srgba8::new([255, 255, 255, 255]) );
+    ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
     let mut ren = agg::RenderingScanlineAASolid::with_base(ren_base);
-    ren.color( &agg::Srgba8::new([255,0,0,255]) );
+    //ren.color( &agg::Srgba8::new([255,0,0,255]) );
+    ren.color( &agg::Rgba8::new(255,0,0,255) );
 
     let mut ras = agg::RasterizerScanlineAA::new();
     let mut sl = agg::ScanlineU8::new();
@@ -115,11 +105,13 @@ fn lion_cw_aa_srgba() {
         .map(|p| agg::ConvTransform::new(p, mtx.clone()))
         .collect();
     println!("polygons: {}", t.len());
-    agg::render_all_paths(&mut ras, &mut sl, &mut ren, &t, &colors);
 
-    agg::write_ppm(&ren.pixeldata(), w, h, "lion_cw_aa.ppm").unwrap();
+    let colors_rgb : Vec<agg::Rgba8> = colors.into_iter().map(|c| c.into()).collect();
+    agg::render_all_paths(&mut ras, &mut sl, &mut ren, &t, &colors_rgb);
 
-    agg::compare_ppm("lion_cw_aa.ppm", "tests/lion_cw_aa.ppm");
+    agg::write_ppm(&ren.pixeldata(), w, h, "lion_cw_aa_srgba.ppm").unwrap();
+
+    agg::compare_ppm("lion_cw_aa_srgba.ppm", "tests/lion_cw_aa_srgba.ppm");
 
 }
 // compare -verbose -metric AE lion.ppm ./tests/lion.ppm blarg.ppm

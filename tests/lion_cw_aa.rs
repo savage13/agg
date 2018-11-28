@@ -5,21 +5,6 @@ use std::fs;
 use agg::RenderingScanline;
 use agg::PixelData;
 
-fn srgb_to_rgb(x: f64) -> f64 {
-    if x <= 0.04045 {
-        x / 12.92
-    } else {
-        ((x + 0.055) / 1.055).powf(2.4)
-    }
-}
-fn rgb_to_srgb(x: f64) -> f64 {
-    if x <= 0.0031308 {
-        x * 12.92
-    } else {
-        1.055 * x.powf(1.0/2.4) - 0.055
-    }
-}
-
 fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Rgba8>){
     let txt = fs::read_to_string("tests/lion.txt").unwrap();
     let mut paths = vec![];
@@ -42,7 +27,7 @@ fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Rgba8>){
                 colors.push(color);
             }
             path = agg::PathStorage::new();
-            color =  agg::Rgba8::new([r,g,b,255]);
+            color =  agg::Rgba8::new(r,g,b,255);
         } else {
             for val in v {
                 if val == "M" {
@@ -84,9 +69,9 @@ fn lion_cw_aa() {
     let (paths, colors) = parse_lion();
     let pixf = agg::PixfmtRgb24::new(w,h,bpp);
     let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
-    ren_base.clear( agg::Rgba8::new([255, 255, 255, 255]) );
+    ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
     let mut ren = agg::RenderingScanlineAASolid::with_base(ren_base);
-    ren.color( &agg::Rgba8::new([255,0,0,255]) );
+    ren.color( &agg::Rgba8::new(255,0,0,255) );
 
     let mut ras = agg::RasterizerScanlineAA::new();
     let mut sl = agg::ScanlineU8::new();

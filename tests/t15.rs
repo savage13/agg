@@ -11,11 +11,11 @@ fn t15_path_stroke() {
 
     let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
 
-    ren_base.clear( agg::Rgba8::new([255, 255, 255, 255]) );
+    ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
 
     let mut ren = agg::RenderingScanlineAASolid::with_base(ren_base);
 
-    ren.color( &agg::Rgba8::new([255,0,0,255]) );
+    ren.color( &agg::Rgba8::new(255,0,0,255) );
 
     let mut ras = agg::RasterizerScanlineAA::new_with_gamma(|v| v as u64);
     let mut sl = agg::ScanlineU8::new();
@@ -58,7 +58,7 @@ fn t15_path_stroke() {
     ras.add_path(&mut pg);
 
     agg::render_scanlines_aa_solid(&mut ras, &mut sl, &mut ren.base,
-                                   agg::Rgba8::new([0,0,0,255]));
+                                   agg::Rgba8::new(0,0,0,255));
 
     agg::write_ppm(&ren.pixeldata(), w, h, "agg_test_15.ppm").unwrap();
 

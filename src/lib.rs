@@ -1,9 +1,32 @@
 
+/// How does this work
+///    ren = RenAA( RenBase( Pixfmt( data ) ) )
+///    ras = Raster()
+///    sl  = Scanline()
+///  Raster Operations
+///    line, move, add_path
+///    clip.line()
+///       clip.line_clip_y()
+///        line()
+///         render_hline()    -- 'INCR[0,1,2,3]'
+///          set_curr_cell()
+///         set_curr_cell()
+///     Output: Cells with X, Cover, and Area
+///  Render to Image
+///   render_scanlines(ras, sl, ren)
+///     rewind_scanline
+///       close_polygon()
+///       sort_cells() -- 'SORT_CELLS: SORTING'
+///     scanline_reset
+///     sweep_scanlines()
+///       render_scanline - Individual horizontal (y) lines
+///         blend_solid_hspan
+///         blend_hline
+///           blend_hline (pixfmt)
 use std::fs;
 use std::fs::File;
 use std::path::Path;
 use std::io::prelude::*;
-use std::ops::Deref;
 use std::collections::HashMap;
 
 use std::cmp::min;
@@ -12,9 +35,11 @@ use std::cmp::max;
 pub mod path_storage;
 pub mod conv_stroke;
 pub mod affine_transform;
+pub mod color;
 pub use path_storage::*;
 pub use conv_stroke::*;
 pub use affine_transform::*;
+pub use color::*;
 
 const POLY_SUBPIXEL_SHIFT : i64 = 8;
 const POLY_SUBPIXEL_SCALE : i64 = 1<<POLY_SUBPIXEL_SHIFT;
@@ -24,33 +49,6 @@ pub trait PixelData<'a> {
     fn pixeldata(&'a self) -> &'a [u8];
 }
 
-pub trait Color: std::fmt::Debug {
-    fn red(&self) -> f64;
-    fn green(&self) -> f64;
-    fn blue(&self) -> f64;
-    fn alpha(&self) -> f64;
-    fn is_transparent(&self) -> bool { self.alpha() == 0.0 }
-    fn is_opaque(&self) -> bool { self.alpha() >= 1.0 }
-}
-
-pub fn cu8r<C: Color>(c: &C) -> u8 {
-    (c.red() / 255.0) as u8
-}
-pub fn cu8g<C: Color>(c: &C) -> u8 {
-    (c.red() / 255.0) as u8
-}
-pub fn cu8b<C: Color>(c: &C) -> u8 {
-    (c.red() / 255.0) as u8
-}
-
-#[derive(Debug,Default,Copy,Clone)]
-pub struct Rgb8([u8;3]);
-impl Deref for Rgb8 {
-    type Target = [u8];
-    fn deref(&self) -> &[u8] {
-        &self.0
-    }
-}
 
 fn blend(fg: Rgb8, bg: Rgb8, alpha: f64) -> Rgb8 {
     let v : Vec<_> = fg.iter().zip(bg.iter())
@@ -62,114 +60,6 @@ fn blend(fg: Rgb8, bg: Rgb8, alpha: f64) -> Rgb8 {
 }
 
 
-impl Rgb8 {
-    pub fn white() -> Self {
-        Self::new([255,255,255])
-    }
-    pub fn black() -> Self {
-        Self::new([0,0,0])
-    }
-    pub fn new(rgb: [u8; 3]) -> Self {
-        Rgb8 ( rgb )
-    }
-    pub fn gray(g: u8) -> Self {
-        Self::new([g,g,g])
-    }
-    pub fn from_wavelength_gamma(w: f64, gamma: f64) -> Self {
-        let (r,g,b) =
-            if w >= 380.0 && w <= 440.0 {
-                (-1.0 * (w-440.0) / (440.0-380.0), 0.0, 1.0)
-            } else if w >= 440.0 && w <= 490.0 {
-                (0.0, (w-440.0)/(490.0-440.0), 1.0)
-            } else if w >= 490.0 && w <= 510.0 {
-                (0.0, 1.0, -1.0 * (w-510.0)/(510.0-490.0))
-            } else if w >= 510.0 && w <= 580.0 {
-                ((w-510.0)/(580.0-510.0), 1.0, 0.0)
-            } else if w >= 580.0 && w <= 645.0 {
-                (1.0, -1.0*(w-645.0)/(645.0-580.0), 0.0)
-            } else if w >= 645.0 && w <= 780.0 {
-                (1.0, 0.0, 0.0)
-            } else {
-                (0.,0.,0.)
-            };
-        let scale =
-            if w > 700.0 {
-                0.3 + 0.7 * (780.0-w)/(780.0-700.0)
-            } else if w < 420.0 {
-                0.3 + 0.7 * (w-380.0)/(420.0-380.0)
-            } else {
-                1.0
-            };
-        let r = (r * scale).powf(gamma) * 255.0;
-        let g = (g * scale).powf(gamma) * 255.0;
-        let b = (b * scale).powf(gamma) * 255.0;
-        Self::new ( [r as u8, g as u8, b as u8] )
-    }
-}
-
-fn color_u8_to_f64(x: u8) -> f64 {
-    f64::from(x) / 255.0
-}
-
-impl Color for Rgb8 {
-    fn   red(&self) -> f64 { color_u8_to_f64(self.0[0]) }
-    fn green(&self) -> f64 { color_u8_to_f64(self.0[1]) }
-    fn  blue(&self) -> f64 { color_u8_to_f64(self.0[2]) }
-    fn alpha(&self) -> f64 { 1.0 }
-}
-
-#[derive(Debug,Copy,Clone)]
-pub struct Gray8(u8);
-impl Deref for Gray8 {
-    type Target = u8;
-    fn deref(&self) -> &u8 {
-        &self.0
-    }
-}
-impl Gray8 {
-    pub fn new(g: u8) -> Self {
-        Gray8( g )
-    }
-}
-
-#[derive(Debug,Default,Copy,Clone)]
-pub struct Rgba8([u8;4]);
-
-impl Deref for Rgba8 {
-    type Target = [u8];
-    fn deref(&self) -> &[u8] {
-        &self.0
-    }
-}
-impl Rgba8 {
-    pub fn white() -> Self {
-        Self::new([255,255,255,255])
-    }
-    pub fn black() -> Self {
-        Self::new([0,0,0,255])
-    }
-    pub fn new(rgba: [u8; 4]) -> Self {
-        Rgba8 ( rgba )
-    }
-    pub fn from_wavelength_gamma(w: f64, gamma: f64) -> Self {
-        let rgb = &*Rgb8::from_wavelength_gamma(w, gamma);
-        Self::new([rgb[0],rgb[1],rgb[2],255])
-    }
-}
-
-impl Color for Rgba8 {
-    fn   red(&self) -> f64 { color_u8_to_f64(self.0[0]) }
-    fn green(&self) -> f64 { color_u8_to_f64(self.0[1]) }
-    fn  blue(&self) -> f64 { color_u8_to_f64(self.0[2]) }
-    fn alpha(&self) -> f64 { color_u8_to_f64(self.0[3]) }
-}
-
-impl From<Rgba8> for Rgb8 {
-    fn from(c: Rgba8) -> Rgb8 {
-        let v = c.0;
-        Rgb8::new( [v[0],v[1],v[2]] )
-    }
-}
 
 
 #[derive(Debug,Default)]
@@ -248,7 +138,7 @@ pub fn prelerp(a: f64, b: f64, t: f64)  {
 
 pub fn lerp(a: f64, b: f64, t: f64) -> f64{
     let mut v = (b-a) * t + a;
-    eprintln!("BLEND PIX: {} {} {} => {}", a, b, t, v);
+    //eprintln!("BLEND PIX: {} {} {} => {}", a, b, t, v);
     if v < 0.0 {
         v = 0.0;
     }
@@ -279,10 +169,7 @@ pub fn blend_pix<C1: Color, C2: Color>(p: &C1, c: &C2, cover: u64) -> Rgba8 {
     let blue  = lerp(p.blue(),  c.blue(),  alpha);
     let alpha = lerp(p.alpha(), c.alpha(), alpha);
 
-    Rgba8([(red   * 255.0) as u8,
-           (green * 255.0) as u8,
-           (blue  * 255.0) as u8,
-           (alpha * 255.0) as u8])
+    Rgba8::new(cu8(red), cu8(green), cu8(blue), cu8(alpha))
 }
 
 impl PixfmtRgb24 {
@@ -312,19 +199,26 @@ impl PixfmtRgb24 {
         let cover_mask = 255;
         if c.is_opaque() && cover == cover_mask {
             for i in 0 .. len {
-                eprintln!("BLEND_HLINE (SET): {:3} {:3} c: {:?} cover: {:3}", x+i, y, c, cover);
+                eprintln!("BLEND_HLINE (SET): {:3} {:3} c: {:3} {:3} {:3} cover: {:3}", x+i, y, cu8r(c), cu8g(c), cu8b(c), cover);
                 self.set((x+i,y), c);
             }
         } else {
             for i in 0 .. len {
-                let pix = self.get((x+i, y));
-                eprintln!("BLEND_HLINE (SET): {:3} {:3} c: {:?} cover: {:3} {:?}", x+i, y, c, cover,pix);
-                let pix = blend_pix(&pix, c, cover);
+                let pix0 = self.get((x+i, y));
+                //eprintln!("BLEND_HLINE (   ): {:3} {:3} c: {:3} {:3} {:3} cover: {:3} {:3} {:3} {:3}", x+i, y, cu8r(c), cu8g(c), cu8b(c), cover, cu8r(&pix), cu8g(&pix), cu8b(&pix));
+                let pix = blend_pix(&pix0, c, cover);
                 self.set((x+i,y), &pix);
+                let pix1 = self.get((x+i, y));
+                eprintln!("BLEND_HLINE (   ): {:3} {:3} c: {:3} {:3} {:3} cover: {:3} pix {:3} {:3} {:3} out {:3} {:3} {:3}", x+i, y,
+                          cu8r(c), cu8g(c), cu8b(c),
+                          cover,
+                          cu8r(&pix0), cu8g(&pix0), cu8b(&pix0),
+                          cu8r(&pix1), cu8g(&pix1), cu8b(&pix1));
             }
         }
     }
     pub fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, _len: i64, c: &C, covers: &[u64]) {
+        eprintln!("BLEND_SOLID_HSPAN: {:3} {:3} len {:3} PIXFMT RGB", x, y, covers.len());
         if c.is_transparent() {
             return;
         }
@@ -554,7 +448,7 @@ impl RenderingBase {
         self.pixf.blend_hline(x1, y, x2 - x1 + 1, c, cover);
     }
     pub fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, covers: &[u64]) {
-        eprintln!("RENBASE BLEND SOLID HSPAN x,y {} {} len {} {}", x, y, len, covers.len() );
+        eprintln!("BLEND_SOLID_HSPAN x,y {} {} len {} RENBASE", x, y, len );
         let (xmin,xmax,ymin,ymax) = self.limits();
         if y > ymax || y < ymin {
             return;
@@ -615,7 +509,8 @@ pub fn render_scanline_aa_solid<C: Color>(sl: &ScanlineU8,
         eprintln!("RENDER SCANLINE AA SOLID: Span x,y,len {} {} {} {}", span.x, y, span.len, span.covers.len());
         let x = span.x;
         if span.len > 0 {
-            //eprintln!("RENDER SCANLINE AA SOLID: {} {}", span.len, span.covers.len());
+            // eprintln!("RENDER SCANLINE AA SOLID: {} {}",
+            //           span.len, span.covers.len());
             ren.blend_solid_hspan(x, y, span.len, color, &span.covers);
         } else {
             ren.blend_hline(x, y, x-span.len-1, color, span.covers[0]);
@@ -634,10 +529,10 @@ impl RenderingScanline for RenderingScanlineAASolid {
         render_scanline_aa_solid(sl, &mut self.base, &self.color);
     }
     fn color<C: Color>(&mut self, color: &C) {
-        self.color = Rgba8::new([(color.red() *255.0) as u8,
-                                 (color.green() *255.0) as u8,
-                                 (color.blue() *255.0) as u8,
-                                 (color.alpha() *255.0) as u8]);
+        self.color = Rgba8::new((color.red() *255.0) as u8,
+                                (color.green() *255.0) as u8,
+                                (color.blue() *255.0) as u8,
+                                (color.alpha() *255.0) as u8);
         
     }
 
@@ -647,10 +542,10 @@ impl RenderingScanline for RenderingScanlineBinSolid {
         render_scanline_bin_solid(sl, &mut self.base, &self.color);
     }
     fn color<C: Color>(&mut self, color: &C) {
-        self.color = Rgba8::new([(color.red() *255.0) as u8,
-                                 (color.green() *255.0) as u8,
-                                 (color.blue() *255.0) as u8,
-                                 (color.alpha() *255.0) as u8]);
+        self.color = Rgba8::new((color.red() *255.0) as u8,
+                                (color.green() *255.0) as u8,
+                                (color.blue() *255.0) as u8,
+                                (color.alpha() *255.0) as u8);
     }
 }
 impl RenderingScanlineBinSolid {
@@ -961,7 +856,7 @@ impl RasterizerCell {
         self.cells.len()
     }
     pub fn sort_cells(&mut self) {
-        eprintln!("SORT_CELLS MAX_Y: {} N: {}", self.max_y, self.cells.len());
+        eprintln!("SORT_CELLS MAX_Y: {} N: {} MIN_Y: {}", self.max_y, self.cells.len(), self.min_y);
         if ! self.sorted_y.is_empty() || self.max_y < 0 {
             return;
         }
@@ -1319,7 +1214,6 @@ impl RasterizerScanline for RasterizerScanlineAA {
     }
 
     fn rewind_scanlines(&mut self) -> bool {
-
         self.close_polygon();
         self.outline.sort_cells();
         if self.outline.total_cells() == 0 {
