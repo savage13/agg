@@ -1,18 +1,6 @@
 
 use std::ops::Deref;
-
-pub trait Color: std::fmt::Debug {
-    fn red(&self) -> f64;
-    fn green(&self) -> f64;
-    fn blue(&self) -> f64;
-    fn alpha(&self) -> f64;
-    fn is_transparent(&self) -> bool { self.alpha() == 0.0 }
-    fn is_opaque(&self) -> bool { self.alpha() >= 1.0 }
-    fn alpha8(&self) -> u8;
-    fn red8(&self) -> u8;
-    fn green8(&self) -> u8;
-    fn blue8(&self) -> u8;
-}
+use Color;
 
 pub fn cu8(v: f64) -> u8 {
     (v * 255.0).round() as u8

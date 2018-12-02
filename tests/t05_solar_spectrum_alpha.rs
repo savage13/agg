@@ -26,10 +26,10 @@ fn t05_solar_spectrum_alpha() {
     for i in 0 .. h {
         mix.blend_color_hspan(0, i, w, &span, 0);
     }
-    agg::write_ppm(&mix.rgb.rbuf.data, w, h,
+    agg::ppm::write_ppm(&mix.rgb.rbuf.data, w, h,
               "agg_test_05.ppm").unwrap();
 
-    agg::compare_ppm("agg_test_05.ppm", "tests/agg_test_05.ppm");
+    agg::ppm::compare_ppm("agg_test_05.ppm", "tests/agg_test_05.ppm");
 
 }
 

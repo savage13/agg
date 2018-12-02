@@ -1,28 +1,28 @@
 
-/// How does this work
-///    ren = RenAA( RenBase( Pixfmt( data ) ) )
-///    ras = Raster()
-///    sl  = Scanline()
-///  Raster Operations
-///    line, move, add_path
-///    clip.line()
-///       clip.line_clip_y()
-///        line()
-///         render_hline()    -- 'INCR[0,1,2,3]'
-///          set_curr_cell()
-///         set_curr_cell()
-///     Output: Cells with X, Cover, and Area
-///  Render to Image
-///   render_scanlines(ras, sl, ren)
-///     rewind_scanline
-///       close_polygon()
-///       sort_cells() -- 'SORT_CELLS: SORTING'
-///     scanline_reset
-///     sweep_scanlines()
-///       render_scanline - Individual horizontal (y) lines
-///         blend_solid_hspan
-///         blend_hline
-///           blend_hline (pixfmt)
+// How does this work / Data Flow
+//    ren = RenAA( RenBase( Pixfmt( data ) ) )
+//    ras = Raster()
+//    sl  = Scanline()
+//  Raster Operations
+//    line, move, add_path
+//    clip.line()
+//       clip.line_clip_y()
+//        line()
+//         render_hline()    -- 'INCR[0,1,2,3]'
+//          set_curr_cell()
+//         set_curr_cell()
+//     Output: Cells with X, Cover, and Area
+//  Render to Image
+//   render_scanlines(ras, sl, ren)
+//     rewind_scanline
+//       close_polygon()
+//       sort_cells() -- 'SORT_CELLS: SORTING'
+//     scanline_reset
+//     sweep_scanlines()
+//       render_scanline - Individual horizontal (y) lines
+//         blend_solid_hspan
+//         blend_hline
+//           blend_hline (pixfmt)
 
 pub mod path_storage;
 pub mod conv_stroke;
@@ -50,9 +50,9 @@ pub use clip::*;
 pub use cell::*;
 pub use raster::*;
 pub use scan::*;
-pub use ppm::*;
 pub use alphamask::*;
 pub use render::*;
+
 
 const POLY_SUBPIXEL_SHIFT : i64 = 8;
 const POLY_SUBPIXEL_SCALE : i64 = 1<<POLY_SUBPIXEL_SHIFT;
@@ -61,6 +61,36 @@ const POLY_SUBPIXEL_MASK  : i64 = POLY_SUBPIXEL_SCALE - 1;
 pub trait PixelData<'a> {
     fn pixeldata(&'a self) -> &'a [u8];
 }
+pub trait VertexSource {
+    fn rewind(&self) { }
+    fn xconvert(&self) -> Vec<Vertex<f64>>;
+}
+pub trait Color: std::fmt::Debug {
+    fn red(&self) -> f64;
+    fn green(&self) -> f64;
+    fn blue(&self) -> f64;
+    fn alpha(&self) -> f64;
+    fn is_transparent(&self) -> bool { self.alpha() == 0.0 }
+    fn is_opaque(&self) -> bool { self.alpha() >= 1.0 }
+    fn alpha8(&self) -> u8;
+    fn red8(&self) -> u8;
+    fn green8(&self) -> u8;
+    fn blue8(&self) -> u8;
+}
+pub trait Render {
+    fn render(&mut self, sl: &ScanlineU8);
+    fn prepare(&self) { }
+    fn color<C: Color>(&mut self, color: &C);
+}
+pub trait Rasterize {
+    fn rewind_scanlines(&mut self) -> bool;
+    fn sweep_scanline(&mut self, sl: &mut ScanlineU8) -> bool;
+    fn max_x(&self) -> i64;
+    fn min_x(&self) -> i64;
+    fn reset(&mut self);
+    fn add_path<VS: VertexSource>(&mut self, path: &VS);
+}
+
 
 
 fn blend(fg: Rgb8, bg: Rgb8, alpha: f64) -> Rgb8 {

@@ -1,9 +1,9 @@
 
 extern crate agg;
+use agg::PixelData;
+use agg::Render;
 
 use std::fs;
-use agg::RenderingScanline;
-use agg::PixelData;
 use std::path::PathBuf;
 use std::path::Path;
 use std::env;
@@ -132,8 +132,8 @@ fn lion_outline() {
 
     let (ppm, test) = ppm_names();
 
-    agg::write_ppm(&ren.pixeldata(), w, h, ppm.clone()).unwrap();
-    agg::compare_ppm(ppm, test);
+    agg::ppm::write_ppm(&ren.pixeldata(), w, h, ppm.clone()).unwrap();
+    agg::ppm::compare_ppm(ppm, test);
 
 }
 // compare -verbose -metric AE lion.ppm ./tests/lion.ppm diff.ppm

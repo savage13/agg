@@ -1,10 +1,7 @@
 
 extern crate agg;
-use agg::RenderingBuffer;
-use agg::PixfmtRgb24;
-use agg::write_ppm;
 
-fn draw_black_frame(pix: &mut PixfmtRgb24) {
+fn draw_black_frame(pix: &mut agg::PixfmtRgb24) {
     let w = pix.rbuf.width;
     let h = pix.rbuf.height;
     println!("w,h: {} {}", w,h);
@@ -22,8 +19,8 @@ fn draw_black_frame(pix: &mut PixfmtRgb24) {
 
 #[test]
 fn t02_pixel_formats() {
-    let rbuf = RenderingBuffer::new(320, 220, 3);
-    let mut pix = PixfmtRgb24::from(rbuf);
+    let rbuf = agg::RenderingBuffer::new(320, 220, 3);
+    let mut pix = agg::PixfmtRgb24::from(rbuf);
     pix.clear();
     draw_black_frame(&mut pix);
 
@@ -32,6 +29,6 @@ fn t02_pixel_formats() {
         pix.copy_pixel(i, i, c);
     }
 
-    write_ppm(&pix.rbuf.data, pix.rbuf.width, pix.rbuf.height, "agg_test_02.ppm").unwrap();
-    agg::compare_ppm("agg_test_02.ppm", "tests/agg_test_02.ppm");
+    agg::ppm::write_ppm(&pix.rbuf.data, pix.rbuf.width, pix.rbuf.height, "agg_test_02.ppm").unwrap();
+    agg::ppm::compare_ppm("agg_test_02.ppm", "tests/agg_test_02.ppm");
 }

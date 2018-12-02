@@ -1,11 +1,14 @@
 
 use POLY_SUBPIXEL_SHIFT;
 use POLY_SUBPIXEL_SCALE;
-use ScanlineU8;
-use path_storage::VertexSource;
-use path_storage::PathCommand;
-use cell::RasterizerCell;
+
 use clip::Clip;
+use scan::ScanlineU8;
+use cell::RasterizerCell;
+use path_storage::PathCommand;
+
+use Rasterize;
+use VertexSource;
 
 use std::cmp::min;
 use std::cmp::max;
@@ -45,14 +48,6 @@ impl Default for PathStatus {
 }
 
 
-pub trait RasterizerScanline {
-    fn rewind_scanlines(&mut self) -> bool;
-    fn sweep_scanline(&mut self, sl: &mut ScanlineU8) -> bool;
-    fn max_x(&self) -> i64;
-    fn min_x(&self) -> i64;
-    fn reset(&mut self);
-    fn add_path<VS: VertexSource>(&mut self, path: &VS);
-}
 
 #[derive(Debug, Default)]
 pub struct RasterizerScanlineAA {
@@ -67,7 +62,7 @@ pub struct RasterizerScanlineAA {
 }
 
 
-impl RasterizerScanline for RasterizerScanlineAA {
+impl Rasterize for RasterizerScanlineAA {
     fn reset(&mut self) {
         self.outline.reset();
         self.status = PathStatus::Initial;

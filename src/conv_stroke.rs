@@ -3,10 +3,11 @@
 //use path_storage::PathStorage;
 use path_storage::PathCommand;
 use path_storage::Vertex;
-use path_storage::VertexSource;
 use path_storage::len;
 use path_storage::cross;
 use path_storage::split;
+
+use VertexSource;
 
 #[derive(Debug,Copy,Clone,PartialEq)]
 pub enum LineCap {

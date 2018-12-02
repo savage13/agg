@@ -1,8 +1,10 @@
 
-use RenderingBuffer;
+use buffer::RenderingBuffer;
 use blend;
 use blend_pix;
 use color::*;
+
+use Color;
 
 #[derive(Debug,Default)]
 pub struct PixfmtRgb24 {

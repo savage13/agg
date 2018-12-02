@@ -2,7 +2,8 @@
 
 use path_storage::Vertex;
 use path_storage::PathStorage;
-use path_storage::VertexSource;
+
+use VertexSource;
 
 #[derive(Debug,Default,Copy,Clone)]
 pub struct AffineTransform {

@@ -2,8 +2,9 @@
 extern crate agg;
 
 use std::fs;
-use agg::RenderingScanline;
+
 use agg::PixelData;
+use agg::Render;
 
 fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Rgba8>){
     let txt = fs::read_to_string("tests/lion.txt").unwrap();
@@ -102,9 +103,9 @@ fn lion_cw_aa() {
     println!("polygons: {}", t.len());
     agg::render_all_paths(&mut ras, &mut sl, &mut ren, &t, &colors);
 
-    agg::write_ppm(&ren.pixeldata(), w, h, "lion_cw_aa.ppm").unwrap();
+    agg::ppm::write_ppm(&ren.pixeldata(), w, h, "lion_cw_aa.ppm").unwrap();
 
-    agg::compare_ppm("lion_cw_aa.ppm", "tests/lion_cw_aa.ppm");
+    agg::ppm::compare_ppm("lion_cw_aa.ppm", "tests/lion_cw_aa.ppm");
 
 }
 // compare -verbose -metric AE lion.ppm ./tests/lion.ppm blarg.ppm

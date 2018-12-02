@@ -16,8 +16,8 @@ fn t07_subpixel_line() {
         println!("angle: {} {} {}", i, x1,y1);
         pix.line_sp(x0,y0, x1, y1, black);
     }
-    agg::write_ppm(&pix.rbuf.data, w, h,
+    agg::ppm::write_ppm(&pix.rbuf.data, w, h,
                    "agg_test_07.ppm").unwrap();
-    agg::compare_ppm("agg_test_07.ppm", "tests/agg_test_07.ppm");
+    agg::ppm::compare_ppm("agg_test_07.ppm", "tests/agg_test_07.ppm");
 
 }

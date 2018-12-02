@@ -15,6 +15,6 @@ fn t10_simple_lines() {
         let y1 = y0 + r * (i as f64).to_radians().sin();
         pix.line_sp_aa(x0,y0, x1, y1, black);
     }
-    agg::write_ppm(&pix.rbuf.data, w, h, "agg_test_10.ppm").unwrap();
-    agg::compare_ppm("agg_test_10.ppm", "tests/agg_test_10.ppm");
+    agg::ppm::write_ppm(&pix.rbuf.data, w, h, "agg_test_10.ppm").unwrap();
+    agg::ppm::compare_ppm("agg_test_10.ppm", "tests/agg_test_10.ppm");
 }

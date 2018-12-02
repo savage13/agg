@@ -1,7 +1,8 @@
 
 extern crate agg;
 use agg::PixelData;
-use agg::RenderingScanline;
+use agg::Render;
+
 #[test]
 fn t12_clip_box() {
     let (w,h,bpp) = (100,100,3);
@@ -27,8 +28,8 @@ fn t12_clip_box() {
 
     agg::render_scanlines(&mut ras, &mut sl, &mut ren);
 
-    agg::write_ppm(&ren.pixeldata(), w, h, "agg_test_12.ppm").unwrap();
+    agg::ppm::write_ppm(&ren.pixeldata(), w, h, "agg_test_12.ppm").unwrap();
 
-    agg::compare_ppm("agg_test_12.ppm", "tests/agg_test_12.ppm");
+    agg::ppm::compare_ppm("agg_test_12.ppm", "tests/agg_test_12.ppm");
 }
 

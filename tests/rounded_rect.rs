@@ -1,11 +1,12 @@
 
 extern crate agg;
-use agg::PixelData;
-use agg::RenderingScanline;
-use agg::RasterizerScanline;
 use std::env;
 use std::path::Path;
 use std::path::PathBuf;
+
+use agg::PixelData;
+use agg::Render;
+use agg::Rasterize;
 
 fn ppm_names() -> (PathBuf,PathBuf) {
     let progname = env::args().next().unwrap();
@@ -59,7 +60,7 @@ fn rounded_rect() {
 
     // Write out Data
     let (ppm, test) = ppm_names();
-    agg::write_ppm(&ren.pixeldata(), w, h, ppm.clone()).unwrap();
-    agg::compare_ppm(ppm, test);
+    agg::ppm::write_ppm(&ren.pixeldata(), w, h, ppm.clone()).unwrap();
+    agg::ppm::compare_ppm(ppm, test);
 }
 

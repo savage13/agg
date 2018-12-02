@@ -3,11 +3,11 @@ extern crate agg;
 
 #[test]
 fn t06_simple_line() {
-    let mut pix = agg::PixfmtRgb24::new(320,200,3);
-    let black = agg::Rgb8::black();
+    let mut pix = agg::pixfmt::PixfmtRgb24::new(320,200,3);
+    let black = agg::color::Rgb8::black();
     let w = pix.rbuf.width;
     let h = pix.rbuf.height;
-    pix.fill(agg::Rgb8::white());
+    pix.fill(agg::color::Rgb8::white());
     let r = h as f64/2.0;
     let (x0,y0) = (w as f64/2.0, h as f64/2.0);
     for i in (0 .. 360).step_by(1) {
@@ -16,8 +16,8 @@ fn t06_simple_line() {
         //println!("angle: {} {} {}", i, x1,y1);
         pix.line(x0,y0, x1, y1, black);
     }
-    agg::write_ppm(&pix.rbuf.data, w, h,
+    agg::ppm::write_ppm(&pix.rbuf.data, w, h,
                    "agg_test_06.ppm").unwrap();
-    agg::compare_ppm("agg_test_06.ppm", "tests/agg_test_06.ppm");
+    agg::ppm::compare_ppm("agg_test_06.ppm", "tests/agg_test_06.ppm");
 
 }

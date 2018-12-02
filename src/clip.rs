@@ -1,6 +1,6 @@
 
 use POLY_SUBPIXEL_SCALE;
-use RasterizerCell;
+use cell::RasterizerCell;
 
 #[derive(Debug,Default)]
 pub struct Rectangle<T: std::cmp::PartialOrd + Copy> {

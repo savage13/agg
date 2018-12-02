@@ -1,8 +1,6 @@
 
-pub trait VertexSource {
-    fn rewind(&self) { }
-    fn xconvert(&self) -> Vec<Vertex<f64>>;
-}
+use clip::Rectangle;
+use VertexSource;
 
 #[derive(Debug,Copy,Clone,PartialEq)]
 pub enum PathCommand {
@@ -30,16 +28,7 @@ pub struct Vertex<T> {
     pub cmd: PathCommand
 }
 
-pub trait Zero<T> {
-    fn zero() -> T;
-}
-impl Zero<f64> for f64 {
-    fn zero() -> f64 {
-        0.0
-    }
-}
-
-impl<T> Vertex<T> where T: Zero<T>  {
+impl<T> Vertex<T> {
     pub fn new(x: T, y: T, cmd: PathCommand) -> Self {
         Self { x, y, cmd }
     }
@@ -204,7 +193,6 @@ pub fn preceive_polygon_orientation(vertices: &[Vertex<f64>]) -> PathOrientation
     }
 }
 
-use Rectangle;
 pub fn bounding_rect<VS: VertexSource>(path: &VS) -> Option<Rectangle<f64>> {
     let pts = path.xconvert();
     if pts.is_empty() {

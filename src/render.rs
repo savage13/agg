@@ -1,10 +1,14 @@
+
 use scan::ScanlineU8;
-use path_storage::VertexSource;
-use raster::RasterizerScanline;
-use color::Color;
 use base::RenderingBase;
-use PixelData;
 use color::Rgba8;
+
+use PixelData;
+use VertexSource;
+use Render;
+use Rasterize;
+use Color;
+
 #[derive(Debug)]
 pub struct RenderingScanlineBinSolid<'a> {
     pub base: &'a mut RenderingBase,
@@ -46,13 +50,8 @@ pub fn render_scanline_aa_solid<C: Color>(sl: &ScanlineU8,
     }
 }
 
-pub trait RenderingScanline {
-    fn render(&mut self, sl: &ScanlineU8);
-    fn prepare(&self) { }
-    fn color<C: Color>(&mut self, color: &C);
-}
 
-impl<'a> RenderingScanline for RenderingScanlineAASolid<'a> {
+impl<'a> Render for RenderingScanlineAASolid<'a> {
     fn render(&mut self, sl: &ScanlineU8) {
         render_scanline_aa_solid(sl, &mut self.base, &self.color);
     }
@@ -65,7 +64,7 @@ impl<'a> RenderingScanline for RenderingScanlineAASolid<'a> {
     }
 
 }
-impl<'a> RenderingScanline for RenderingScanlineBinSolid<'a> {
+impl<'a> Render for RenderingScanlineBinSolid<'a> {
     fn render(&mut self, sl: &ScanlineU8) {
         render_scanline_bin_solid(sl, &mut self.base, &self.color);
     }
@@ -100,20 +99,17 @@ impl<'a> PixelData<'a> for RenderingScanlineBinSolid<'a> {
 }
 
 
-/*
-pub trait Scale<T> {
+/* pub trait Scale<T> {
     fn upscale(v: f64)   -> T;
     fn downscale(v: i64) -> T;
-
-}
-*/
+}*/
 
 
 pub fn render_scanlines_aa_solid<RAS,C>(ras: &mut RAS,
                                             sl: &mut ScanlineU8,
                                             ren: &mut RenderingBase,
                                             color: &C) 
-    where RAS: RasterizerScanline,
+    where RAS: Rasterize,
           C: Color
 {
     if ras.rewind_scanlines() {
@@ -127,8 +123,8 @@ pub fn render_scanlines_aa_solid<RAS,C>(ras: &mut RAS,
 pub fn render_scanlines<REN, RAS>(ras: &mut RAS,
                                   sl: &mut ScanlineU8,
                                   ren: &mut REN)
-    where REN: RenderingScanline,
-          RAS: RasterizerScanline
+    where REN: Render,
+          RAS: Rasterize
 {
     eprintln!("RENDER SCANLINES");
     if ras.rewind_scanlines() {
@@ -151,8 +147,8 @@ pub fn render_all_paths<REN,RAS,VS,C>(ras: &mut RAS,
                                       paths: &[VS],
                                       colors: &[C])
     where C: Color,
-          REN: RenderingScanline,
-          RAS: RasterizerScanline,
+          REN: Render,
+          RAS: Rasterize,
           VS: VertexSource
 {
     debug_assert!(paths.len() == colors.len());

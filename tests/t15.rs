@@ -1,8 +1,9 @@
 
 extern crate agg;
 use agg::PixelData;
-use agg::RasterizerScanline;
-use agg::RenderingScanline;
+use agg::Rasterize;
+use agg::Render;
+
 #[test]
 fn t15_path_stroke() {
     let (w,h,bpp) = (100,100,3);
@@ -60,8 +61,8 @@ fn t15_path_stroke() {
     agg::render_scanlines_aa_solid(&mut ras, &mut sl, &mut ren.base,
                                    &agg::Rgba8::new(0,0,0,255));
 
-    agg::write_ppm(&ren.pixeldata(), w, h, "agg_test_15.ppm").unwrap();
+    agg::ppm::write_ppm(&ren.pixeldata(), w, h, "agg_test_15.ppm").unwrap();
 
-    agg::compare_ppm("agg_test_15.ppm", "tests/agg_test_15.ppm");
+    agg::ppm::compare_ppm("agg_test_15.ppm", "tests/agg_test_15.ppm");
 }
 

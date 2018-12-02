@@ -2,6 +2,7 @@
 use pixfmt::*;
 use color::*;
 use PixelData;
+use Color;
 
 use std::cmp::min;
 use std::cmp::max;

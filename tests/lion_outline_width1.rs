@@ -1,21 +1,21 @@
 
 extern crate agg;
+use agg::PixelData;
+use agg::Render;
 
 use std::fs;
-use agg::RenderingScanline;
-use agg::PixelData;
-use std::path::PathBuf;
-use std::path::Path;
 use std::env;
+use std::path::Path;
+use std::path::PathBuf;
 
 fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Srgba8>){
     let txt = fs::read_to_string("tests/lion.txt").unwrap();
     let mut paths = vec![];
     let mut colors = vec![];
-    let mut path = agg::PathStorage::new();
+    let mut path = agg::path_storage::PathStorage::new();
     //let mut color = agg::Srgba8::black();
-    let mut color = agg::Srgba8::new(0,0,0,255);
-    let mut cmd = agg::PathCommand::Stop;
+    let mut color = agg::color::Srgba8::new(0,0,0,255);
+    let mut cmd = agg::path_storage::PathCommand::Stop;
 
     for line in txt.lines() {
         let v : Vec<_> = line.split_whitespace().collect();
@@ -30,8 +30,8 @@ fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Srgba8>){
                 paths.push(path);
                 colors.push(color);
             }
-            path = agg::PathStorage::new();
-            let rgb = agg::Rgba8::new(r,g,b,255);
+            path = agg::path_storage::PathStorage::new();
+            let rgb = agg::color::Rgba8::new(r,g,b,255);
             color =  rgb.into();
             //color =  agg::Rgba8::new(r,g,b,255);
         } else {
@@ -132,8 +132,8 @@ fn lion_outline_width1() {
 
     let (ppm, test) = ppm_names();
 
-    agg::write_ppm(&ren.pixeldata(), w, h, ppm.clone()).unwrap();
-    agg::compare_ppm(ppm, test);
+    agg::ppm::write_ppm(&ren.pixeldata(), w, h, ppm.clone()).unwrap();
+    agg::ppm::compare_ppm(ppm, test);
 
 }
 // compare -verbose -metric AE lion.ppm ./tests/lion.ppm diff.ppm

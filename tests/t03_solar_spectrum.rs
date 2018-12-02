@@ -1,7 +1,6 @@
 
 extern crate agg;
 use agg::PixfmtRgb24;
-use agg::write_ppm;
 
 fn draw_black_frame(pix: &mut PixfmtRgb24) {
     let w = pix.rbuf.width;
@@ -31,6 +30,6 @@ fn t03_solar_specturm() {
     for i in 0 .. h {
         pix.blend_color_hspan(0, i, w, &span, 0);
     }
-    write_ppm(&pix.rbuf.data, pix.rbuf.width, pix.rbuf.height, "agg_test_03.ppm").unwrap();
-    agg::compare_ppm("agg_test_03.ppm", "tests/agg_test_03.ppm");
+    agg::ppm::write_ppm(&pix.rbuf.data, pix.rbuf.width, pix.rbuf.height, "agg_test_03.ppm").unwrap();
+    agg::ppm::compare_ppm("agg_test_03.ppm", "tests/agg_test_03.ppm");
 }

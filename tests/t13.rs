@@ -1,7 +1,8 @@
 
 extern crate agg;
 use agg::PixelData;
-use agg::RenderingScanline;
+use agg::Render;
+
 #[test]
 fn t13_aliased() {
     let (w,h,bpp) = (100,100,3);
@@ -27,8 +28,8 @@ fn t13_aliased() {
 
     agg::render_scanlines(&mut ras, &mut sl, &mut ren);
 
-    agg::write_ppm(&ren.pixeldata(), w, h, "agg_test_13.ppm").unwrap();
+    agg::ppm::write_ppm(&ren.pixeldata(), w, h, "agg_test_13.ppm").unwrap();
 
-    agg::compare_ppm("agg_test_13.ppm", "tests/agg_test_13.ppm");
+    agg::ppm::compare_ppm("agg_test_13.ppm", "tests/agg_test_13.ppm");
 }
 

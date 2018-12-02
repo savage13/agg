@@ -20,8 +20,8 @@ fn t08_spiral() {
         x0 = x1;
         y0 = y1;
     }
-    agg::write_ppm(&pix.rbuf.data, w, h,
+    agg::ppm::write_ppm(&pix.rbuf.data, w, h,
                    "agg_test_08.ppm").unwrap();
-    agg::compare_ppm("agg_test_08.ppm", "tests/agg_test_08.ppm");
+    agg::ppm::compare_ppm("agg_test_08.ppm", "tests/agg_test_08.ppm");
 
 }
