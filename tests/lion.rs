@@ -69,7 +69,7 @@ fn lion() {
     let pixf = agg::PixfmtRgb24::new(w,h,bpp);
     let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
     ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
-    let mut ren = agg::RenderingScanlineBinSolid::with_base(ren_base);
+    let mut ren = agg::RenderingScanlineBinSolid::with_base(&mut ren_base);
     ren.color( &agg::Rgba8::new(255,0,0,255) );
 
     let mut ras = agg::RasterizerScanlineAA::new();
@@ -83,15 +83,15 @@ fn lion() {
     for p in &paths {
         if let Some(rp) = agg::bounding_rect(p) {
             //eprintln!("dx,dy: {:?}", rp);
-            r.expand_rect(rp);
+            r.expand_rect(&rp);
         }
     }
     //eprintln!("dx,dy: {:?}", r);
     let g_base_dx = (r.x2 - r.x1)/2.0;
     let g_base_dy = (r.y2 - r.y1)/2.0;
     let mut mtx = agg::AffineTransform::new();
-    //eprintln!("dx,dy: {} {}", -g_base_dx, -g_base_dy);
-    //eprintln!("dx,dy: {} {}", (w/2) as f64, (h/2) as f64);
+    eprintln!("dx,dy: {} {}", -g_base_dx, -g_base_dy);
+    eprintln!("dx,dy: {} {}", (w/2) as f64, (h/2) as f64);
     mtx.translate(-g_base_dx, -g_base_dy);
     mtx.translate((w/2) as f64, (h/2) as f64);
     //mtx.translate(0.0, 0.0);

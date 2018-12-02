@@ -4,13 +4,17 @@ extern crate agg;
 use std::fs;
 use agg::RenderingScanline;
 use agg::PixelData;
+use std::path::PathBuf;
+use std::path::Path;
+use std::env;
 
-fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Rgba8>){
+fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Srgba8>){
     let txt = fs::read_to_string("tests/lion.txt").unwrap();
     let mut paths = vec![];
     let mut colors = vec![];
     let mut path = agg::PathStorage::new();
-    let mut color = agg::Rgba8::black();
+    //let mut color = agg::Srgba8::black();
+    let mut color = agg::Srgba8::new(0,0,0,255);
     let mut cmd = agg::PathCommand::Stop;
 
     for line in txt.lines() {
@@ -27,7 +31,9 @@ fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Rgba8>){
                 colors.push(color);
             }
             path = agg::PathStorage::new();
-            color =  agg::Rgba8::new(r,g,b,255);
+            let rgb = agg::Rgba8::new(r,g,b,255);
+            color =  rgb.into();
+            //color =  agg::Rgba8::new(r,g,b,255);
         } else {
             for val in v {
                 if val == "M" {
@@ -62,15 +68,29 @@ fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Rgba8>){
     (paths, colors)
 }
 
+fn ppm_names() -> (PathBuf,PathBuf) {
+    let progname = env::args().next().unwrap();
+    let progname = Path::new(&progname);
+    let mut base = progname.file_stem().unwrap().to_string_lossy().into_owned();
+    let n = base.rfind("-").unwrap();
+    base.truncate(n);
+    let ppm = Path::new(&base).with_extension("ppm");
+    let test = Path::new("tests").join(ppm.clone());
+    (ppm, test)
+}
+
+
 #[test]
-fn lion_cw() {
+fn lion_outline() {
     let (w,h,bpp) = (400,400,3);
 
     let (paths, colors) = parse_lion();
     let pixf = agg::PixfmtRgb24::new(w,h,bpp);
     let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
+    //ren_base.clear( agg::Srgba8::new([255, 255, 255, 255]) );
     ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
-    let mut ren = agg::RenderingScanlineBinSolid::with_base(&mut ren_base);
+    let mut ren = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
+    //ren.color( &agg::Srgba8::new([255,0,0,255]) );
     ren.color( &agg::Rgba8::new(255,0,0,255) );
 
     let mut ras = agg::RasterizerScanlineAA::new();
@@ -91,8 +111,8 @@ fn lion_cw() {
     let g_base_dx = (r.x2 - r.x1)/2.0;
     let g_base_dy = (r.y2 - r.y1)/2.0;
     let mut mtx = agg::AffineTransform::new();
-    //eprintln!("dx,dy: {} {}", -g_base_dx, -g_base_dy);
-    //eprintln!("dx,dy: {} {}", (w/2) as f64, (h/2) as f64);
+    eprintln!("dx,dy: {} {}", -g_base_dx, -g_base_dy);
+    eprintln!("dx,dy: {} {}", (w/2) as f64, (h/2) as f64);
     mtx.translate(-g_base_dx, -g_base_dy);
     mtx.translate((w/2) as f64, (h/2) as f64);
     //mtx.translate(0.0, 0.0);
@@ -100,11 +120,20 @@ fn lion_cw() {
         .map(|p| agg::ConvTransform::new(p, mtx.clone()))
         .collect();
     println!("polygons: {}", t.len());
-    agg::render_all_paths(&mut ras, &mut sl, &mut ren, &t, &colors);
 
-    agg::write_ppm(&ren.pixeldata(), w, h, "lion_cw.ppm").unwrap();
+    let mut stroke : Vec<_> = t.into_iter()
+        .map(|p| agg::ConvStroke::new( p ))
+        .collect();
+    stroke.iter_mut().for_each(|p| p.width(7.0));
+    let colors_rgb : Vec<agg::Rgba8> = colors.into_iter()
+        .map(|c| c.into()).collect();
+    agg::render_all_paths(&mut ras, &mut sl, &mut ren,
+                          &stroke[..], &colors_rgb[..]);
 
-    agg::compare_ppm("lion_cw.ppm", "tests/lion_cw.ppm");
+    let (ppm, test) = ppm_names();
+
+    agg::write_ppm(&ren.pixeldata(), w, h, ppm.clone()).unwrap();
+    agg::compare_ppm(ppm, test);
 
 }
-// compare -verbose -metric AE lion.ppm ./tests/lion.ppm blarg.ppm
+// compare -verbose -metric AE lion.ppm ./tests/lion.ppm diff.ppm

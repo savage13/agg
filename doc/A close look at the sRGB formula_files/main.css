@@ -1,0 +1,12 @@
+BODY {
+ font-size: 115%;
+ margin: 12px;
+ border: 1px solid #488;
+ border-radius: 8px;
+ box-shadow: 5px 5px 5px #777; 
+ padding: 1em;
+}
+H1 { margin-top: 0; color:#366; background-color:#fff;
+  border-bottom:2px solid #366; }
+P.line { border-top:2px solid #366; padding-top:10px; }
+

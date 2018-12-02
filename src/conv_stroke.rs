@@ -1,11 +1,12 @@
 
 
-use path_storage::PathStorage;
+//use path_storage::PathStorage;
 use path_storage::PathCommand;
 use path_storage::Vertex;
 use path_storage::VertexSource;
 use path_storage::len;
 use path_storage::cross;
+use path_storage::split;
 
 #[derive(Debug,Copy,Clone,PartialEq)]
 pub enum LineCap {
@@ -25,8 +26,8 @@ impl Default for LineJoin  { fn default() -> LineJoin  { LineJoin::Miter  } }
 impl Default for InnerJoin { fn default() -> InnerJoin { InnerJoin::Miter } }
 
 #[derive(Debug,Default)]
-pub struct ConvStroke {
-    pub source: PathStorage,
+pub struct ConvStroke<T: VertexSource + Default> {
+    pub source: T,//PathStorage,
     pub width: f64,
     pub width_abs: f64,
     pub width_eps: f64,
@@ -39,11 +40,8 @@ pub struct ConvStroke {
     pub inner_join: InnerJoin,
 }
 
-impl VertexSource for ConvStroke {
-    fn vertices(&self) -> &[Vertex<f64>] {
-        self.source.vertices()
-    }
-    fn convert(&self) -> Vec<Vertex<f64>> {
+impl<T> VertexSource for ConvStroke<T> where T: VertexSource + Default {
+    fn xconvert(&self) -> Vec<Vertex<f64>> {
         self.stroke()
     }
 }
@@ -58,10 +56,10 @@ macro_rules! next {
     ($i:expr, $n:expr) => ( ($i + 1) % $n )
 }
 
-impl ConvStroke {
-    pub fn new(source: PathStorage) -> Self {
+impl<T> ConvStroke<T> where T: VertexSource + Default {
+    pub fn new(source: T) -> Self {
         Self {
-            source: source,
+            source,
             width: 0.5, width_abs: 0.5, width_eps: 0.5/1024.0, width_sign: 1.0,
             miter_limit: 4.0, inner_miter_limit: 1.01,
             approx_scale: 1.0,
@@ -88,12 +86,12 @@ impl ConvStroke {
             LineCap::Square => {
                 let dx2 = dy1 * self.width_sign;
                 let dy2 = dx1 * self.width_sign;
-                out.push(Vertex::xy(v0.x - dx1 - dx2, v0.y + dy1 - dy2));
-                out.push(Vertex::xy(v0.x + dx1 - dx2, v0.y - dy1 - dy2));
+                out.push(Vertex::line_to(v0.x - dx1 - dx2, v0.y + dy1 - dy2));
+                out.push(Vertex::line_to(v0.x + dx1 - dx2, v0.y - dy1 - dy2));
             },
             LineCap::Butt => {
-                out.push(Vertex::xy(v0.x - dx1, v0.y + dy1));
-                out.push(Vertex::xy(v0.x + dx1, v0.y - dy1));
+                out.push(Vertex::line_to(v0.x - dx1, v0.y + dy1));
+                out.push(Vertex::line_to(v0.x + dx1, v0.y - dy1));
             },
             LineCap::Round => {
 
@@ -108,30 +106,36 @@ impl ConvStroke {
                       p0: &Vertex<f64>,
                       p1: &Vertex<f64>,
                       p2: &Vertex<f64>,
-                      dx1: f64, dy1: f64,dx2: f64, dy2: f64,
+                      dx1: f64, dy1: f64, dx2: f64, dy2: f64,
                       join: LineJoin, mlimit: f64, dbevel: f64)
                       -> Vec<Vertex<f64>>{
         let mut out = vec![];
-        let xi  = p1.x;
-        let yi  = p1.y;
-        let di  = 1.0;
+        let mut xi  = p1.x;
+        let mut yi  = p1.y;
+        let mut di  = 1.0;
         let lim = self.width_abs * mlimit;
         let mut miter_limit_exceeded = true; // Assume the worst
         let mut intersection_failed  = true; // Assume the worst
-
-        if let Some((xi,yi)) = self.calc_intersection(p0.x + dx1, p0.y - dy1,
+        eprintln!("LINEOUT: calc_miter");
+        eprintln!("LINEOUT: dx,dy {} {} {} {}", dx1, dx2, dy1, dy2);
+        eprintln!("LINEOUT: mlimit {} width_abs {}", mlimit, self.width_abs);
+        if let Some((xit,yit)) = self.calc_intersection(p0.x + dx1, p0.y - dy1,
                                                       p1.x + dx1, p1.y - dy1,
                                                       p1.x + dx2, p1.y - dy2,
                                                       p2.x + dx2, p2.y - dy2) {
                                                //&xi, &yi))
             // Calculation of the intersection succeeded
             //---------------------
-            let pz = Vertex::xy(xi,yi);
-            let di = len(p1,&pz);
+            xi = xit;
+            yi = yit;
+            let pz = Vertex::line_to(xi,yi);
+            eprintln!("LINEOUT: intersection ok {:?}", pz);
+            di = len(p1,&pz);
             if di <= lim {
                 // Inside the miter limit
                 //---------------------
-                out.push(Vertex::xy(xi, yi));
+                eprintln!("LINEOUT: Inside the miter limit");
+                out.push(Vertex::line_to(xi, yi));
                 miter_limit_exceeded = false;
             }
             intersection_failed = false;
@@ -143,21 +147,23 @@ impl ConvStroke {
             // to the line determined by vertices v0 and v1.
             // This condition determines whether the next line segments continues
             // the previous one or goes back.
+            eprintln!("LINEOUT: intersection failed");
             //----------------
             let x2 = p1.x + dx1;
             let y2 = p1.y - dy1;
-            let pz = Vertex::xy(x2,y2);
+            let pz = Vertex::line_to(x2,y2);
             if (cross(&p0, &p1, &pz) < 0.0) ==
                (cross(&p1, &p2, &pz) < 0.0) {
                 // This case means that the next segment continues
                 // the previous one (straight line)
                 //-----------------
-                out.push(Vertex::xy(p1.x + dx1, p1.y - dy1));
+                out.push(Vertex::line_to(p1.x + dx1, p1.y - dy1));
                 miter_limit_exceeded = false;
             }
         }
 
         if miter_limit_exceeded {
+            println!("LINEOUT: miter_limit_exceeded");
             // Miter limit exceeded
             //------------------------
             match join {
@@ -166,33 +172,47 @@ impl ConvStroke {
                     // we use a simple bevel join instead of
                     // "smart" bevel
                     //-------------------
-                    out.push(Vertex::xy(p1.x + dx1, p1.y - dy1));
-                    out.push(Vertex::xy(p1.x + dx2, p1.y - dy2));
+                    println!("LINEOUT: Doing miter_revert: {:?}", join);
+                    out.push(Vertex::line_to(p1.x + dx1, p1.y - dy1));
+                    out.push(Vertex::line_to(p1.x + dx2, p1.y - dy2));
                 },
                 LineJoin::Round => out.extend( self.calc_arc(p1.x, p1.y, dx1, -dy1, dx2, -dy2)),
                 _ => {
                     //default:
+                    println!("LINEOUT: Doing miter default");
                     // If no miter-revert, calculate new dx1, dy1, dx2, dy2
                     //----------------
                     if intersection_failed {
+                        println!("LINEOUT: intersection failed arm");
                         let mlimit = mlimit * self.width_sign;
-                        out.push(Vertex::xy(p1.x + dx1 + dy1 * mlimit,
+                        out.push(Vertex::line_to(p1.x + dx1 + dy1 * mlimit,
                                             p1.y - dy1 + dx1 * mlimit));
-                        out.push(Vertex::xy(p1.x + dx2 - dy2 * mlimit,
+                        out.push(Vertex::line_to(p1.x + dx2 - dy2 * mlimit,
                                             p1.y - dy2 - dx2 * mlimit));
                     } else {
+                        println!("LINEOUT: intersection ok arm");
                         let x1 = p1.x + dx1;
                         let y1 = p1.y - dy1;
                         let x2 = p1.x + dx2;
                         let y2 = p1.y - dy2;
+                        println!("LINEOUT: OK V0: {:?}", p0);
+                        println!("LINEOUT: OK V1: {:?}", p1);
+                        println!("LINEOUT: OK V2: {:?}", p2);
+                        println!("LINEOUT: OK di {} lim {} dbevel {}\n", di, lim, dbevel);
+                        println!("LINEOUT: OK {} {} {} {}", x1,y1,x2,y2);
+                        println!("LINEOUT: OK {} {} INTERSECTION", xi,yi);
                         let di = (lim - dbevel) / (di - dbevel);
-                        out.push(Vertex::xy(x1 + (xi - x1) * di,
-                                            y1 + (yi - y1) * di));
-                        out.push(Vertex::xy(x2 + (xi - x2) * di,
-                                            y2 + (yi - y2) * di));
+                        println!("LINEOUT: OK di {} \n", di);
+                        out.push(Vertex::line_to(x1 + (xi - x1) * di,
+                                                 y1 + (yi - y1) * di));
+                        out.push(Vertex::line_to(x2 + (xi - x2) * di,
+                                                 y2 + (yi - y2) * di));
                     }
                 }
             }
+        }
+        for v in &out {
+            eprintln!("LINEOUT: CALC_MITER: {:?}", v);
         }
         out
     }
@@ -216,22 +236,22 @@ impl ConvStroke {
                      p1: &Vertex<f64>,
                      p2: &Vertex<f64>) -> Vec<Vertex<f64>> {
         let mut out = vec![];
-        //let dx01 = p1.x - p0.x;
-        //let dx12 = p2.x - p1.x;
-        //let dy01 = p1.y - p0.y;
-        //let dy12 = p2.y - p1.y;
         let len1 = len(p1,p0);
         let len2 = len(p2,p1);
-        //eprintln!("LINE: JOIN: V0: {} {}", p0.x, p0.y);
-        //eprintln!("JOIN: V1: {} {}", p1.x, p1.y);
-        //eprintln!("JOIN: V2: {} {}", p2.x, p2.y);
-        //eprintln!("JOIN: LEN1,LEN2: {} {} {} {}", len1,len2, self.width, self.width_abs);
+        eprintln!("LINEOUT: V0: {:?} {}", p0, len1);
+        eprintln!("LINEOUT: V1: {:?} {}", p1, len2);
+        eprintln!("LINEOUT: V2: {:?}", p2);
+        if len1 == 0.0 {
+            panic!("Same point between p0,p1 {:?} {:?}", p0,p1);
+        }
+        if len2 == 0.0 {
+            panic!("Same point between p1,p2 {:?} {:?}", p1,p2);
+        }
         let dx1 = self.width * (p1.y-p0.y) / len1;
         let dy1 = self.width * (p1.x-p0.x) / len1;
         let dx2 = self.width * (p2.y-p1.y) / len2;
         let dy2 = self.width * (p2.x-p1.x) / len2;
-        //eprintln!("JOIN: {} {} {} {}", dx1, dy1, dx2, dy2);
-
+        eprintln!("LINEOUT: {} {} {} {}", dx1, dy1, dx2, dy2);
         let cp = cross(p0, p1, p2);
         if cp != 0.0 && cp.is_sign_positive() == self.width.is_sign_positive() {
             //println!("LINE: INNER JOIN");
@@ -246,11 +266,11 @@ impl ConvStroke {
             }
             match self.inner_join {
                 InnerJoin::Bevel => {
-                    out.push(Vertex::xy(p1.x + dx1, p1.y - dy1));
-                    out.push(Vertex::xy(p1.x + dx2, p1.y - dy2));
+                    out.push(Vertex::line_to(p1.x + dx1, p1.y - dy1));
+                    out.push(Vertex::line_to(p1.x + dx2, p1.y - dy2));
                 },
                 InnerJoin::Miter => {
-                    eprintln!("JOIN: MITER: {} {} {} {} {}", dx1,dy1,dx2,dy2,limit);
+                    eprintln!("LINEOUT: MITER: {} {} {} {} {}", dx1,dy1,dx2,dy2,limit);
                     out.extend(self.calc_miter(p0, p1, p2, dx1, dy1, dx2, dy2, LineJoin::MiterRevert, limit, 0.0));
                 }
                 InnerJoin::Jag |
@@ -260,28 +280,28 @@ impl ConvStroke {
                         out.extend(self.calc_miter(p0,p1,p2, dx1, dy1, dx2, dy2, LineJoin::MiterRevert, limit, 0.0));
                     } else {
                         if self.inner_join == InnerJoin::Jag {
-                            out.push(Vertex::xy(p1.x + dx1, p1.y - dy1));
-                            out.push(Vertex::xy(p1.x,       p1.y      ));
-                            out.push(Vertex::xy(p1.x + dx2, p1.y - dy2));
+                            out.push(Vertex::line_to(p1.x + dx1, p1.y - dy1));
+                            out.push(Vertex::line_to(p1.x,       p1.y      ));
+                            out.push(Vertex::line_to(p1.x + dx2, p1.y - dy2));
                         }
                         if self.inner_join == InnerJoin::Round {
-                            out.push(Vertex::xy(p1.x + dx1, p1.y - dy1));
-                            out.push(Vertex::xy(p1.x,       p1.y      ));
+                            out.push(Vertex::line_to(p1.x + dx1, p1.y - dy1));
+                            out.push(Vertex::line_to(p1.x,       p1.y      ));
                             out.extend(self.calc_arc(p1.x, p1.y, dx2, -dy2, dx1, -dy1));
-                            out.push(Vertex::xy(p1.x,       p1.y      ));
-                            out.push(Vertex::xy(p1.x + dx2, p1.y - dy2));
+                            out.push(Vertex::line_to(p1.x,       p1.y      ));
+                            out.push(Vertex::line_to(p1.x + dx2, p1.y - dy2));
                         }
                     }
                 }
             }
         } else {
-            //println!("LINE: OUTER JOIN");
+            eprintln!("LINEOUT: OUTER JOIN");
             // Outer Join
             let dx = (dx1 + dx2) / 2.0;
             let dy = (dy1 + dy2) / 2.0;
             let dbevel = (dx*dx + dy*dy).sqrt();
 
-            if self.line_join == LineJoin::Round || self.line_join == LineJoin::Bevel {
+            if (self.line_join == LineJoin::Round || self.line_join == LineJoin::Bevel) &&  self.approx_scale * (self.width_abs - dbevel) < self.width_eps {
                 // This is an optimization that reduces the number of points 
                 // in cases of almost collinear segments. If there's no
                 // visible difference between bevel and miter joins we'd rather
@@ -299,21 +319,20 @@ impl ConvStroke {
                 // the same as in round joins and caps. You can safely comment 
                 // out this entire "if".
                 //-------------------
-                if self.approx_scale * (self.width_abs - dbevel) < self.width_eps {
-                    if let Some((dx,dy)) =
-                        self.calc_intersection(p0.x + dx1, p0.y - dy1,
-                                               p1.x + dx1, p1.y - dy1,
-                                               p1.x + dx2, p1.y - dy2,
-                                               p2.x + dx2, p2.y - dy2) {
-                            out.push(Vertex::xy(dx, dy));
-                        } else {
-                            out.push(Vertex::xy(p1.x + dx1, p1.y - dy1));
-                        }
-                    //eprintln!("LINE: RETURN APPROX");
-                    return out ;
-                }
+
+                if let Some((dx,dy)) =
+                    self.calc_intersection(p0.x + dx1, p0.y - dy1,
+                                           p1.x + dx1, p1.y - dy1,
+                                           p1.x + dx2, p1.y - dy2,
+                                           p2.x + dx2, p2.y - dy2) {
+                        out.push(Vertex::line_to(dx, dy));
+                    } else {
+                        out.push(Vertex::line_to(p1.x + dx1, p1.y - dy1));
+                    }
+                eprintln!("LINEOUT: RETURN APPROX");
+                return out ;
             }
-            //eprintln!("LINE: RETURN NON APPROX {:?}", self.line_join);
+            eprintln!("LINEOUT: RETURN NON APPROX {:?} {}", self.line_join, dbevel);
             match self.line_join {
                 LineJoin::Miter |
                 LineJoin::MiterRevert |
@@ -326,39 +345,124 @@ impl ConvStroke {
                     self.calc_arc(p1.x, p1.y, dx1, -dy1, dx2, -dy2)
                 ),
                 LineJoin::Bevel => {
-                    out.push(Vertex::xy(p1.x + dx1, p1.y - dy1));
-                    out.push(Vertex::xy(p1.x + dx2, p1.y - dy2));
+                    out.push(Vertex::line_to(p1.x + dx1, p1.y - dy1));
+                    out.push(Vertex::line_to(p1.x + dx2, p1.y - dy2));
                 },
             }
         }
         out
     }
+
     pub fn stroke(&self) -> Vec<Vertex<f64>> {
-        let mut out = vec![];
-        let v = self.source.vertices();
-        let n = v.len();
-        //eprintln!("LINE: JOIN: BEGIN CAP {}", n);
-        out.extend( self.calc_cap(&v[0], &v[1]) ); // Begin Cap
-        //eprintln!("LINE: JOIN: FORWARD PATH");
-        for i in 1 .. n-1 { // Forward Path
-            out.extend(
-                self.calc_join(&v[prev!(i,n)], &v[curr!(i,n)], &v[next!(i,n)])
-            );
+        //println!("LINEOUT: STROKE PATH");
+        let mut all_out = vec![];
+        let v0 = &self.source.xconvert();
+        let pairs = split(&v0);
+        // println!("STROKE PATH: pathlen {} segments {}",
+        //          v0.len(), pairs.len());
+        for (m1,m2) in pairs {
+            let mut outf = vec![];
+            let v = clean_path(&v0[m1..=m2]);
+            // Has Closed Path Element
+            let closed = is_path_closed(&v);
+            // Ignore Closed Tag Element
+            let n = if closed { v.len() - 1 } else { v.len() }; 
+            let (n1,n2) = if closed { (0, n) } else { (1,n-1) };
+            if ! closed {
+                outf.extend( self.calc_cap(&v[0], &v[1]) ); // Begin Cap
+            }
+            for i in n1 .. n2 { // Forward Path
+                outf.extend(
+                    self.calc_join(&v[prev!(i,n)], &v[curr!(i,n)], &v[next!(i,n)])
+                );
+            }
+            if closed {
+                let n = outf.len();
+                let last = outf[n-1];
+                outf.push( Vertex::close_polygon(last.x, last.y) );
+            }
+            let mut outb = vec![];
+            if ! closed {
+                outb.extend( self.calc_cap(&v[n-1], &v[n-2]) ); // End Cap
+            }
+
+            for i in (n1 .. n2).rev() { // Backward Path
+                outb.extend(
+                    self.calc_join(&v[next!(i,n)], &v[curr!(i,n)], &v[prev!(i,n)])
+                );
+            }
+            if closed {
+                outb[0].cmd = PathCommand::MoveTo;
+                let n = outb.len();
+                let last = outb[n-1];
+                outb.push( Vertex::close_polygon(last.x, last.y) );
+            }
+            outf[0].cmd = PathCommand::MoveTo;
+            outf.extend(outb);
+
+            //println!("COMPLETE: closed? {}", closed);
+            //for v in &outf {
+            //    println!("COMPLETE: {:?} {:.6} {:.6}", v.cmd, v.x,v.y);
+            //}
+            all_out.extend(outf);
         }
-        //eprintln!("LINE: JOIN: END CAP");
-        out.extend( self.calc_cap(&v[n-1], &v[n-2]) ); // End Cap
-        //eprintln!("LINE: JOIN: BACKWARD PATH");
-        for i in (1 .. n-1).rev() { // Backward Path
-            out.extend(
-                self.calc_join(&v[next!(i,n)], &v[curr!(i,n)], &v[prev!(i,n)])
-            );
-            //eprintln!("LINE: BACKWARDS: {}/{}", i,out.len());
-        }
-        
-        out.iter_mut().for_each(|x| x.cmd = PathCommand::LineTo);
-        out[0].cmd = PathCommand::MoveTo;
-        let v = Vertex::new(out[0].x, out[0].y, PathCommand::Close);
-        out.push(v);
-        out
+        all_out
     }
+}
+
+fn is_path_closed(verts: &[Vertex<f64>]) -> bool {
+    for v in verts {
+        if v.cmd == PathCommand::Close {
+            return true;
+        }
+    }
+    false
+}
+fn clean_path(v: &[Vertex<f64>]) -> Vec<Vertex<f64>>{
+    let mut mark = vec![];
+    if ! v.is_empty() {
+        mark.push(0);
+    }
+    for i in 1 .. v.len() {
+        match v[i].cmd {
+            PathCommand::LineTo => {
+                if len(&v[i-1],&v[i]) >= 1e-6 {
+                    mark.push(i);
+                }
+            },
+            _ => mark.push(i),
+        }
+    }
+    if mark.is_empty() {
+        return vec![]
+    }
+    let mut out : Vec<_> = mark.into_iter().map(|i| v[i]).collect();
+    if ! is_path_closed(&out) {
+        return out;
+    }
+
+    let first = out[0];
+    loop {
+        let i = match last_line_to(&out) {
+            Some(i) => i,
+            None => panic!("Missing Last Line To"),
+        };
+        let last = out[i];
+        if len(&first, &last) >= 1e-6 {
+            break;
+        }
+        eprintln!("REMOVING POINT {:?} {:?}", first, last);
+        out.remove(i);
+    }
+    out
+}
+fn last_line_to(v: &[Vertex<f64>]) -> Option<usize> {
+    let mut i = v.len()-1;
+    while i > 0 {
+        if v[i].cmd == PathCommand::LineTo {
+            return Some(i);
+        }
+        i -= 1;
+    }
+    None
 }

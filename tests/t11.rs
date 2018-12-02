@@ -12,7 +12,7 @@ fn t11_full() {
 
     ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
 
-    let mut ren = agg::RenderingScanlineAASolid::with_base(ren_base);
+    let mut ren = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
 
     ren.color( &agg::Rgba8::new(255,0,0,255) );
 

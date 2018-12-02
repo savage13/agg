@@ -12,11 +12,11 @@ fn t14_with_gamma() {
 
     ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
 
-    let mut ren = agg::RenderingScanlineAASolid::with_base(ren_base);
+    let mut ren = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
 
     ren.color( &agg::Rgba8::new(255,0,0,255) );
 
-    let mut ras = agg::RasterizerScanlineAA::new_with_gamma(|v| v as u64);
+    let mut ras = agg::RasterizerScanlineAA::new();
     let mut sl = agg::ScanlineU8::new();
 
     ras.clip_box(40.0, 0.0, w as f64-40.0, h as f64);

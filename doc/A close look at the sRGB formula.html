@@ -1,0 +1,145 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=windows-1252">
+<title>A close look at the sRGB formula</title>
+<link rel="stylesheet" type="text/css" href="A%20close%20look%20at%20the%20sRGB%20formula_files/main.css">
+<style>
+ .hl { background-color:#fdd; }
+</style>
+</head>
+
+<body>
+<h1>A close look at the sRGB formula</h1>
+
+<p>The formulas for converting sRGB colors to linear, and the reverse,
+are usually given as follows:</p>
+
+<table><tbody><tr><td>
+<table border="1">
+<tbody><tr><th colspan="2">sRGB to Linear</th></tr>
+<tr><td><i>Condition</i></td><td><i>Value</i></td></tr>
+<tr><td>0 &#8804; S &#8804; 0.04045</td><td>L = S/12.92</td></tr>
+<tr><td>0.04045 &lt; S &#8804; 1</td>
+ <td>L = ((S+0.055)/1.055)<sup>2.4</sup></td></tr>
+</tbody></table>
+</td><td>
+<table border="1">
+<tbody><tr><th colspan="2">Linear to sRGB</th></tr>
+<tr><td><i>Condition</i></td><td><i>Value</i></td></tr>
+<tr><td>0 &#8804; L &#8804; 0.0031308</td><td>S = L×12.92</td></tr>
+<tr><td>0.0031308 &lt; L &#8804; 1</td>
+ <td>S = 1.055×L<sup>1/2.4</sup> &#8722; 0.055</td></tr>
+</tbody></table>
+</td></tr></tbody></table>
+
+<p>The definition uses two different functions
+– a straight line and an exponential curve –
+glued together at a
+certain “cutoff point”. The implication is that these functions 
+(the ones in the <i>sRGB to Linear</i> definition) intersect at the point:
+</p>
+<table border="1">
+<tbody><tr><td>(0.0404500000000000, 0.00313080000000000)</td></tr>
+</tbody></table>
+
+<p>If we take a close look at the function, though, we can see this
+intersection point is not exact, so the formula has a slight discontinuity:</p>
+
+<table border="1">
+<tbody><tr><th>sRGB</th><th>Linear</th></tr>
+<tr><td>0.040450000000000<span class="hl">0</span></td>
+  <td>0.00313080<span class="hl">495356037</span></td></tr>
+<tr><td>0.040450000000000<span class="hl">1</span></td>
+  <td>0.00313080<span class="hl">728306769</span></td></tr>
+</tbody></table>
+
+<p>If we extend the functions, we see that they actually
+intersect at two points:</p>
+<p><img src="A%20close%20look%20at%20the%20sRGB%20formula_files/srgbplot.png"></p>
+
+<p>The intersection points are approximately:</p>
+<table border="1">
+<tbody><tr><td>(0.0381547987133173, 0.00295315779514840)</td></tr>
+<tr><td>(0.0404482362771082, 0.00313066844250063)</td></tr>
+</tbody></table>
+
+<p>If we use either of these two points as the cutoff point, there will be
+no discontinuity at all. It’s apparent that the sRGB inventors selected the
+second of these points, and rounded its value to 4 significant digits to
+get 0.04045.
+They then used that rounded sRGB value to recalculate the Linear
+value, and got 0.00313080.
+I don’t know why their Linear value has more
+significant digits (5 or 6) than their sRGB value (4).</p>
+
+
+<p>I guess that if you’re a perfectionist, and want no
+discontinuity at all, you can tweak the formulas like this:</p>
+
+<table><tbody><tr><td>
+<table border="1">
+<tbody><tr><th colspan="2">sRGB to Linear</th></tr>
+<tr><td><i>Condition</i></td><td><i>Value</i></td></tr>
+<tr><td>0 &#8804; S &#8804; 0.0404482362771082</td><td>L = S/12.92</td></tr>
+<tr><td>0.0404482362771082 &lt; S &#8804; 1</td>
+ <td>L = ((S+0.055)/1.055)<sup>2.4</sup></td></tr>
+</tbody></table>
+</td><td>
+<table border="1">
+<tbody><tr><th colspan="2">Linear to sRGB</th></tr>
+<tr><td><i>Condition</i></td><td><i>Value</i></td></tr>
+<tr><td>0 &#8804; L &#8804; 0.00313066844250063</td><td>S = L×12.92</td></tr>
+<tr><td>0.00313066844250063 &lt; L &#8804; 1</td>
+ <td>S = 1.055×L<sup>1/2.4</sup> &#8722; 0.055</td></tr>
+</tbody></table>
+</td></tr></tbody></table>
+
+<p>It doesn’t make any practical difference.
+The two functions are extremely close together in
+this region, so the precise cutoff point is almost
+irrelevant.</p>
+
+<h2>0.03928?</h2>
+<p>Some references give a formula with a different cutoff point:</p>
+
+<table border="1">
+<tbody><tr><th colspan="2">sRGB to Linear</th></tr>
+<tr><td><i>Condition</i></td><td><i>Value</i></td></tr>
+<tr><td>0 &#8804; S &#8804; 0.03928</td><td>S/12.92</td></tr>
+<tr><td>0.03928 &lt; S &#8804; 1</td><td>((S+0.055)/1.055)<sup>2.4</sup></td></tr>
+</tbody></table>
+
+<p>Evidently, this came from the fact that the slope of
+1/12.92 is actually a rounded version of a
+more theoretically correct slope of about 1/12.92321. 
+A cutoff of 0.03928 is what you would
+arrive at if you used that slope.</p>
+
+<p>However, the sRGB standard defines 12.92 as the exact value
+to use. So I don’t think it would be correct to use
+12.92321 in sRGB formulas.</p>
+
+<p>In any case, there’s certainly no
+reason to use 0.03928 together with 12.92. That would be half-baked, and
+it leads to a discontinuity that is possibly big
+enough to be significant:</p>
+
+<table border="1">
+<tbody><tr><th>sRGB</th><th>Linear</th></tr>
+<tr><td>0.039280000000000<span class="hl">0</span></td>
+   <td>0.0030<span class="hl">4024767801858</span></td></tr>
+<tr><td>0.039280000000000<span class="hl">1</span></td>
+   <td>0.0030<span class="hl">3949248622587</span></td></tr>
+</tbody></table>
+
+
+
+<p class="footer"><i>This page is by
+<a href="http://entropymine.com/jason/">Jason Summers</a>,
+and is one of several documents related to
+<a href="http://entropymine.com/imageworsener/">ImageWorsener</a>.
+Created 2/2012.</i></p>
+
+
+
+</body></html>

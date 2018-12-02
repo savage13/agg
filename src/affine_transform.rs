@@ -59,10 +59,7 @@ pub struct ConvTransform {
 }
 
 impl VertexSource for ConvTransform {
-    fn vertices(&self) -> &[Vertex<f64>] {
-        self.source.vertices()
-    }
-    fn convert(&self) -> Vec<Vertex<f64>> {
+    fn xconvert(&self) -> Vec<Vertex<f64>> {
         self.transform()
     }
 }
@@ -73,7 +70,7 @@ impl ConvTransform {
     }
     pub fn transform(&self) -> Vec<Vertex<f64>> {
         let mut out = vec![];
-        for v in self.vertices() {
+        for v in &self.source.xconvert() {
             let (x,y) = self.trans.transform(v.x, v.y);
             out.push(Vertex::new(x,y,v.cmd));
         }

@@ -8,6 +8,10 @@ pub trait Color: std::fmt::Debug {
     fn alpha(&self) -> f64;
     fn is_transparent(&self) -> bool { self.alpha() == 0.0 }
     fn is_opaque(&self) -> bool { self.alpha() >= 1.0 }
+    fn alpha8(&self) -> u8;
+    fn red8(&self) -> u8;
+    fn green8(&self) -> u8;
+    fn blue8(&self) -> u8;
 }
 
 pub fn cu8(v: f64) -> u8 {
@@ -26,7 +30,7 @@ pub fn srgb_to_rgb(x: f64) -> f64 {
     }
 }
 pub fn rgb_to_srgb(x: f64) -> f64 {
-    if x <= 0.0031308 {
+    if x <= 0.003_130_8 {
         x * 12.92
     } else {
         1.055 * x.powf(1.0/2.4) - 0.055
@@ -64,6 +68,10 @@ impl Color for Rgba8 {
     fn green(&self) -> f64 { color_u8_to_f64(self.g) }
     fn  blue(&self) -> f64 { color_u8_to_f64(self.b) }
     fn alpha(&self) -> f64 { color_u8_to_f64(self.a) }
+    fn alpha8(&self) -> u8 { self.a }
+    fn red8(&self) -> u8 { self.r }
+    fn green8(&self) -> u8 { self.g }
+    fn blue8(&self) -> u8 { self.b }
 }
 
 impl From<Rgba8> for Rgb8 {
@@ -141,6 +149,10 @@ impl Color for Rgb8 {
     fn green(&self) -> f64 { color_u8_to_f64(self.0[1]) }
     fn  blue(&self) -> f64 { color_u8_to_f64(self.0[2]) }
     fn alpha(&self) -> f64 { 1.0 }
+    fn alpha8(&self) -> u8 { 255 }
+    fn red8(&self) -> u8 { self.0[0] }
+    fn green8(&self) -> u8 { self.0[1] }
+    fn blue8(&self) -> u8 { self.0[2] }
 }
 
 
@@ -171,6 +183,10 @@ impl Color for Srgba8 {
     fn green(&self) -> f64 { color_u8_to_f64(self.g) }
     fn  blue(&self) -> f64 { color_u8_to_f64(self.b) }
     fn alpha(&self) -> f64 { color_u8_to_f64(self.a) }
+    fn alpha8(&self) -> u8 { self.a }
+    fn red8(&self) -> u8 { self.r }
+    fn green8(&self) -> u8 { self.g }
+    fn blue8(&self) -> u8 { self.b }
 }
 
 

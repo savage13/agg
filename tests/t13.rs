@@ -12,7 +12,7 @@ fn t13_aliased() {
 
     ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
 
-    let mut ren = agg::RenderingScanlineBinSolid::with_base(ren_base);
+    let mut ren = agg::RenderingScanlineBinSolid::with_base(&mut ren_base);
 
     ren.color( &agg::Rgba8::new(255,0,0,255) );
 

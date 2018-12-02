@@ -74,7 +74,7 @@ fn lion_cw_aa_srgba() {
     let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
     //ren_base.clear( agg::Srgba8::new([255, 255, 255, 255]) );
     ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
-    let mut ren = agg::RenderingScanlineAASolid::with_base(ren_base);
+    let mut ren = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
     //ren.color( &agg::Srgba8::new([255,0,0,255]) );
     ren.color( &agg::Rgba8::new(255,0,0,255) );
 
@@ -89,7 +89,7 @@ fn lion_cw_aa_srgba() {
     for p in &paths {
         if let Some(rp) = agg::bounding_rect(p) {
             //eprintln!("dx,dy: {:?}", rp);
-            r.expand_rect(rp);
+            r.expand_rect(&rp);
         }
     }
     //eprintln!("dx,dy: {:?}", r);
