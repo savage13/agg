@@ -5,4 +5,4 @@ authors = ["Brian Savage <savage@uri.edu>"]
 
 [dependencies]
 # num-traits = "0.2"
-fixed = "0.1"
+# fixed = "0.1"

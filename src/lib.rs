@@ -24,9 +24,6 @@
 ///         blend_hline
 ///           blend_hline (pixfmt)
 
-extern crate fixed;
-
-
 pub mod path_storage;
 pub mod conv_stroke;
 pub mod affine_transform;
