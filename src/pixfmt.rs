@@ -1,4 +1,6 @@
 
+//! Pixel Format
+
 use buffer::RenderingBuffer;
 use blend;
 use blend_pix;
@@ -6,15 +8,19 @@ use color::*;
 
 use Color;
 
+/// RGB24 Pixel format
 #[derive(Debug,Default)]
 pub struct PixfmtRgb24 {
+    /// Rendering Buffer
     pub rbuf: RenderingBuffer,
 }
 
 impl PixfmtRgb24 {
+    /// Clear the Image
     pub fn clear(&mut self) {
         self.rbuf.clear();
     }
+    /// Fill the Image with a Color c
     pub fn fill(&mut self, c: Rgb8) {
         let w = self.rbuf.width;
         let h = self.rbuf.height;
@@ -24,12 +30,21 @@ impl PixfmtRgb24 {
             }
         }
     }
+    /// Create new Pixel Format of width * height * bpp
+    ///
+    /// Also creates underlying RenderingBuffer 
     pub fn new(width: usize, height: usize, bpp: usize) -> Self {
         Self { rbuf: RenderingBuffer::new(width, height, bpp) }
     }
+    /// Creats a new Pixel Format from a [RenderingBuffer](../base/struct.RenderingBase.html)
     pub fn from(rbuf: RenderingBuffer) -> Self {
         Self { rbuf }
     }
+    /// Blend a color and coverage from (x,y) with a length
+    ///
+    /// If the color is opaque or the cover is "full",
+    /// then the pixel value is set.
+    /// Otherwise the color is combined with the existing color using blend_pix
     pub fn blend_hline<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, cover: u64) {
         if c.is_transparent() {
             return;
@@ -38,7 +53,7 @@ impl PixfmtRgb24 {
         let cover_mask = 255;
         if c.is_opaque() && cover == cover_mask {
             for i in 0 .. len {
-                eprintln!("BLEND_HLINE (SET): {:3} {:3} c: {:3} {:3} {:3} cover: {:3}", x+i, y, cu8r(c), cu8g(c), cu8b(c), cover);
+                //eprintln!("BLEND_HLINE (SET): {:3} {:3} c: {:3} {:3} {:3} cover: {:3}", x+i, y, cu8r(c), cu8g(c), cu8b(c), cover);
                 self.set((x+i,y), c);
             }
         } else {
@@ -47,15 +62,19 @@ impl PixfmtRgb24 {
                 //eprintln!("BLEND_HLINE (   ): {:3} {:3} c: {:3} {:3} {:3} cover: {:3} {:3} {:3} {:3}", x+i, y, cu8r(c), cu8g(c), cu8b(c), cover, cu8r(&pix), cu8g(&pix), cu8b(&pix));
                 let pix = blend_pix(&pix0, c, cover);
                 self.set((x+i,y), &pix);
-                let pix1 = self.get((x+i, y));
-                eprintln!("BLEND_HLINE (   ): {:3} {:3} c: {:3} {:3} {:3} cover: {:3} pix {:3} {:3} {:3} out {:3} {:3} {:3}", x+i, y,
-                          cu8r(c), cu8g(c), cu8b(c),
-                          cover,
-                          cu8r(&pix0), cu8g(&pix0), cu8b(&pix0),
-                          cu8r(&pix1), cu8g(&pix1), cu8b(&pix1));
+                //let pix1 = self.get((x+i, y));
+                // eprintln!("BLEND_HLINE (   ): {:3} {:3} c: {:3} {:3} {:3} cover: {:3} pix {:3} {:3} {:3} out {:3} {:3} {:3}", x+i, y,
+                //           cu8r(c), cu8g(c), cu8b(c),
+                //           cover,
+                //           cu8r(&pix0), cu8g(&pix0), cu8b(&pix0),
+                //           cu8r(&pix1), cu8g(&pix1), cu8b(&pix1));
             }
         }
     }
+
+    /// Blend a color from (x,y) with a range of covers
+    ///
+    /// Wrapper around [blend_hline](#method.blend_hline)
     pub fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, _len: i64, c: &C, covers: &[u64]) {
         eprintln!("BLEND_SOLID_HSPAN: {:3} {:3} len {:3} PIXFMT RGB", x, y, covers.len());
         if c.is_transparent() {
@@ -65,20 +84,25 @@ impl PixfmtRgb24 {
             self.blend_hline(x+i as i64,y,1,c,cover);
         }
     }
+    /// Set a color c at (x,y)
     pub fn copy_pixel(&mut self, x: usize, y: usize, c: Rgb8) {
         self.set((x,y), &c);
     }
+    /// Set a color from (x,y) of length n along a horizontal line
     pub fn copy_hline(&mut self, x: usize, y: usize, n: usize, c: Rgb8) {
         for i in 0 .. n {
             self.set((x+i,y), &c);
         }
     }
+    /// Set a color from (x,y) of length n along a vertical line
     pub fn copy_vline(&mut self, x: usize, y: usize, n: usize, c: Rgb8) {
         for i in 0 .. n {
             self.set((x,y+i), &c);
         }
     }
-
+    /// Blends an array of colors from (x,y)
+    ///
+    /// Currently does not blend 
     pub fn blend_color_hspan(&mut self, x: usize, y: usize, _n: usize,
                              c: &[Rgb8], _cover: usize) {
         for (i,ci) in c.iter().enumerate() {
@@ -86,11 +110,15 @@ impl PixfmtRgb24 {
         }
     }
 
+    /// Set the color c of a pixel at id = (x,y)
     pub fn set<C: Color>(&mut self, id: (usize, usize), c: &C) {
-        self.rbuf[id][0] = (c.red()   * 255.0) as u8;
-        self.rbuf[id][1] = (c.green() * 255.0) as u8;
-        self.rbuf[id][2] = (c.blue()  * 255.0) as u8;
+        self.rbuf[id][0] = c.red8();
+        self.rbuf[id][1] = c.green8();
+        self.rbuf[id][2] = c.blue8();
     }
+    /// Draw a line from (x1,y1) to (x2,y2) of color c 
+    ///
+    /// Uses Xiaolin Wu's line algorithm with Anti-Aliasing
     pub fn line_sp_aa(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, c: Rgb8) {
         let steep = (x2-x1).abs() < (y2-y1).abs();
         let (x1,y1,x2,y2) = if steep   { (y1,x1,y2,x2) } else { (x1,y1,x2,y2) };
@@ -139,10 +167,14 @@ impl PixfmtRgb24 {
         }
 
     }
+    /// Get the value at a pixel id = (x,y)
     pub fn get(&self, id: (usize, usize)) -> Rgb8 {
         let p = &self.rbuf[id];
         Rgb8::new( [p[0], p[1], p[2]] )
     }
+    /// Draw a line from (x1,y1) to (x2,y2) of color c
+    ///
+    /// Line is Aliased (not-anti-aliased)
     pub fn line_sp(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, c: Rgb8) {
         println!("({}, {}) - ({}, {})", x1,y1,x2,y2);
         let x1 = (x1 * 256.0).round() as i64 / 256;
@@ -185,8 +217,10 @@ impl PixfmtRgb24 {
             }
         }
     }
-    /// https://rosettacode.org/wiki/Bitmap/Bresenham%27s_line_algorithm#C.2B.2B
-    
+    /// Draw a line from (x1,y1) to (x2,y2) of color c
+    ///
+    /// Uses Bresenham's Line Algorithm and based on [RosettaCode](https://rosettacode.org/wiki/Bitmap/Bresenham%27s_line_algorithm#C.2B.2B)
+    ///
     pub fn line(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, c: Rgb8) {
         let steep = (y2-y1).abs() > (x2-x1).abs();
 
@@ -215,20 +249,28 @@ impl PixfmtRgb24 {
     }
 }
 
+/// Gray scale Pixel Format
 pub struct PixfmtGray8 {
+    /// Rendering Buffer
     pub rbuf: RenderingBuffer
 }
 
 impl PixfmtGray8 {
+    /// Create new Gray Scale Pixel format
+    ///
+    /// Allocates the underlying RenderingBuffer 
     pub fn new(width: usize, height: usize, bpp: usize) -> Self {
         Self{ rbuf: RenderingBuffer::new(width, height, bpp) }
     }
+    /// Copy a color c to horizontal line starting at (x,y) of length n
     pub fn copy_hline(&mut self, x: usize, y: usize, n: usize, c: Gray8) {
         for i in 0 .. n {
             self.rbuf[(x+i,y)][0] = *c;
         }
     }
 }
+
+/// Compute endpoint values of a line in Xiaolin Wu's line algorithm
 fn endpoint(x: f64, y: f64, gradient: f64) -> (f64,f64,f64,usize,usize,f64,f64) {
     let xend = x.round();
     let yend = y + gradient * (xend - x);
@@ -242,13 +284,15 @@ fn endpoint(x: f64, y: f64, gradient: f64) -> (f64,f64,f64,usize,usize,f64,f64) 
      v1, v2)
 }
 
-
+/// Compute fractional part of an f64 number
 fn fpart(x: f64) -> f64 {
     x - x.floor()
 }
+/// Compute 1.0 - fractional part of an f64 number (remainder)
 fn rfpart(x: f64) -> f64 {
     1.0 - fpart(x)
 }
+/// Compute integral part of an f64 number
 fn ipart(x: f64) -> f64 {
     x.floor()
 }

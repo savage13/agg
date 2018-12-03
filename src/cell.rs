@@ -1,4 +1,6 @@
 
+//! Rendering Cells
+
 use POLY_SUBPIXEL_SCALE;
 use POLY_SUBPIXEL_SHIFT;
 use POLY_SUBPIXEL_MASK;
@@ -6,48 +8,66 @@ use POLY_SUBPIXEL_MASK;
 use std::cmp::min;
 use std::cmp::max;
 
+/// Rendering Cell
+///
+/// Effectively Represents a Pixel
 #[derive(Debug,Copy,Clone,PartialEq, Default)]
 pub struct Cell { // cell_aa
+    /// Cell x position
     pub x: i64,
+    /// Cell y position
     pub y: i64,
+    /// Cell coverage
     pub cover: i64,
+    /// Cell area 
     pub area: i64,
 }
 
 impl Cell {
-    pub fn new() -> Self {
-        Cell { x: std::i64::MAX,
-               y: std::i64::MAX,
-               cover: 0,
-               area: 0
-        }
+    /// Create a new Cell
+    ///
+    /// Cover and Area are both 0
+    fn new() -> Self {
+        Cell { x: std::i64::MAX, y: std::i64::MAX, cover: 0, area: 0 }
     }
+    /// Create new cell at position (x,y)
     pub fn at(x: i64, y: i64) -> Self {
         let mut c = Cell::new();
         c.x = x;
         c.y = y;
         c
     }
+    /// Compare two cell positionsx
     pub fn equal(&self, x: i64, y: i64) -> bool {
         self.x - x == 0 && self.y - y == 0
     }
+    /// Test if cover and area are equal to 0
     pub fn is_empty(&self) -> bool {
         self.cover == 0 && self.area == 0
     }
 }
 
+
+/// Collection of Cells
 #[derive(Debug,Default)]
 pub struct RasterizerCell {
+    /// Cells
     pub cells: Vec<Cell>,
+    /// Minimum x value of current cells
     pub min_x: i64,
+    /// Maximum x value of current cells
     pub max_x: i64,
+    /// Minimum y value of current cells
     pub min_y: i64,
+    /// Maximum y value of current cells
     pub max_y: i64,
+    /// Cells sorted by y position, then x position
     pub sorted_y: Vec<Vec<Cell>>,
 }
 
 
 impl RasterizerCell {
+    /// Create new Cell collection
     pub fn new() -> Self {
         Self { cells: vec![],
                min_x: std::i64::MAX,
@@ -57,6 +77,7 @@ impl RasterizerCell {
                sorted_y: vec![],
         }
     }
+    /// Clear cells
     pub fn reset(&mut self) {
         self.max_x = std::i64::MIN;
         self.max_y = std::i64::MIN;
@@ -66,9 +87,13 @@ impl RasterizerCell {
         self.cells.clear();    // Not sure if this should be cleared
     }
 
+    /// Return total number of cells
     pub fn total_cells(&self) -> usize {
         self.cells.len()
     }
+    /// Sort cells into sorted_y cells
+    ///
+    /// Cells are distributed into y bins, then sorted by x value
     pub fn sort_cells(&mut self) {
         eprintln!("SORT_CELLS MAX_Y: {} N: {} MIN_Y: {}", self.max_y, self.cells.len(), self.min_y);
         if ! self.sorted_y.is_empty() || self.max_y < 0 {
@@ -89,9 +114,11 @@ impl RasterizerCell {
             self.sorted_y[i].sort_by(|a,b| (a.x).cmp(&b.x));
         }
     }
+    /// Return number of cells in a specific y row
     pub fn scanline_num_cells(&self, y: i64) -> usize {
         self.sorted_y[y as usize].len()
     }
+    /// Returns the cells of a specific y row
     pub fn scanline_cells(&self, y: i64) -> &[Cell] {
         & self.sorted_y[y as usize]
     }
@@ -99,27 +126,26 @@ impl RasterizerCell {
     //pub fn add_curr_cell(&mut self, new_cell: Cell) {
     //    self.cells.push( new_cell );
     //}
-    pub fn curr_cell_is_set(&self, x: i64, y: i64) -> bool {
+    /// Determine if the last cell is equal to (x,y) and is empty
+    ///
+    // fn curr_cell_is_set(&self, x: i64, y: i64) -> bool {
+    //     match self.cells.last() {
+    //         None      => true,
+    //         Some(cur) => {
+    //             //eprintln!("SET_CURR_CELL: {} {} EQUAL: {} EMPTY: {}", x, y, cur.equal(x,y), !cur.is_empty());
+    //             ! cur.equal(x,y) && ! cur.is_empty()
+    //         }
+    //     }
+    // }
+    /// Determine if the current cell is located at (x,y)
+    fn curr_cell_not_equal(&self, x: i64, y: i64) -> bool {
         match self.cells.last() {
             None      => true,
-            Some(cur) => {
-                //eprintln!("SET_CURR_CELL: {} {} EQUAL: {} EMPTY: {}", x, y, cur.equal(x,y), !cur.is_empty());
-                ! cur.equal(x,y) && ! cur.is_empty()
-            }
+            Some(cur) => ! cur.equal(x,y),
         }
     }
-    pub fn curr_cell_not_equal(&self, x: i64, y: i64) -> bool {
-        match self.cells.last() {
-            None      => true,
-            Some(cur) => {
-                //eprintln!("XXXX {:?}", cur);
-                ! cur.equal(x,y)
-
-            }
-        }
-    }
-
-    pub fn pop_last_cell_if_empty(&mut self) {
+    /// Remove last cell is cover and area are equal to 0
+    fn pop_last_cell_if_empty(&mut self) {
         let n = self.cells.len();
         if n == 0 {
             return;
@@ -130,12 +156,17 @@ impl RasterizerCell {
             self.show_last_cell();
         }
     }
-    pub fn show_last_cell(&self) {
+    /// Print the last cell
+    fn show_last_cell(&self) {
         if let Some(c) = self.cells.last() {
             eprintln!("ADD_CURR_CELL: {} {} area {} cover {} len {}", c.x,c.y,c.area,c.cover, self.cells.len());
         }
     }
-    pub fn set_curr_cell(&mut self, x: i64, y: i64)  {
+    /// Create new cell at (x,y)
+    ///
+    /// Current cell is removed if empty (cover and area equal to 0)
+    /// New cell is added to cell list
+    fn set_curr_cell(&mut self, x: i64, y: i64)  {
         //eprintln!("SET_CURR_CELL: {} {}", x,y);
         if self.curr_cell_not_equal(x, y) {
             //eprintln!("ADD_CURR_CELL: {} {} {} ", x,y, self.cells.len()+1);
@@ -144,7 +175,8 @@ impl RasterizerCell {
         }
     }
 
-    pub fn render_hline(&mut self, ey: i64, x1: i64, y1: i64, x2: i64, y2: i64) {
+    /// Create and update new cells 
+    fn render_hline(&mut self, ey: i64, x1: i64, y1: i64, x2: i64, y2: i64) {
         let ex1 = x1 >> POLY_SUBPIXEL_SHIFT;
         let ex2 = x2 >> POLY_SUBPIXEL_SHIFT;
         let fx1 = x1  & POLY_SUBPIXEL_MASK;
@@ -243,6 +275,11 @@ impl RasterizerCell {
         }
     }
 
+    /// Draw a line from (x1,y1) to (x2,y2)
+    ///
+    /// Cells are added to the cells collection with cover and area values
+    ///
+    /// Input coordinates are at subpixel scale
     pub fn line(&mut self, x1: i64, y1: i64, x2: i64, y2: i64) {
         eprintln!("LINE: {} {} -> {} {}", x1,y1, x2,y2);
         let dx_limit = 16384 << POLY_SUBPIXEL_SHIFT;

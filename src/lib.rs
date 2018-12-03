@@ -53,46 +53,72 @@ pub use scan::*;
 pub use alphamask::*;
 pub use render::*;
 
-
 const POLY_SUBPIXEL_SHIFT : i64 = 8;
 const POLY_SUBPIXEL_SCALE : i64 = 1<<POLY_SUBPIXEL_SHIFT;
 const POLY_SUBPIXEL_MASK  : i64 = POLY_SUBPIXEL_SCALE - 1;
 
+/// Access raw color component data at the pixel level
 pub trait PixelData<'a> {
     fn pixeldata(&'a self) -> &'a [u8];
 }
+/// Source of vertex points
 pub trait VertexSource {
+    /// Rewind the vertex source (unused)
     fn rewind(&self) { }
+    /// Get values from the source
+    ///
+    /// This could be turned into an iterator
     fn xconvert(&self) -> Vec<Vertex<f64>>;
 }
+/// Access Color properties and compoents
 pub trait Color: std::fmt::Debug {
+    /// Get red value [0,1] as f64
     fn red(&self) -> f64;
+    /// Get green value [0,1] as f64 
     fn green(&self) -> f64;
+    /// Get blue value [0,1] as f64
     fn blue(&self) -> f64;
+    /// Get alpha value [0,1] as f64
     fn alpha(&self) -> f64;
-    fn is_transparent(&self) -> bool { self.alpha() == 0.0 }
-    fn is_opaque(&self) -> bool { self.alpha() >= 1.0 }
-    fn alpha8(&self) -> u8;
+    /// Get red value [0,255] as u8
     fn red8(&self) -> u8;
+    /// Get green value [0,255] as u8
     fn green8(&self) -> u8;
+    /// Get blue value [0,255] as u8
     fn blue8(&self) -> u8;
+    /// Get alpha value [0,255] as u8
+    fn alpha8(&self) -> u8;
+    /// Return if the color is completely transparent, alpha = 0.0
+    fn is_transparent(&self) -> bool { self.alpha() == 0.0 }
+    /// Return if the color is completely opaque, alpha = 1.0
+    fn is_opaque(&self) -> bool { self.alpha() >= 1.0 }
 }
+/// Render scanlines to Image
 pub trait Render {
+    /// Render a single scanlines to the image
     fn render(&mut self, sl: &ScanlineU8);
-    fn prepare(&self) { }
+    /// Set the Color of the Renderer
     fn color<C: Color>(&mut self, color: &C);
+    /// Prepare the Renderer
+    fn prepare(&self) { }
 }
+/// Rasterize lines, path, and other things to scanlines
 pub trait Rasterize {
+    /// Setup Rasterizer, returns if data is available
     fn rewind_scanlines(&mut self) -> bool;
+    /// Sweeps cells in a scanline for data, returns if data is available
     fn sweep_scanline(&mut self, sl: &mut ScanlineU8) -> bool;
-    fn max_x(&self) -> i64;
+    /// Return maximum x value of rasterizer
     fn min_x(&self) -> i64;
+    /// Return maximum x value of rasterizer
+    fn max_x(&self) -> i64;
+    /// Resets the rasterizer, clearing content
     fn reset(&mut self);
+    /// Rasterize a path 
     fn add_path<VS: VertexSource>(&mut self, path: &VS);
 }
 
-
-
+/// Blend a Foreground, Background and Alpha Components
 fn blend(fg: Rgb8, bg: Rgb8, alpha: f64) -> Rgb8 {
     let v : Vec<_> = fg.iter().zip(bg.iter())
         .map(|(&fg,&bg)| (f64::from(fg), f64::from(bg)) )
@@ -102,27 +128,30 @@ fn blend(fg: Rgb8, bg: Rgb8, alpha: f64) -> Rgb8 {
     Rgb8::new([v[0],v[1],v[2]])
 }
 
-pub fn prelerp(a: f64, b: f64, t: f64)  {
-    let (_a,_b,_t) = (a as f64, b as f64, t as f64);
-}
+// fn prelerp(a: f64, b: f64, t: f64)  {
+//     let (_a,_b,_t) = (a as f64, b as f64, t as f64);
+// }
 
-pub fn lerp(a: f64, b: f64, t: f64) -> f64{
-    let mut v = (b-a) * t + a;
-    //eprintln!("BLEND PIX: {} {} {} => {}", a, b, t, v);
-    if v < 0.0 {
-        v = 0.0;
-    }
-    if v >= 1.0 {
-        v = 1.0;
-    }
-    v
-}
 
-pub fn mult_cover(alpha: f64, cover: f64) -> f64 {
-    alpha * cover
-}
+// fn lerp(a: f64, b: f64, t: f64) -> f64{
+//     let mut v = (b-a) * t + a;
+//     if v < 0.0 {
+//         v = 0.0;
+//     }
+//     if v >= 1.0 {
+//         v = 1.0;
+//     }
+//     v
+// }
 
-// See agg_color_rgba.h:454 
+// fn mult_cover(alpha: f64, cover: f64) -> f64 {
+//     alpha * cover
+// }
+
+/// Interpolate a value between two end points using fixed point math
+///
+/// See agg_color_rgba.h:454 of agg version 2.4
+///
 pub fn lerp_u8(p: u8, q: u8, a: u8) -> u8 {
     let base_shift = 8;
     let base_msb = 1 << (base_shift - 1);
@@ -132,11 +161,13 @@ pub fn lerp_u8(p: u8, q: u8, a: u8) -> u8 {
     let t1 : i32 = ((t0>>base_shift) + t0) >> base_shift;
     (p + t1) as u8
 }
-// See agg_color_rgba.h:395
-// https://sestevenson.wordpress.com/2009/08/19/rounding-in-fixed-point-number-conversions/
-// https://stackoverflow.com/questions/10067510/fixed-point-arithmetic-in-c-programming
-// http://x86asm.net/articles/fixed-point-arithmetic-and-tricks/
-// Still not sure where the value is added and shifted multiple times
+/// Multiply two u8 values using fixed point math
+///
+/// See agg_color_rgba.h:395
+/// https://sestevenson.wordpress.com/2009/08/19/rounding-in-fixed-point-number-conversions/
+/// https://stackoverflow.com/questions/10067510/fixed-point-arithmetic-in-c-programming
+/// http://x86asm.net/articles/fixed-point-arithmetic-and-tricks/
+/// Still not sure where the value is added and shifted multiple times
 pub fn multiply_u8(a: u8, b: u8) -> u8 {
     let base_shift = 8;
     let base_msb = 1 << (base_shift - 1);
@@ -145,6 +176,16 @@ pub fn multiply_u8(a: u8, b: u8) -> u8 {
     let tt : u32 = ((t >> base_shift) + t) >> base_shift;
     tt as u8
 }
+
+/// Blend foreground and background pixels with an cover value
+///
+/// Color components are computed by:
+///
+/// out = (alpha * cover) * (c - p)
+///
+/// Computations are conducted using fixed point math
+///
+/// see [Alpha Compositing](https://en.wikipedia.org/wiki/Alpha_compositing)
 
 pub fn blend_pix<C1: Color, C2: Color>(p: &C1, c: &C2, cover: u64) -> Rgba8 {
 
@@ -160,7 +201,8 @@ pub fn blend_pix<C1: Color, C2: Color>(p: &C1, c: &C2, cover: u64) -> Rgba8 {
     let green = lerp_u8(p.green8(), c.green8(), alpha);
     let blue  = lerp_u8(p.blue8(),  c.blue8(),  alpha);
     let alpha = lerp_u8(p.alpha8(), c.alpha8(), alpha);
-    eprintln!("BLEND PIX: r,g,b,a {:.3} {:.3} {:.3} {:.3}", red, green, blue, alpha);
+    eprintln!("BLEND PIX: r,g,b,a {:.3} {:.3} {:.3} {:.3}",
+              red, green, blue, alpha);
     Rgba8::new(red, green, blue,alpha)
 }
 

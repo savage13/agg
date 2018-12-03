@@ -1,7 +1,9 @@
+//! Colors
 
 use std::ops::Deref;
 use Color;
 
+/// Convert an f64 [0,1] component to a u8 [0,255] component
 pub fn cu8(v: f64) -> u8 {
     (v * 255.0).round() as u8
 }
@@ -10,6 +12,7 @@ pub fn cu8r<C: Color>(c: &C) -> u8 { cu8(c.red())   }
 pub fn cu8g<C: Color>(c: &C) -> u8 { cu8(c.green()) }
 pub fn cu8b<C: Color>(c: &C) -> u8 { cu8(c.blue())  }
 
+/// Convert from sRGB to RGB for a single component
 pub fn srgb_to_rgb(x: f64) -> f64 {
     if x <= 0.04045 {
         x / 12.92
@@ -17,6 +20,7 @@ pub fn srgb_to_rgb(x: f64) -> f64 {
         ((x + 0.055) / 1.055).powf(2.4)
     }
 }
+/// Convert from RGB to sRGB for a single component
 pub fn rgb_to_srgb(x: f64) -> f64 {
     if x <= 0.003_130_8 {
         x * 12.92
@@ -26,28 +30,35 @@ pub fn rgb_to_srgb(x: f64) -> f64 {
 }
 
 
-
+/// Color as Red, Green, Blue, and Alpha
 #[derive(Debug,Default,Copy,Clone)]
 pub struct Rgba8 {
+    /// Red
     r: u8,
+    /// Green
     g: u8,
+    /// Blue
     b: u8,
+    /// Alpha
     a: u8,
 }
 
 impl Rgba8 {
+    /// White Color (255,255,255,255)
     pub fn white() -> Self {
         Self::new(255,255,255,255)
     }
+    /// Black Color (0,0,0,255)
     pub fn black() -> Self {
         Self::new(0,0,0,255)
     }
+    /// Create new color
     pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Rgba8 { r, g, b, a }
     }
+    /// Crate new color from a wavelength and gamma 
     pub fn from_wavelength_gamma(w: f64, gamma: f64) -> Self {
-        let c = &*Rgb8::from_wavelength_gamma(w, gamma);
-        Self::new(c[0],c[1],c[2],255)
+        Rgb8::from_wavelength_gamma(w, gamma).into()
     }
 }
 
@@ -67,7 +78,13 @@ impl From<Rgba8> for Rgb8 {
         Rgb8::new( [c.r, c.g, c.b] )
     }
 }
+impl From<Rgb8> for Rgba8 {
+    fn from(c: Rgb8) -> Rgba8 {
+        Rgba8::new( c.0[0], c.0[1], c.0[2], 255 )
+    }
+}
 
+/// Gray scale
 #[derive(Debug,Copy,Clone)]
 pub struct Gray8(u8);
 impl Deref for Gray8 {
@@ -77,10 +94,12 @@ impl Deref for Gray8 {
     }
 }
 impl Gray8 {
+    /// Create a new gray scale value
     pub fn new(g: u8) -> Self {
         Gray8( g )
     }
 }
+
 
 
 impl Rgb8 {
@@ -143,7 +162,7 @@ impl Color for Rgb8 {
     fn blue8(&self) -> u8 { self.0[2] }
 }
 
-
+/// Color as Red, Green, Blue
 #[derive(Debug,Default,Copy,Clone)]
 pub struct Rgb8([u8;3]);
 impl Deref for Rgb8 {
@@ -153,15 +172,24 @@ impl Deref for Rgb8 {
     }
 }
 
+/// Color as standard Red, Green, Blue, Alpha
+///
+/// See <https://en.wikipedia.org/wiki/SRGB>
+///
 #[derive(Debug,Default,Copy,Clone)]
 pub struct Srgba8 {
+    /// Red
     r: u8,
+    /// Green
     g: u8,
+    /// Blue
     b: u8,
+    /// Alpha
     a: u8,
 }
 
 impl Srgba8 {
+    /// Create a new Srgba8 color
     pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }

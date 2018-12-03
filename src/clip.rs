@@ -1,29 +1,49 @@
+//! Clipping Region
 
 use POLY_SUBPIXEL_SCALE;
 use cell::RasterizerCell;
 
+/// Rectangle
 #[derive(Debug,Default)]
 pub struct Rectangle<T: std::cmp::PartialOrd + Copy> {
+    /// Minimum x value
     pub x1: T,
+    /// Minimum y value
     pub y1: T,
+    /// Maximum x value
     pub x2: T,
+    /// Maximum y value
     pub y2: T,
 }
 impl<T> Rectangle<T> where T: std::cmp::PartialOrd + Copy {
+    /// Create a new Rectangle
+    ///
+    /// Values are sorted before storing
     pub fn new(x1: T, y1: T, x2: T, y2: T) -> Self {
         let (x1, x2) = if x1 > x2 { (x2,x1) } else { (x1,x2) };
         let (y1, y2) = if y1 > x2 { (y2,y1) } else { (y1,y2) };
         Self { x1,y1,x2,y2 }
     }
+    /// Get location of point relative to rectangle
+    ///
+    /// Returned is an a u8 made up of the following bits:
+    /// - [INSIDE](constant.INSIDE.html)
+    /// - [LEFT](constant.LEFT.html)
+    /// - [RIGHT](constant.RIGHT.html)
+    /// - [BOTTOM](constant.BOTTOM.html)
+    /// - [TOP](constant.TOP.html)
+    ///
     pub fn clip_flags(&self, x: T, y: T) -> u8 {
         clip_flags(&x,&y, &self.x1, &self.y1, &self.x2, &self.y2)
     }
+    /// Expand if the point (x,y) is outside
     pub fn expand(&mut self, x: T, y: T) {
         if x < self.x1 { self.x1 = x; }
         if x > self.x2 { self.x2 = x; }
         if y < self.y1 { self.y1 = y; }
         if y > self.y2 { self.y2 = y; }
     }
+    /// Expand if the rectangle is outside
     pub fn expand_rect(&mut self, r: &Rectangle<T>) {
         self.expand(r.x1, r.y1);
         self.expand(r.x2, r.y2);
@@ -31,14 +51,47 @@ impl<T> Rectangle<T> where T: std::cmp::PartialOrd + Copy {
 }
 
 
+
+/// Inside Region
+///
 /// See https://en.wikipedia.org/wiki/Liang-Barsky_algorithm
 /// See https://en.wikipedia.org/wiki/Cyrus-Beck_algorithm
+pub const INSIDE : u8 = 0b0000;
+/// Left of Region
+///
+/// See [Liang Barsky](https://en.wikipedia.org/wiki/Liang-Barsky_algorithm)
+///
+/// See [Cyrus Beck](https://en.wikipedia.org/wiki/Cyrus-Beck_algorithm)
+pub const LEFT   : u8 = 0b0001;
+/// Right of Region
+///
+/// See [Liang Barsky](https://en.wikipedia.org/wiki/Liang-Barsky_algorithm)
+///
+/// See [Cyrus Beck](https://en.wikipedia.org/wiki/Cyrus-Beck_algorithm)
+pub const RIGHT  : u8 = 0b0010;
+/// Below Region
+///
+/// See [Liang Barsky](https://en.wikipedia.org/wiki/Liang-Barsky_algorithm)
+///
+/// See [Cyrus Beck](https://en.wikipedia.org/wiki/Cyrus-Beck_algorithm)
+pub const BOTTOM : u8 = 0b0100;
+/// Above Region
+///
+/// See [Liang Barsky](https://en.wikipedia.org/wiki/Liang-Barsky_algorithm)
+///
+/// See [Cyrus Beck](https://en.wikipedia.org/wiki/Cyrus-Beck_algorithm)
+pub const TOP    : u8 = 0b1000;
 
-const INSIDE : u8 = 0b0000;
-const LEFT   : u8 = 0b0001;
-const RIGHT  : u8 = 0b0010;
-const BOTTOM : u8 = 0b0100;
-const TOP    : u8 = 0b1000;
+
+/// Determine the loaiton of a point to a broken-down rectangle or range
+///
+/// Returned is an a u8 made up of the following bits:
+/// - [INSIDE](constant.INSIDE.html)
+/// - [LEFT](constant.LEFT.html)
+/// - [RIGHT](constant.RIGHT.html)
+/// - [BOTTOM](constant.BOTTOM.html)
+/// - [TOP](constant.TOP.html)
+///
 pub fn clip_flags<T: std::cmp::PartialOrd>(x: &T, y: &T, x1: &T, y1: &T, x2: &T, y2: &T) -> u8 {
     let mut code = INSIDE;
     if x < x1 { code |= LEFT; }
@@ -48,28 +101,37 @@ pub fn clip_flags<T: std::cmp::PartialOrd>(x: &T, y: &T, x1: &T, y1: &T, x2: &T,
     code
 }
 
+/// Clip Region
+///
+/// Clipping for Rasterizers
 #[derive(Debug,Default)]
 pub struct Clip {
+    /// Current x Point
     x1: i64,
+    /// Current y Point
     y1: i64,
+    /// Rectangle to clip on
     clip_box: Option<Rectangle<i64>>,
+    /// Current clip flag for point (x1,y1)
     clip_flag: u8,
 }
 
-pub fn mul_div(a: i64, b: i64, c: i64) -> i64 {
+fn mul_div(a: i64, b: i64, c: i64) -> i64 {
     let (a,b,c) = (a as f64, b as f64, c as f64);
     (a * b / c).round() as i64
 }
 impl Clip {
+    /// Create new Clipping region
     pub fn new() -> Self {
         Self {x1: 0, y1: 0,
               clip_box: None,
               clip_flag: INSIDE }
     }
-    pub fn line_clip_y(&self, ras: &mut RasterizerCell,
-                       x1: i64, y1: i64,
-                       x2: i64, y2: i64,
-                       f1: u8, f2: u8) {
+    /// Clip a line along the top and bottom of the regon
+    fn line_clip_y(&self, ras: &mut RasterizerCell,
+                   x1: i64, y1: i64,
+                   x2: i64, y2: i64,
+                   f1: u8, f2: u8) {
         let b = match self.clip_box {
             None => return,
             Some(ref b) => b,
@@ -108,6 +170,10 @@ impl Clip {
             ras.line(tx1,tx2,ty1,ty2);
         }
     }
+
+    /// Draw a line from (x1,y1) to (x2,y2) into a RasterizerCell
+    ///
+    /// Final point (x2,y2) is saved internally as (x1,y1))
     pub fn line_to(&mut self, ras: &mut RasterizerCell, x2: i64, y2: i64) {
         //eprintln!("ras.line_to_d({}, {}); // LINE TO: {} {}",
         //          x2 / POLY_SUBPIXEL_SCALE, y2 / POLY_SUBPIXEL_SCALE,
@@ -186,6 +252,9 @@ impl Clip {
         self.x1 = x2;
         self.y1 = y2;
     }
+    /// Move to point (x2,y2)
+    ///
+    /// Point is saved internally as (x1,y1)
     pub fn move_to(&mut self, x2: i64, y2: i64) {
         eprintln!("//ras.move_to_d({}, {}); // MOVE TO: {} {}", x2/POLY_SUBPIXEL_SCALE, y2/POLY_SUBPIXEL_SCALE, x2, y2);
         self.x1 = x2;
@@ -196,6 +265,7 @@ impl Clip {
                                         &b.x2,&b.y2);
         }
     }
+    /// Define the clipping region
     pub fn clip_box(&mut self, x1: i64, y1: i64, x2: i64, y2: i64) {
         self.clip_box = Some( Rectangle::new(x1, y1, x2, y2) );
     }
