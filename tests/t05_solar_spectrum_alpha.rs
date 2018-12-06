@@ -1,11 +1,13 @@
 
 extern crate agg;
 
+use agg::PixfmtFunc;
+
 #[test]
 fn t05_solar_spectrum_alpha() {
     let mut pix = agg::PixfmtRgb24::new(320, 200, 3);
     pix.clear();
-    pix.fill(agg::Rgb8::black());
+    pix.fill(&agg::Rgb8::black());
     let mut alpha = agg::PixfmtGray8::new(320, 200, 1);
 
     let w = pix.rbuf.width;

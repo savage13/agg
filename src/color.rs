@@ -195,14 +195,15 @@ impl Srgba8 {
     }
 }
 impl Color for Srgba8 {
-    fn   red(&self) -> f64 { color_u8_to_f64(self.r) }
-    fn green(&self) -> f64 { color_u8_to_f64(self.g) }
-    fn  blue(&self) -> f64 { color_u8_to_f64(self.b) }
-    fn alpha(&self) -> f64 { color_u8_to_f64(self.a) }
-    fn alpha8(&self) -> u8 { self.a }
-    fn red8(&self) -> u8 { self.r }
-    fn green8(&self) -> u8 { self.g }
-    fn blue8(&self) -> u8 { self.b }
+    fn   red(&self)  -> f64 { srgb_to_rgb(color_u8_to_f64(self.r)) }
+    fn green(&self)  -> f64 { srgb_to_rgb(color_u8_to_f64(self.g)) }
+    fn  blue(&self)  -> f64 { srgb_to_rgb(color_u8_to_f64(self.b)) }
+    fn alpha(&self)  -> f64 { color_u8_to_f64(self.a) }
+
+    fn alpha8(&self) -> u8  { cu8(self.alpha()) }
+    fn red8(&self)   -> u8  { cu8(self.red()) }
+    fn green8(&self) -> u8  { cu8(self.green()) }
+    fn blue8(&self)  -> u8  { cu8(self.blue()) }
 }
 
 
@@ -222,14 +223,14 @@ impl<'a> From<&'a Rgba8> for Srgba8 {
         Self::new(r,g,b,c.a)
     }
 }
-impl<'a> From<&'a Srgba8> for Rgba8 {
+/*impl<'a> From<&'a Srgba8> for Rgba8 {
     fn from(c: &Srgba8) -> Self {
         let r = cu8(srgb_to_rgb(c.red()));
         let g = cu8(srgb_to_rgb(c.green()));
         let b = cu8(srgb_to_rgb(c.blue()));
         Self::new(r,g,b,c.a)
     }
-}
+}*/
 impl From<Srgba8> for Rgba8 {
     fn from(c: Srgba8) -> Self {
         let r = cu8(srgb_to_rgb(c.red()));
@@ -239,3 +240,13 @@ impl From<Srgba8> for Rgba8 {
     }
 }
 
+impl<'a, C> From<&'a C> for Rgba8 where C: Color {
+    fn from(c: &C) -> Self {
+        Self::new(c.red8(), c.green8(), c.blue8(), c.alpha8() )
+    }
+}
+impl<'a, C> From<&'a C> for Rgb8 where C: Color {
+    fn from(c: &C) -> Self {
+        Self::new([c.red8(), c.green8(), c.blue8()])
+    }
+}

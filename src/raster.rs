@@ -7,9 +7,12 @@ use clip::Clip;
 use scan::ScanlineU8;
 use cell::RasterizerCell;
 use path_storage::PathCommand;
+use render::RendererPrimatives;
 
 use Rasterize;
 use VertexSource;
+use PixfmtFunc;
+use Pixel;
 
 use std::cmp::min;
 use std::cmp::max;
@@ -92,13 +95,12 @@ impl Rasterize for RasterizerScanlineAA {
             self.reset();
         }
         for seg in path.xconvert() {
-            //eprintln!("ADD_PATH: {} {} {:?} ", seg.x, seg.y, seg.cmd);
-            if seg.cmd == PathCommand::LineTo {
-                self.line_to_d(seg.x, seg.y);
-            } else if seg.cmd == PathCommand::MoveTo {
-                self.move_to_d(seg.x, seg.y);
-            } else if seg.cmd == PathCommand::Close {
-                self.close_polygon();
+            eprintln!("ADD_PATH: {:.6} {:.6}", seg.x, seg.y);
+            match seg.cmd {
+                PathCommand::LineTo => self.line_to_d(seg.x, seg.y),
+                PathCommand::MoveTo => self.move_to_d(seg.x, seg.y),
+                PathCommand::Close =>  self.close_polygon(),
+                PathCommand::Stop => unimplemented!("stop encountered"),
             }
             //eprintln!("ADD_PATH: {} {} {:?} DONE", seg.x, seg.y, seg.cmd);
         }
@@ -154,13 +156,13 @@ impl Rasterize for RasterizerScanlineAA {
                     let mut area = cur_cell.area;
 
                     cover  += cur_cell.cover;
-                    eprintln!("SWEEP SCANLINES: {:?} outside cover {} area {}", cur_cell, cover, area);
+                    //eprintln!("SWEEP SCANLINES: {:?} outside cover {} area {}", cur_cell, cover, area);
                     num_cells -= 1;
                     //eprintln!("SWEEP SCANLINES: N(A): {}", num_cells); 
                     //accumulate all cells with the same X
                     while num_cells > 0 {
                         cur_cell = iter.next().unwrap();
-                        eprintln!("SWEEP SCANLINES: {:?} inside cover {} area {}", cur_cell, cover, area);
+                        //eprintln!("SWEEP SCANLINES: {:?} inside cover {} area {}", cur_cell, cover, area);
                         if cur_cell.x != x {
                             break;
                         }
@@ -169,7 +171,7 @@ impl Rasterize for RasterizerScanlineAA {
                         num_cells -= 1;
                         //eprintln!("SWEEP SCANLINES: N(B): {}", num_cells); 
                     }
-                    eprintln!("SWEEP SCANLINES: {:?} DONE cover {} area {}", cur_cell, cover, area);
+                    //eprintln!("SWEEP SCANLINES: {:?} DONE cover {} area {}", cur_cell, cover, area);
                     //eprintln!("SWEEP SCANLINES: ADDING CHECK AREA: {} NUM_CELLS {} x,y {} {}", area, num_cells, x, self.scan_y);
                     if area != 0 {
                         eprintln!("SWEEP SCANLINES: ADDING CELL: x {} y {} area {} cover {}", x,self.scan_y, area, cover);
@@ -181,7 +183,7 @@ impl Rasterize for RasterizerScanlineAA {
                     }
                     if num_cells > 0 && cur_cell.x > x {
                         let alpha = self.calculate_alpha(cover << (POLY_SUBPIXEL_SHIFT + 1));
-                        eprintln!("SWEEP SCANLINES: ADDING SPAN: {} -> {} Y: {} {} {}", x, cur_cell.x, self.scan_y, area, cover);
+                        eprintln!("SWEEP SCANLINES: ADDING SPAN: {} -> {} Y: {} area {} cover {}", x, cur_cell.x, self.scan_y, area, cover);
                         if alpha > 0 {
                             sl.add_span(x, cur_cell.x - x, alpha);
                         }
@@ -307,3 +309,56 @@ impl RasterizerScanlineAA {
         self.gamma[cover as usize]
     }
 }
+
+pub struct RasterizerOutline<'a,T> where T: PixfmtFunc + Pixel , T: 'a {
+    pub ren: &'a mut RendererPrimatives<'a,T>,
+    pub start_x: i64,
+    pub start_y: i64,
+    pub vertices: usize,
+}
+impl<'a,T> RasterizerOutline<'a,T> where T: PixfmtFunc + Pixel {
+    pub fn with_primative(ren: &'a mut RendererPrimatives<'a,T>) -> Self {
+        Self { start_x: 0, start_y: 0, vertices: 0, ren }
+    }
+    pub fn add_path<VS: VertexSource>(&mut self, path: &VS) {
+        for v in path.xconvert().iter() {
+            match v.cmd {
+                PathCommand::MoveTo => self.move_to_d(v.x, v.y),
+                PathCommand::LineTo => self.line_to_d(v.x, v.y),
+                PathCommand::Close => self.close(),
+                PathCommand::Stop => unimplemented!("stop encountered"),
+            }
+        }
+    }
+    pub fn close(&mut self) {
+        if self.vertices > 2 {
+            let (x,y) = (self.start_x, self.start_y);
+            self.line_to( x, y );
+        }
+        self.vertices = 0;
+    }
+    pub fn move_to_d(&mut self, x: f64, y: f64) {
+        eprintln!("DDA MOVED {:.6} {:.6}", x, y);
+        let x = self.ren.coord(x);
+        let y = self.ren.coord(y);
+        self.move_to( x, y );
+    }
+    pub fn line_to_d(&mut self, x: f64, y: f64) {
+        eprintln!("DDA LINED: {:.6} {:.6}", x, y);
+        let x = self.ren.coord(x);
+        let y = self.ren.coord(y);
+        eprintln!("DDA LINED: {} {}", x, y);
+        self.line_to( x, y );
+    }
+    pub fn move_to(&mut self, x: i64, y: i64) {
+        self.vertices = 1;
+        self.start_x = x;
+        self.start_y = y;
+        self.ren.move_to(x, y);
+    }
+    pub fn line_to(&mut self, x: i64, y: i64) {
+        self.vertices += 1;
+        self.ren.line_to(x, y);
+    }
+}
+

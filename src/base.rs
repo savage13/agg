@@ -1,35 +1,35 @@
 //! Rendering Base
 
-use pixfmt::*;
 use color::*;
 use PixelData;
 use Color;
-
+use Pixel;
+use PixfmtFunc;
 use std::cmp::min;
 use std::cmp::max;
+
 
 /// Rendering Base
 ///
 #[derive(Debug,Default)]
-pub struct RenderingBase {
+pub struct RenderingBase<T> where T: PixfmtFunc + Pixel {
     /// Pixel Format
-    pub pixf: PixfmtRgb24,
+    pub pixf: T,
 }
 
-
-impl RenderingBase {
+impl<T> RenderingBase<T> where T: PixfmtFunc + Pixel {
     /// Create new RGB24 Rendering Base from Pixel Format
-    pub fn with_rgb24(pixf: PixfmtRgb24) -> RenderingBase {
+    pub fn with_rgb24(pixf: T) -> RenderingBase<T> {
         RenderingBase { pixf }
     }
     /// Set Image to a single color 
     pub fn clear(&mut self, color: Rgba8) {
-        self.pixf.fill(color.into());
+        self.pixf.fill(&color);
     }
     /// Get Image size
     pub fn limits(&self) -> (i64,i64,i64,i64) {
-        let w = self.pixf.rbuf.width as i64;
-        let h = self.pixf.rbuf.height as i64;
+        let w = self.pixf.rbuf().width as i64;
+        let h = self.pixf.rbuf().height as i64;
         (0, w-1, 0, h-1)
     }
     /// Blend a color along y-row from x1 to x2
@@ -73,8 +73,8 @@ impl RenderingBase {
     }
 }
 
-impl<'a> PixelData<'a> for RenderingBase {
+impl<'a,T> PixelData<'a> for RenderingBase<T> where T: PixfmtFunc + Pixel {
     fn pixeldata(&'a self) -> &'a [u8] {
-        & self.pixf.rbuf.data
+        & self.pixf.rbuf().data
     }
 }

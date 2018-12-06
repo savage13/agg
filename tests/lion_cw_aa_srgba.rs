@@ -107,8 +107,7 @@ fn lion_cw_aa_srgba() {
         .collect();
     println!("polygons: {}", t.len());
 
-    let colors_rgb : Vec<agg::Rgba8> = colors.into_iter().map(|c| c.into()).collect();
-    agg::render_all_paths(&mut ras, &mut sl, &mut ren, &t, &colors_rgb);
+    agg::render_all_paths(&mut ras, &mut sl, &mut ren, &t, &colors);
 
     agg::ppm::write_ppm(&ren.pixeldata(), w, h, "lion_cw_aa_srgba.ppm").unwrap();
 

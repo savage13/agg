@@ -7,6 +7,146 @@ use blend_pix;
 use color::*;
 
 use Color;
+use Pixel;
+use PixfmtFunc;
+
+use std::marker::PhantomData;
+pub struct Pixfmt<T> {
+    pub rbuf: RenderingBuffer,
+    phantom: PhantomData<T>,
+}
+
+impl<T> PixfmtFunc for Pixfmt<T> where Pixfmt<T> : Pixel {
+    fn fill<C: Color>(&mut self, c: &C) {
+        let w = self.rbuf.width;
+        let h = self.rbuf.height;
+        for i in 0 .. w {
+            for j in 0 .. h {
+                self.set((i,j), c);
+            }
+        }
+    }
+    fn rbuf(&self) -> &RenderingBuffer {
+        &self.rbuf
+    }
+    fn blend_hline<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, cover: u64) {
+        if c.is_transparent() {
+            return;
+        }
+        let (x,y,len) = (x as usize, y as usize, len as usize);
+        if c.is_opaque() && cover == Self::cover_mask() {
+            for i in 0 .. len {
+                self.set((x+i,y), c);
+            }
+        } else {
+            for i in 0 .. len {
+                self.blend_pix((x+i,y), c, cover);
+            }
+        }
+    }
+    fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, _len: i64, c: &C, covers: &[u64]) {
+        if c.is_transparent() {
+            return;
+        }
+        for (i, &cover) in covers.iter().enumerate() {
+            self.blend_hline(x+i as i64, y, 1, c, cover);
+        }
+    }
+
+}
+
+impl<T> Pixfmt<T> where Pixfmt<T>: Pixel {
+    /// Create new Pixel Format of width * height * bpp
+    ///
+    /// Also creates underlying RenderingBuffer 
+    pub fn new(width: usize, height: usize) -> Self {
+        Self { rbuf: RenderingBuffer::new(width, height, Self::bpp()),
+               phantom: PhantomData
+        }
+    }
+    pub fn from(rbuf: RenderingBuffer) -> Self {
+        Self { rbuf, phantom: PhantomData }
+    }
+    pub fn copy_pixel<C: Color>(&mut self, x: usize, y: usize, c: &C) {
+        self.set((x,y), c);
+    }
+    pub fn copy_hline<C: Color>(&mut self, x: usize, y: usize, n: usize, c: &C) {
+        for i in 0 .. n {
+            self.set((x+i,y), c);
+        }
+    }
+    pub fn copy_vline<C: Color>(&mut self, x: usize, y: usize, n: usize, c: &C) {
+        for i in 0 .. n {
+            self.set((x,y+i), c);
+        }
+    }
+    pub fn blend_color_hspan<C: Color>(&mut self, x: usize, y: usize, _n: usize,
+                             c: &[C], _cover: usize) {
+        for (i,ci) in c.iter().enumerate() {
+            self.set((x+i, y), ci);
+        }
+    }
+}
+
+impl Pixel for Pixfmt<Rgba8> {
+    fn set<C: Color>(&mut self, id: (usize, usize), c: &C) {
+        let c = Rgba8::from(c);
+        self.rbuf[id][0] = c.red8();
+        self.rbuf[id][1] = c.green8();
+        self.rbuf[id][2] = c.blue8();
+        self.rbuf[id][3] = c.alpha8();
+    }
+    fn bpp() -> usize { 4 }
+    fn cover_mask() -> u64 { 255 }
+    fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: &C, cover: u64) {
+        let pix0 = self.get(id);
+        let pix  = blend_pix(&pix0, c, cover);
+        self.set(id, &pix);
+    }
+}
+impl Pixel for Pixfmt<Rgb8> {
+    fn set<C: Color>(&mut self, id: (usize, usize), c: &C) {
+        let c = Rgba8::from(c);
+        self.rbuf[id][0] = c.red8();
+        self.rbuf[id][1] = c.green8();
+        self.rbuf[id][2] = c.blue8();
+    }
+    fn bpp() -> usize { 3 }
+    fn cover_mask() -> u64 { 255 }
+    fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: &C, cover: u64) {
+        let pix0 = self.get(id);
+        let pix  = blend_pix(&pix0, c, cover);
+        self.set(id, &pix);
+    }
+}
+impl Pixfmt<Rgba8> {
+    fn get(&self, id: (usize, usize)) -> Rgba8 {
+        let p = &self.rbuf[id];
+        Rgba8::new(p[0],p[1],p[2],p[3])
+    }
+}
+impl Pixfmt<Rgb8> {
+    fn get(&self, id: (usize, usize)) -> Rgb8 {
+        let p = &self.rbuf[id];
+        Rgb8::new([p[0],p[1],p[2]])
+    }
+}
+
+impl Pixel for PixfmtRgb24 {
+    fn set<C: Color>(&mut self, id: (usize, usize), c: &C) {
+        let c = Rgb8::from(c);
+        self.rbuf[id][0] = c.red8();
+        self.rbuf[id][1] = c.green8();
+        self.rbuf[id][2] = c.blue8();
+    }
+    fn bpp() -> usize { 3 }
+    fn cover_mask() -> u64 { 255 }
+    fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: &C, cover: u64) {
+        let pix0 = self.get(id);
+        let pix  = blend_pix(&pix0, c, cover);
+        self.set(id, &pix);
+    }
+}
 
 /// RGB24 Pixel format
 #[derive(Debug,Default)]
@@ -15,20 +155,71 @@ pub struct PixfmtRgb24 {
     pub rbuf: RenderingBuffer,
 }
 
-impl PixfmtRgb24 {
-    /// Clear the Image
-    pub fn clear(&mut self) {
-        self.rbuf.clear();
-    }
+impl PixfmtFunc for PixfmtRgb24 {
     /// Fill the Image with a Color c
-    pub fn fill(&mut self, c: Rgb8) {
+    fn fill<C: Color>(&mut self, c: &C) {
         let w = self.rbuf.width;
         let h = self.rbuf.height;
         for i in 0 .. w {
             for j in 0 .. h {
-                self.set((i,j), &c);
+                self.set((i,j), c.into());
             }
         }
+    }
+    fn rbuf(&self) -> &RenderingBuffer {
+        &self.rbuf
+    }
+        /// Blend a color and coverage from (x,y) with a length
+    ///
+    /// If the color is opaque or the cover is "full",
+    /// then the pixel value is set.
+    /// Otherwise the color is combined with the existing color using blend_pix
+    fn blend_hline<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, cover: u64) {
+        if c.is_transparent() {
+            return;
+        }
+        let (x,y,len) = (x as usize, y as usize, len as usize);
+        let cover_mask = 255;
+        if c.is_opaque() && cover == cover_mask {
+            for i in 0 .. len {
+                eprintln!("BLEND_HLINE (SET): {:3} {:3} c: {:3} {:3} {:3} cover: {:3}", x+i, y, cu8r(c), cu8g(c), cu8b(c), cover);
+                self.set((x+i,y), c);
+            }
+        } else {
+            for i in 0 .. len {
+                let pix0 = self.get((x+i, y));
+                //eprintln!("BLEND_HLINE (   ): {:3} {:3} c: {:3} {:3} {:3} cover: {:3} {:3} {:3} {:3}", x+i, y, cu8r(c), cu8g(c), cu8b(c), cover, cu8r(&pix), cu8g(&pix), cu8b(&pix));
+                let pix = blend_pix(&pix0, c, cover);
+                self.set((x+i,y), &pix);
+                let pix1 = self.get((x+i, y));
+                 eprintln!("BLEND_HLINE (   ): {:3} {:3} c: {:3} {:3} {:3} cover: {:3} pix {:3} {:3} {:3} out {:3} {:3} {:3}", x+i, y,
+                           cu8r(c), cu8g(c), cu8b(c),
+                           cover,
+                           cu8r(&pix0), cu8g(&pix0), cu8b(&pix0),
+                           cu8r(&pix1), cu8g(&pix1), cu8b(&pix1));
+            }
+        }
+    }
+
+    /// Blend a color from (x,y) with a range of covers
+    ///
+    /// Wrapper around [blend_hline](#method.blend_hline)
+    fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, _len: i64, c: &C, covers: &[u64]) {
+        eprintln!("BLEND_SOLID_HSPAN: {:3} {:3} len {:3} PIXFMT RGB", x, y, covers.len());
+        if c.is_transparent() {
+            return;
+        }
+        for (i, &cover) in covers.iter().enumerate() {
+            self.blend_hline(x+i as i64,y,1,c,cover);
+        }
+    }
+
+}
+
+impl PixfmtRgb24 {
+    /// Clear the Image
+    pub fn clear(&mut self) {
+        self.rbuf.clear();
     }
     /// Create new Pixel Format of width * height * bpp
     ///
@@ -39,50 +230,6 @@ impl PixfmtRgb24 {
     /// Creats a new Pixel Format from a [RenderingBuffer](../base/struct.RenderingBase.html)
     pub fn from(rbuf: RenderingBuffer) -> Self {
         Self { rbuf }
-    }
-    /// Blend a color and coverage from (x,y) with a length
-    ///
-    /// If the color is opaque or the cover is "full",
-    /// then the pixel value is set.
-    /// Otherwise the color is combined with the existing color using blend_pix
-    pub fn blend_hline<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, cover: u64) {
-        if c.is_transparent() {
-            return;
-        }
-        let (x,y,len) = (x as usize, y as usize, len as usize);
-        let cover_mask = 255;
-        if c.is_opaque() && cover == cover_mask {
-            for i in 0 .. len {
-                //eprintln!("BLEND_HLINE (SET): {:3} {:3} c: {:3} {:3} {:3} cover: {:3}", x+i, y, cu8r(c), cu8g(c), cu8b(c), cover);
-                self.set((x+i,y), c);
-            }
-        } else {
-            for i in 0 .. len {
-                let pix0 = self.get((x+i, y));
-                //eprintln!("BLEND_HLINE (   ): {:3} {:3} c: {:3} {:3} {:3} cover: {:3} {:3} {:3} {:3}", x+i, y, cu8r(c), cu8g(c), cu8b(c), cover, cu8r(&pix), cu8g(&pix), cu8b(&pix));
-                let pix = blend_pix(&pix0, c, cover);
-                self.set((x+i,y), &pix);
-                //let pix1 = self.get((x+i, y));
-                // eprintln!("BLEND_HLINE (   ): {:3} {:3} c: {:3} {:3} {:3} cover: {:3} pix {:3} {:3} {:3} out {:3} {:3} {:3}", x+i, y,
-                //           cu8r(c), cu8g(c), cu8b(c),
-                //           cover,
-                //           cu8r(&pix0), cu8g(&pix0), cu8b(&pix0),
-                //           cu8r(&pix1), cu8g(&pix1), cu8b(&pix1));
-            }
-        }
-    }
-
-    /// Blend a color from (x,y) with a range of covers
-    ///
-    /// Wrapper around [blend_hline](#method.blend_hline)
-    pub fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, _len: i64, c: &C, covers: &[u64]) {
-        eprintln!("BLEND_SOLID_HSPAN: {:3} {:3} len {:3} PIXFMT RGB", x, y, covers.len());
-        if c.is_transparent() {
-            return;
-        }
-        for (i, &cover) in covers.iter().enumerate() {
-            self.blend_hline(x+i as i64,y,1,c,cover);
-        }
     }
     /// Set a color c at (x,y)
     pub fn copy_pixel(&mut self, x: usize, y: usize, c: Rgb8) {

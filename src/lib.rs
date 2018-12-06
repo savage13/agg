@@ -24,6 +24,11 @@
 //         blend_hline
 //           blend_hline (pixfmt)
 
+// When difference occur:
+//   - Check Input Path (ADD_PATH) in rasterizer
+//   - Check Scanlines (SWEEP SCANLINES) in rasterizer
+//   - Check Pixels    (BLEND_HLINE)
+
 pub mod path_storage;
 pub mod conv_stroke;
 pub mod affine_transform;
@@ -117,6 +122,20 @@ pub trait Rasterize {
     /// Rasterize a path 
     fn add_path<VS: VertexSource>(&mut self, path: &VS);
 }
+
+pub trait Pixel {
+    fn set<C: Color>(&mut self, id: (usize, usize), c: &C);
+    fn cover_mask() -> u64;
+    fn bpp() -> usize;
+    fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: &C, cover: u64);
+}
+pub trait PixfmtFunc {
+    fn fill<C: Color>(&mut self, color: &C);
+    fn rbuf(&self) -> &RenderingBuffer;
+    fn blend_hline<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, cover: u64);
+    fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, covers: &[u64]);
+}
+
 
 /// Blend a Foreground, Background and Alpha Components
 fn blend(fg: Rgb8, bg: Rgb8, alpha: f64) -> Rgb8 {
