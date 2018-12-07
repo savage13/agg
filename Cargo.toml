@@ -2,6 +2,7 @@
 name = "agg"
 version = "0.1.0"
 authors = ["Brian Savage <savage@uri.edu>"]
+edition = "2018"
 
 [dependencies]
 # num-traits = "0.2"
