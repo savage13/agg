@@ -88,10 +88,10 @@ impl Spiral {
 }
 
 #[test]
-fn rasterizers2() {
+fn rasterizers2_pre() {
     let (w,h) = (500, 450);
 
-    let pixf = agg::Pixfmt::<agg::Rgb8>::new(w, h);
+    let pixf = agg::Pixfmt::<agg::Rgb8pre>::new(w, h);
     let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
 
     ren_base.clear( agg::Rgba8::new(255, 255, 242, 255) );
@@ -143,7 +143,32 @@ fn rasterizers2() {
         ras_al.ren.line_color(&agg::Rgba8::new(102, 77, 26, 255));
         ras_al.add_path(&spiral);
     }
+    // Anti-Aliased Outline
+    {
+        let x = (w/5) as f64;
+        let y = (h - h/4 + 20) as f64;
+        let spiral = Spiral::new(x, y, r1, r2, step, start_angle);
 
+        let mut ren_oaa = agg::RendererOutlineAA::with_base(&mut ren_base);
+        let mut ras_oaa = agg::RasterizerOutlineAA::with_renderer(ren_oaa);
+        ren_oaa.color(&agg::Rgba8::new(102,77,26,255));
+        ras_oaa.add_path(&spiral);
+    }
+    // Anti-Aliased Outline Image
+    {
+        // let x = (w - w/5) as f64;
+        // let y = (h - h/4 + 20) as f64;
+        // let spiral = Spiral::new(x, y, r1, r2, step, start_angle);
+
+        // let mut ren_oaa = agg::RendererOutlineAA::with_base(&mut ren_base);
+        // let mut filter  = agg::PatternFilterBilinear<Rgba8pre>::new();
+        // let mut pat     = agg::LineImagePatternPow2(&mut filter);
+        // let mut ren_img = agg::RendererOutlineImage::with_base_and_pattern(&mut ren_base, &mut pat);
+        // let mut ras_img = agg::RasterizerOutlineAA::with_renderer(ren_oaa);
+        // ren_oaa.color(&agg::Rgba8(102,77,26,255));
+        // ras_oaa.add_path(&spiral);
+    }
+    
     let (ppm, test) = ppm_names();
 
     agg::ppm::write_ppm(&ren_base.pixeldata(), w, h, ppm.clone()).unwrap();

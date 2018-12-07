@@ -3,8 +3,8 @@
 
 use buffer::RenderingBuffer;
 use blend;
-use blend_pix;
 use color::*;
+use math::*;
 
 use Color;
 use Pixel;
@@ -99,14 +99,16 @@ impl Pixel for Pixfmt<Rgba8> {
     fn bpp() -> usize { 4 }
     fn cover_mask() -> u64 { 255 }
     fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: &C, cover: u64) {
-        let pix0 = self.get(id);
-        let pix  = blend_pix(&pix0, c, cover);
+        let alpha = multiply_u8(c.alpha8(), cover as u8);
+        let pix0 = self.get(id); // Rgba8
+        let pix  = self.mix_pix(&pix0, &Rgba8::from(c), alpha);
         self.set(id, &pix);
     }
 }
+
 impl Pixel for Pixfmt<Rgb8> {
     fn set<C: Color>(&mut self, id: (usize, usize), c: &C) {
-        let c = Rgba8::from(c);
+        let c = Rgb8::from(c);
         self.rbuf[id][0] = c.red8();
         self.rbuf[id][1] = c.green8();
         self.rbuf[id][2] = c.blue8();
@@ -115,7 +117,7 @@ impl Pixel for Pixfmt<Rgb8> {
     fn cover_mask() -> u64 { 255 }
     fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: &C, cover: u64) {
         let pix0 = self.get(id);
-        let pix  = blend_pix(&pix0, c, cover);
+        let pix  = self.mix_pix(&pix0, &Rgb8::from(c), c.alpha8(), cover);
         self.set(id, &pix);
     }
 }
@@ -124,11 +126,63 @@ impl Pixfmt<Rgba8> {
         let p = &self.rbuf[id];
         Rgba8::new(p[0],p[1],p[2],p[3])
     }
+    fn mix_pix(&mut self, p: &Rgba8, c: &Rgba8, alpha: u8) -> Rgba8 {
+        let red   =    lerp_u8(p.r, c.r, alpha);
+        let green =    lerp_u8(p.g, c.g, alpha);
+        let blue  =    lerp_u8(p.b, c.b, alpha);
+        let alpha =    lerp_u8(p.a, alpha, alpha);//Should be prelerp_u8
+        Rgba8::new(red, green, blue, alpha)
+    }
+    fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: &C, cover: u64) {
+        let alpha = multiply_u8(c.alpha8(), cover as u8);
+        let pix0 = self.get(id);
+        let pix  = self.mix_pix(&pix0, &Rgba8::from(c), alpha);
+        self.set(id, &pix);
+    }
 }
+impl Pixel for Pixfmt<Rgb8pre> {
+    fn set<C: Color>(&mut self, id: (usize, usize), c: &C) {
+        let c = Rgb8pre::from(c);
+        self.rbuf[id][0] = c.red8();
+        self.rbuf[id][1] = c.green8();
+        self.rbuf[id][2] = c.blue8();
+    }
+    fn bpp() -> usize { 3 }
+    fn cover_mask() -> u64 { 255 }
+    fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: &C, cover: u64) {
+        let pix0 = self.get(id);
+        let pix  = self.mix_pix(&pix0, &Rgb8pre::from(c), c.alpha8(), cover);
+        self.set(id, &pix);
+    }
+}
+
 impl Pixfmt<Rgb8> {
     fn get(&self, id: (usize, usize)) -> Rgb8 {
         let p = &self.rbuf[id];
-        Rgb8::new([p[0],p[1],p[2]])
+        Rgb8::new(p[0],p[1],p[2])
+    }
+    fn mix_pix(&mut self, p: &Rgb8, c: &Rgb8, alpha: u8, cover: u64) -> Rgb8 {
+        let alpha = multiply_u8(alpha, cover as u8);
+        let red   = lerp_u8(p.r, c.r, alpha);
+        let green = lerp_u8(p.g, c.g, alpha);
+        let blue  = lerp_u8(p.b, c.b, alpha);
+        Rgb8::new(red, green, blue)
+    }
+}
+impl Pixfmt<Rgb8pre> {
+    fn get(&self, id: (usize, usize)) -> Rgb8pre {
+        let p = &self.rbuf[id];
+        Rgb8pre::new(p[0],p[1],p[2])
+    }
+    fn mix_pix(&mut self, p: &Rgb8pre, c: &Rgb8pre, alpha: u8, cover: u64) -> Rgb8pre {
+        let alpha = multiply_u8(alpha, cover as u8);
+        let red   = multiply_u8(c.r,   cover as u8);
+        let green = multiply_u8(c.g,   cover as u8);
+        let blue  = multiply_u8(c.b,   cover as u8);
+        let red   = prelerp_u8(p.r, red,   alpha);
+        let green = prelerp_u8(p.g, green, alpha);
+        let blue  = prelerp_u8(p.b, blue,  alpha);
+        Rgb8pre::new(red, green, blue)
     }
 }
 
@@ -169,7 +223,7 @@ impl PixfmtFunc for PixfmtRgb24 {
     fn rbuf(&self) -> &RenderingBuffer {
         &self.rbuf
     }
-        /// Blend a color and coverage from (x,y) with a length
+    /// Blend a color and coverage from (x,y) with a length
     ///
     /// If the color is opaque or the cover is "full",
     /// then the pixel value is set.
@@ -317,7 +371,7 @@ impl PixfmtRgb24 {
     /// Get the value at a pixel id = (x,y)
     pub fn get(&self, id: (usize, usize)) -> Rgb8 {
         let p = &self.rbuf[id];
-        Rgb8::new( [p[0], p[1], p[2]] )
+        Rgb8::new( p[0], p[1], p[2] )
     }
     /// Draw a line from (x1,y1) to (x2,y2) of color c
     ///

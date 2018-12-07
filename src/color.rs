@@ -34,13 +34,13 @@ pub fn rgb_to_srgb(x: f64) -> f64 {
 #[derive(Debug,Default,Copy,Clone)]
 pub struct Rgba8 {
     /// Red
-    r: u8,
+    pub r: u8,
     /// Green
-    g: u8,
+    pub g: u8,
     /// Blue
-    b: u8,
+    pub b: u8,
     /// Alpha
-    a: u8,
+    pub a: u8,
 }
 
 impl Rgba8 {
@@ -75,12 +75,12 @@ impl Color for Rgba8 {
 
 impl From<Rgba8> for Rgb8 {
     fn from(c: Rgba8) -> Rgb8 {
-        Rgb8::new( [c.r, c.g, c.b] )
+        Rgb8::new( c.r, c.g, c.b )
     }
 }
 impl From<Rgb8> for Rgba8 {
     fn from(c: Rgb8) -> Rgba8 {
-        Rgba8::new( c.0[0], c.0[1], c.0[2], 255 )
+        Rgba8::new( c.r, c.g, c.b, 255 )
     }
 }
 
@@ -101,19 +101,18 @@ impl Gray8 {
 }
 
 
-
 impl Rgb8 {
     pub fn white() -> Self {
-        Self::new([255,255,255])
+        Self::new(255,255,255)
     }
     pub fn black() -> Self {
-        Self::new([0,0,0])
+        Self::new(0,0,0)
     }
-    pub fn new(rgb: [u8; 3]) -> Self {
-        Rgb8 ( rgb )
+    pub fn new(r: u8, g: u8, b: u8) -> Self {
+        Rgb8 { r, g, b }
     }
     pub fn gray(g: u8) -> Self {
-        Self::new([g,g,g])
+        Self::new(g,g,g)
     }
     pub fn from_wavelength_gamma(w: f64, gamma: f64) -> Self {
         let (r,g,b) =
@@ -143,7 +142,7 @@ impl Rgb8 {
         let r = (r * scale).powf(gamma) * 255.0;
         let g = (g * scale).powf(gamma) * 255.0;
         let b = (b * scale).powf(gamma) * 255.0;
-        Self::new ( [r as u8, g as u8, b as u8] )
+        Self::new ( r as u8, g as u8, b as u8 )
     }
 }
 
@@ -152,23 +151,44 @@ fn color_u8_to_f64(x: u8) -> f64 {
 }
 
 impl Color for Rgb8 {
-    fn   red(&self) -> f64 { color_u8_to_f64(self.0[0]) }
-    fn green(&self) -> f64 { color_u8_to_f64(self.0[1]) }
-    fn  blue(&self) -> f64 { color_u8_to_f64(self.0[2]) }
+    fn   red(&self) -> f64 { color_u8_to_f64(self.r) }
+    fn green(&self) -> f64 { color_u8_to_f64(self.g) }
+    fn  blue(&self) -> f64 { color_u8_to_f64(self.b) }
     fn alpha(&self) -> f64 { 1.0 }
     fn alpha8(&self) -> u8 { 255 }
-    fn red8(&self) -> u8 { self.0[0] }
-    fn green8(&self) -> u8 { self.0[1] }
-    fn blue8(&self) -> u8 { self.0[2] }
+    fn red8(&self) -> u8   { self.r }
+    fn green8(&self) -> u8 { self.g }
+    fn blue8(&self) -> u8  { self.b }
+}
+impl Color for Rgb8pre {
+    fn   red(&self) -> f64 { color_u8_to_f64(self.r) }
+    fn green(&self) -> f64 { color_u8_to_f64(self.g) }
+    fn  blue(&self) -> f64 { color_u8_to_f64(self.b) }
+    fn alpha(&self) -> f64 { 1.0 }
+    fn alpha8(&self) -> u8 { 255 }
+    fn red8(&self) -> u8   { self.r }
+    fn green8(&self) -> u8 { self.g }
+    fn blue8(&self) -> u8  { self.b }
 }
 
 /// Color as Red, Green, Blue
 #[derive(Debug,Default,Copy,Clone)]
-pub struct Rgb8([u8;3]);
-impl Deref for Rgb8 {
-    type Target = [u8];
-    fn deref(&self) -> &[u8] {
-        &self.0
+pub struct Rgb8 {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+}
+/// Color as Red, Green, Blue with pre-multiplied components
+#[derive(Debug,Default,Copy,Clone)]
+pub struct Rgb8pre {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+}
+
+impl Rgb8pre {
+    pub fn new(r: u8, g: u8, b: u8) -> Self {
+        Self {r, g, b}
     }
 }
 
@@ -247,6 +267,11 @@ impl<'a, C> From<&'a C> for Rgba8 where C: Color {
 }
 impl<'a, C> From<&'a C> for Rgb8 where C: Color {
     fn from(c: &C) -> Self {
-        Self::new([c.red8(), c.green8(), c.blue8()])
+        Self::new(c.red8(), c.green8(), c.blue8())
+    }
+}
+impl<'a, C> From<&'a C> for Rgb8pre where C: Color {
+    fn from(c: &C) -> Self {
+        Self::new(c.red8(), c.green8(), c.blue8())
     }
 }

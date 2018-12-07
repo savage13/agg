@@ -125,10 +125,8 @@ fn lion_outline() {
         .map(|p| agg::ConvStroke::new( p ))
         .collect();
     stroke.iter_mut().for_each(|p| p.width(7.0));
-    let colors_rgb : Vec<agg::Rgba8> = colors.into_iter()
-        .map(|c| c.into()).collect();
     agg::render_all_paths(&mut ras, &mut sl, &mut ren,
-                          &stroke[..], &colors_rgb[..]);
+                          &stroke, &colors);
 
     let (ppm, test) = ppm_names();
 

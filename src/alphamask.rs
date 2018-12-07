@@ -1,6 +1,6 @@
 //! Alphamask Adapator
 
-use blend_pix;
+use math::blend_pix;
 use color::Rgb8;
 use pixfmt::PixfmtGray8;
 use pixfmt::PixfmtRgb24;

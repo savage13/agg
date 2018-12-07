@@ -25,7 +25,7 @@ fn t02_pixel_formats() {
     draw_black_frame(&mut pix);
 
     for i in 0 .. pix.rbuf.height/2 {
-        let c = agg::Rgb8::new([127,200,98]);
+        let c = agg::Rgb8::new(127,200,98);
         pix.copy_pixel(i, i, c);
     }
 

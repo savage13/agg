@@ -30,7 +30,7 @@ pub fn compare_ppm<P: AsRef<Path>>(f1: P, f2: P) {
 ///
 pub fn write_ppm<P: AsRef<Path>>(buf: &[u8], width: usize, height: usize, filename: P) -> Result<(),std::io::Error> {
     let mut fd = File::create(filename)?;
-    write!(fd, "P6 {} {} 255 ", width, height);
+    write!(fd, "P6 {} {} 255 ", width, height)?;
     fd.write_all(buf)?;
     Ok(())
 }
