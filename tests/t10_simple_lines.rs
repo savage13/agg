@@ -5,7 +5,7 @@ use agg::PixfmtFunc;
 
 #[test]
 fn t10_simple_lines() {
-    let mut pix = agg::PixfmtRgb24::new(320,200,3);
+    let mut pix = agg::Pixfmt::<agg::Rgb8>::new(320,200);
     let black = agg::Rgb8::black();
     let w = pix.rbuf.width;
     let h = pix.rbuf.height;

@@ -63,10 +63,10 @@ fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Rgba8>){
 
 #[test]
 fn lion_cw() {
-    let (w,h,bpp) = (400,400,3);
+    let (w,h) = (400,400);
 
     let (paths, colors) = parse_lion();
-    let pixf = agg::PixfmtRgb24::new(w,h,bpp);
+    let pixf = agg::Pixfmt::<agg::Rgb8>::new(w,h);
     let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
     ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
     let mut ren = agg::RenderingScanlineBinSolid::with_base(&mut ren_base);

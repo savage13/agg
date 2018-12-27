@@ -100,18 +100,16 @@ impl<T> PixfmtFunc for Pixfmt<T> where Pixfmt<T> : Pixel {
             for (i,(color,&cover)) in colors.iter().zip(covers.iter()).enumerate() {
                 self.copy_or_blend_pix_with_cover((x,y+i), color, cover);
             }
+        } else if cover == 255 {
+            for (i,color) in colors.iter().enumerate() {
+                if ! color.is_transparent() {
+                    eprintln!("blend_color_vspan with cover = cover_mask {:4},{:4}", x, y+i);
+                }
+                self.copy_or_blend_pix((x,y+i), color);
+            }
         } else {
-            if cover == 255 {
-                for (i,color) in colors.iter().enumerate() {
-                    if ! color.is_transparent() {
-                        eprintln!("blend_color_vspan with cover = cover_mask {:4},{:4}", x, y+i);
-                    }
-                    self.copy_or_blend_pix((x,y+i), color);
-                }
-            } else {
-                for (i,color) in colors.iter().enumerate() {
-                    self.copy_or_blend_pix_with_cover((x,y+i), color, cover);
-                }
+            for (i,color) in colors.iter().enumerate() {
+                self.copy_or_blend_pix_with_cover((x,y+i), color, cover);
             }
         }
     }
@@ -124,24 +122,20 @@ impl<T> PixfmtFunc for Pixfmt<T> where Pixfmt<T> : Pixel {
             for (i,(color,&cover)) in colors.iter().zip(covers.iter()).enumerate() {
                 self.copy_or_blend_pix_with_cover((x+i,y), color, cover);
             }
+        } else if cover == 255 {
+            for (i,color) in colors.iter().enumerate() {
+                if ! color.is_transparent() {
+                    eprintln!("blend_color_hspan with cover = cover_mask {:4},{:4}", x+i, y);
+                }
+                self.copy_or_blend_pix((x+i,y), color);
+            }
         } else {
-            if cover == 255 {
-                for (i,color) in colors.iter().enumerate() {
-                    if ! color.is_transparent() {
-                        eprintln!("blend_color_hspan with cover = cover_mask {:4},{:4}", x+i, y);
-                    }
-                    self.copy_or_blend_pix((x+i,y), color);
-                }
-            } else {
-
-                for (i,color) in colors.iter().enumerate() {
-                    eprintln!("blend_color_hspan with cover != cover_mask {:4},{:4}", x, y);
-                    self.copy_or_blend_pix_with_cover((x+i,y), color, cover);
-                }
+            for (i,color) in colors.iter().enumerate() {
+                eprintln!("blend_color_hspan with cover != cover_mask {:4},{:4}", x, y);
+                self.copy_or_blend_pix_with_cover((x+i,y), color, cover);
             }
         }
     }
-
 }
 
 impl<T> Pixfmt<T> where Pixfmt<T>: Pixel {
@@ -152,6 +146,10 @@ impl<T> Pixfmt<T> where Pixfmt<T>: Pixel {
         Self { rbuf: RenderingBuffer::new(width, height, Self::bpp()),
                phantom: PhantomData
         }
+    }
+    /// Clear the Image
+    pub fn clear(&mut self) {
+        self.rbuf.clear();
     }
     pub fn from(rbuf: RenderingBuffer) -> Self {
         Self { rbuf, phantom: PhantomData }
@@ -195,7 +193,135 @@ impl<T> Pixfmt<T> where Pixfmt<T>: Pixel {
             }
         }
     }
+    /// Draw a line from (x1,y1) to (x2,y2) of color c 
+    ///
+    /// Uses Xiaolin Wu's line algorithm with Anti-Aliasing
+    pub fn line_sp_aa(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, c: Rgb8) {
+        let steep = (x2-x1).abs() < (y2-y1).abs();
+        let (x1,y1,x2,y2) = if steep   { (y1,x1,y2,x2) } else { (x1,y1,x2,y2) };
+        let (x1,y1,x2,y2) = if x2 < x1 { (x2,y2,x1,y1) } else { (x1,y1,x2,y2) };
+        let dx = x2-x1;
+        let dy = y2-y1;
+        let gradient = if dx.abs() <= 1e-6 { 1.0 } else { dy/dx };
 
+        let white = Rgb8::white();
+        // Handle First Endpoint
+        let (_xend, yend, _xgap, xpx11, ypx11, v1, v2) = endpoint(x1,y1,gradient);
+        let v1 = blend(c, white, v1);
+        let v2 = blend(c, white, v2);
+        if steep {
+            self.set((ypx11,  xpx11), &v1);
+            self.set((ypx11+1,xpx11), &v2);
+        } else {
+            self.set((xpx11,  ypx11),  &v1);
+            self.set((xpx11,  ypx11+1),&v2);
+        }
+        let mut intery = yend + gradient;
+        // Handle Second Endpoint
+
+        let (_xend, _yend, _xgap, xpx12, ypx12, v1, v2) = endpoint(x2,y2,gradient);
+        let v1 = blend(c, white, v1);
+        let v2 = blend(c, white, v2);
+        if steep {
+            self.set((ypx12,  xpx12),   &v1);
+            self.set((ypx12+1,xpx12),   &v2);
+        } else {
+            self.set((xpx12,  ypx12),   &v1);
+            self.set((xpx12,  ypx12+1), &v2);
+        }
+        // In Between Points
+        for xp in xpx11 + 1 .. xpx12 {
+            let yp = ipart(intery) as usize;
+            let (p0,p1) = if steep { ((yp,xp),(yp+1,xp)) } else { ((xp,yp),(xp,yp+1)) };
+
+            let (v1,v2) = ( rfpart(intery), fpart(intery) );
+            //let v0 = blend(c, self.get(p0), v1);
+            //let v1 = blend(c, self.get(p1), v2);
+            //self.set(p0,&v0);
+            //self.set(p1,&v1);
+            self.blend_pix(p0, &c, (v1*255.) as u64);
+            self.blend_pix(p1, &c, (v2*255.) as u64);
+
+            intery += gradient;
+        }
+    }
+
+    /// Draw a line from (x1,y1) to (x2,y2) of color c
+    ///
+    /// Line is Aliased (not-anti-aliased)
+    pub fn line_sp(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, c: Rgb8) {
+        println!("({}, {}) - ({}, {})", x1,y1,x2,y2);
+        let x1 = (x1 * 256.0).round() as i64 / 256;
+        let y1 = (y1 * 256.0).round() as i64 / 256;
+        let x2 = (x2 * 256.0).round() as i64 / 256;
+        let y2 = (y2 * 256.0).round() as i64 / 256;
+        println!("   ({}, {}) - ({}, {})", x1,y1,x2,y2);
+
+        let steep = (x2-x1).abs() < (y2-y1).abs();
+        let (x1,y1,x2,y2) = if steep   { (y1,x1,y2,x2) } else { (x1,y1,x2,y2) };
+        let (x1,y1,x2,y2) = if x2 < x1 { (x2,y2,x1,y1) } else { (x1,y1,x2,y2) };
+
+        let count = (x2-x1).abs();
+        let count = std::cmp::max(count, 1);
+        let dy = y2-y1;
+
+        let mut left = dy / count;
+        let mut rem  = dy % count;
+        let mut xmod = rem;
+        let mut y = y1;
+        //println!("   count, left, rem, dy: {} {} {} {}", count, left, rem, dy);
+        if xmod <= 0 {
+            xmod += count;
+            rem  += count;
+            left -= 1;
+        }
+        xmod -= count;
+
+        for x in x1..x2 {
+            if steep {
+                self.set((y as usize, x as usize), &c);
+            } else {
+                self.set((x as usize, y as usize), &c);
+            }
+            xmod += rem;
+            y += left;
+            if xmod > 0 {
+                xmod -= count;
+                y += 1;
+            }
+        }
+    }
+
+    /// Draw a line from (x1,y1) to (x2,y2) of color c
+    ///
+    /// Uses Bresenham's Line Algorithm and based on [RosettaCode](https://rosettacode.org/wiki/Bitmap/Bresenham%27s_line_algorithm#C.2B.2B)
+    ///
+    pub fn line(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, c: Rgb8) {
+        let steep = (y2-y1).abs() > (x2-x1).abs();
+
+        let (x1,y1,x2,y2) = if steep { (y1,x1,y2,x2) } else { (x1,y1,x2,y2) };
+        let (x1,y1,x2,y2) = if x1>x2 { (x2,y2,x1,y1) } else { (x1,y1,x2,y2) };
+        let dx = x2-x1;
+        let dy = (y2-y1).abs();
+        let mut error = dx / 2.0;
+
+        let pos   = y1<y2;
+        let mut y = y1.floor() as usize;
+        let x1    = x1.floor() as usize;
+        let x2    = x2.floor() as usize;
+        for x in x1 .. x2 {
+            if steep {
+                self.set((y,x), &c);
+            } else {
+                self.set((x,y), &c);
+            }
+            error -= dy;
+            if error <= 0.0 {
+                y = if pos { y+1 } else { y-1 };
+                error += dx;
+            }
+        }
+    }
 
 }
 
@@ -224,20 +350,20 @@ impl Source for Pixfmt<Rgba32> {
         //let n = (id.0 + id.1 * self.rbuf.width) * Pixfmt::<Rgba32>::bpp();
         let p = &self.rbuf[id];
         //eprintln!("GET {:?}", &p[..16]);
-        let r : f32 = unsafe { std::mem::transmute::<[u8;4],f32>([p[0],p[1],p[2],p[3]]) };
-        let g : f32 = unsafe { std::mem::transmute::<[u8;4],f32>([p[4],p[5],p[6],p[7]]) };
-        let b : f32 = unsafe { std::mem::transmute::<[u8;4],f32>([p[8],p[9],p[10],p[11]]) };
-        let a : f32 = unsafe { std::mem::transmute::<[u8;4],f32>([p[12],p[13],p[14],p[15]]) };
+        let red   : f32 = unsafe { std::mem::transmute::<[u8;4],f32>([p[0],p[1],p[2],p[3]]) };
+        let green : f32 = unsafe { std::mem::transmute::<[u8;4],f32>([p[4],p[5],p[6],p[7]]) };
+        let blue  : f32 = unsafe { std::mem::transmute::<[u8;4],f32>([p[8],p[9],p[10],p[11]]) };
+        let alpha : f32 = unsafe { std::mem::transmute::<[u8;4],f32>([p[12],p[13],p[14],p[15]]) };
         //eprintln!("GET: {} {} {} {}", r,g,b,a);
         //eprintln!("GET {:?}", Rgba32::new(r,g,b,a));
-        Rgba8::from(&Rgba32::new(r,g,b,a))
+        Rgba8::from(&Rgba32::new(red,green,blue,alpha))
     }
 }
 
 impl Pixel for Pixfmt<Rgba8> {
     fn set<C: Color>(&mut self, id: (usize, usize), c: &C) {
         let c = Rgba8::from(c);
-        assert!(self.rbuf.data.len() > 0);
+        assert!(! self.rbuf.data.is_empty() );
         self.rbuf[id][0] = c.red8();
         self.rbuf[id][1] = c.green8();
         self.rbuf[id][2] = c.blue8();
@@ -248,7 +374,7 @@ impl Pixel for Pixfmt<Rgba8> {
     fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: &C, cover: u64) {
         let alpha = multiply_u8(c.alpha8(), cover as u8);
         let pix0 = self.get(id); // Rgba8
-        let pix  = self.mix_pix(&pix0, &Rgba8::from(c), alpha);
+        let pix  = self.mix_pix(pix0, Rgba8::from(c), alpha);
         self.set(id, &pix);
     }
 }
@@ -266,12 +392,12 @@ impl Pixel for Pixfmt<Rgb8> {
         //eprintln!("BLEND PIX rgb8 in  {:?} cover {}", c, cover);
         let pix0 = self.get(id);
         //eprintln!("BLEND PIX rgb8 cur {:?}", c);
-        let pix  = self.mix_pix(&pix0, &Rgb8::from(c), c.alpha8(), cover);
+        let pix  = self.mix_pix(pix0, Rgb8::from(c), c.alpha8(), cover);
         self.set(id, &pix);
     }
 }
 impl Pixfmt<Rgba8> {
-    fn mix_pix(&mut self, p: &Rgba8, c: &Rgba8, alpha: u8) -> Rgba8 {
+    fn mix_pix(&mut self, p: Rgba8, c: Rgba8, alpha: u8) -> Rgba8 {
         let red   =    lerp_u8(p.r, c.r, alpha);
         let green =    lerp_u8(p.g, c.g, alpha);
         let blue  =    lerp_u8(p.b, c.b, alpha);
@@ -281,7 +407,7 @@ impl Pixfmt<Rgba8> {
     fn _blend_pix<C: Color>(&mut self, id: (usize, usize), c: &C, cover: u64) {
         let alpha = multiply_u8(c.alpha8(), cover as u8);
         let pix0 = self.get(id);
-        let pix  = self.mix_pix(&pix0, &Rgba8::from(c), alpha);
+        let pix  = self.mix_pix(pix0, Rgba8::from(c), alpha);
         self.set(id, &pix);
     }
 }
@@ -299,8 +425,7 @@ impl Pixel for Pixfmt<Rgba8pre> {
         let p = self.get(id);
         let p0 = Rgba8pre::new(p.red8(), p.green8(), p.blue8(), p.alpha8());
         let c0 = Rgba8pre::new(c.red8(), c.green8(), c.blue8(), c.alpha8());
-
-        let p  = self.mix_pix(&p0, &c0, c.alpha8(), cover);
+        let p  = self.mix_pix(p0, c0, c.alpha8(), cover);
         //eprintln!("BLEND PIX: p {:4} {:4} {:4} {:4} c: {:4} {:4} {:4} {:4}", p0.r,p0.g,p0.b,c.alpha8(), c0.red8(),c0.green8(),c0.blue8(),c0.alpha8());
         self.set(id, &p);
         //eprintln!("         : p {:4} {:4} {:4} {:4}", p.r,p.g,p.b,c.alpha8());
@@ -312,7 +437,7 @@ impl Pixfmt<Rgb8> {
         let p = &self.rbuf[id];
         Rgb8::new(p[0],p[1],p[2])
     }
-    fn mix_pix(&mut self, p: &Rgb8, c: &Rgb8, alpha: u8, cover: u64) -> Rgb8 {
+    fn mix_pix(&mut self, p: Rgb8, c: Rgb8, alpha: u8, cover: u64) -> Rgb8 {
         let alpha = multiply_u8(alpha, cover as u8);
         let red   = lerp_u8(p.r, c.r, alpha);
         let green = lerp_u8(p.g, c.g, alpha);
@@ -321,7 +446,7 @@ impl Pixfmt<Rgb8> {
     }
 }
 impl Pixfmt<Rgba8pre> {
-    fn mix_pix(&mut self, p: &Rgba8pre, c: &Rgba8pre, alpha: u8, cover: u64) -> Rgba8pre {
+    fn mix_pix(&mut self, p: Rgba8pre, c: Rgba8pre, alpha: u8, cover: u64) -> Rgba8pre {
         let mut alpha = alpha;
         let (mut red, mut green, mut blue) = (c.r, c.g, c.b);
         if cover != 255 {
@@ -338,7 +463,7 @@ impl Pixfmt<Rgba8pre> {
     }
 }
 
-impl Pixel for PixfmtRgb24 {
+impl Pixel for PixfmtRgb24x {
     fn set<C: Color>(&mut self, id: (usize, usize), c: &C) {
         let c = Rgb8::from(c);
         self.rbuf[id][0] = c.red8();
@@ -356,19 +481,19 @@ impl Pixel for PixfmtRgb24 {
 
 /// RGB24 Pixel format
 #[derive(Debug,Default)]
-pub struct PixfmtRgb24 {
+pub struct PixfmtRgb24x {
     /// Rendering Buffer
     pub rbuf: RenderingBuffer,
 }
 
-impl PixfmtFunc for PixfmtRgb24 {
+impl PixfmtFunc for PixfmtRgb24x {
     /// Fill the Image with a Color c
     fn fill<C: Color>(&mut self, c: &C) {
         let w = self.rbuf.width;
         let h = self.rbuf.height;
         for i in 0 .. w {
             for j in 0 .. h {
-                self.set((i,j), c.into());
+                self.set((i,j), c);
             }
         }
     }
@@ -450,10 +575,9 @@ impl PixfmtFunc for PixfmtRgb24 {
     fn blend_color_vspan<C: Color>(&mut self, _x: i64, _y: i64, _len: i64, _colors: &[C], _covers: &[u64], _cover: u64) {
         unimplemented!("not done");
     }
-
 }
 
-impl PixfmtRgb24 {
+impl PixfmtRgb24x {
     /// Clear the Image
     pub fn clear(&mut self) {
         self.rbuf.clear();
@@ -500,137 +624,13 @@ impl PixfmtRgb24 {
         self.rbuf[id][1] = c.green8();
         self.rbuf[id][2] = c.blue8();
     }
-    /// Draw a line from (x1,y1) to (x2,y2) of color c 
-    ///
-    /// Uses Xiaolin Wu's line algorithm with Anti-Aliasing
-    pub fn line_sp_aa(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, c: Rgb8) {
-        let steep = (x2-x1).abs() < (y2-y1).abs();
-        let (x1,y1,x2,y2) = if steep   { (y1,x1,y2,x2) } else { (x1,y1,x2,y2) };
-        let (x1,y1,x2,y2) = if x2 < x1 { (x2,y2,x1,y1) } else { (x1,y1,x2,y2) };
-        let dx = x2-x1;
-        let dy = y2-y1;
-        let gradient = if dx.abs() <= 1e-6 { 1.0 } else { dy/dx };
-
-        let white = Rgb8::white();
-        // Handle First Endpoint
-        let (_xend, yend, _xgap, xpx11, ypx11, v1, v2) = endpoint(x1,y1,gradient);
-        let v1 = blend(c, white, v1);
-        let v2 = blend(c, white, v2);
-        if steep {
-            self.set((ypx11,  xpx11), &v1);
-            self.set((ypx11+1,xpx11), &v2);
-        } else {
-            self.set((xpx11,  ypx11),  &v1);
-            self.set((xpx11,  ypx11+1),&v2);
-        }
-        let mut intery = yend + gradient;
-        // Handle Second Endpoint
-
-        let (_xend, _yend, _xgap, xpx12, ypx12, v1, v2) = endpoint(x2,y2,gradient);
-        let v1 = blend(c, white, v1);
-        let v2 = blend(c, white, v2);
-        if steep {
-            self.set((ypx12,  xpx12),   &v1);
-            self.set((ypx12+1,xpx12),   &v2);
-        } else {
-            self.set((xpx12,  ypx12),   &v1);
-            self.set((xpx12,  ypx12+1), &v2);
-        }
-        // In Between Points
-        for xp in xpx11 + 1 .. xpx12 {
-            let yp = ipart(intery) as usize;
-            let (p0,p1) = if steep { ((yp,xp),(yp+1,xp)) } else { ((xp,yp),(xp,yp+1)) };
-
-            let (v1,v2) = ( rfpart(intery), fpart(intery) );
-            let v0 = blend(c, self.get(p0), v1);
-            let v1 = blend(c, self.get(p1), v2);
-            self.set(p0,&v0);
-            self.set(p1,&v1);
-
-            intery += gradient;
-        }
-
-    }
     /// Get the value at a pixel id = (x,y)
     pub fn get(&self, id: (usize, usize)) -> Rgb8 {
         let p = &self.rbuf[id];
         Rgb8::new( p[0], p[1], p[2] )
     }
-    /// Draw a line from (x1,y1) to (x2,y2) of color c
-    ///
-    /// Line is Aliased (not-anti-aliased)
-    pub fn line_sp(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, c: Rgb8) {
-        println!("({}, {}) - ({}, {})", x1,y1,x2,y2);
-        let x1 = (x1 * 256.0).round() as i64 / 256;
-        let y1 = (y1 * 256.0).round() as i64 / 256;
-        let x2 = (x2 * 256.0).round() as i64 / 256;
-        let y2 = (y2 * 256.0).round() as i64 / 256;
-        println!("   ({}, {}) - ({}, {})", x1,y1,x2,y2);
 
-        let steep = (x2-x1).abs() < (y2-y1).abs();
-        let (x1,y1,x2,y2) = if steep   { (y1,x1,y2,x2) } else { (x1,y1,x2,y2) };
-        let (x1,y1,x2,y2) = if x2 < x1 { (x2,y2,x1,y1) } else { (x1,y1,x2,y2) };
 
-        let count = (x2-x1).abs();
-        let count = std::cmp::max(count, 1);
-        let dy = y2-y1;
-
-        let mut left = dy / count;
-        let mut rem  = dy % count;
-        let mut xmod = rem;
-        let mut y = y1;
-        //println!("   count, left, rem, dy: {} {} {} {}", count, left, rem, dy);
-        if xmod <= 0 {
-            xmod += count;
-            rem  += count;
-            left -= 1;
-        }
-        xmod -= count;
-
-        for x in x1..x2 {
-            if steep {
-                self.set((y as usize, x as usize), &c);
-            } else {
-                self.set((x as usize, y as usize), &c);
-            }
-            xmod += rem;
-            y += left;
-            if xmod > 0 {
-                xmod -= count;
-                y += 1;
-            }
-        }
-    }
-    /// Draw a line from (x1,y1) to (x2,y2) of color c
-    ///
-    /// Uses Bresenham's Line Algorithm and based on [RosettaCode](https://rosettacode.org/wiki/Bitmap/Bresenham%27s_line_algorithm#C.2B.2B)
-    ///
-    pub fn line(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, c: Rgb8) {
-        let steep = (y2-y1).abs() > (x2-x1).abs();
-
-        let (x1,y1,x2,y2) = if steep { (y1,x1,y2,x2) } else { (x1,y1,x2,y2) };
-        let (x1,y1,x2,y2) = if x1>x2 { (x2,y2,x1,y1) } else { (x1,y1,x2,y2) };
-        let dx = x2-x1;
-        let dy = (y2-y1).abs();
-        let mut error = dx / 2.0;
-
-        let pos   = y1<y2;
-        let mut y = y1.floor() as usize;
-        let x1    = x1.floor() as usize;
-        let x2    = x2.floor() as usize;
-        for x in x1 .. x2 {
-            if steep {
-                self.set((y,x), &c);
-            } else {
-                self.set((x,y), &c);
-            }
-            error -= dy;
-            if error <= 0.0 {
-                y = if pos { y+1 } else { y-1 };
-                error += dx;
-            }
-        }
-    }
 }
 
 /// Gray scale Pixel Format
@@ -685,16 +685,16 @@ impl Pixel for Pixfmt<Rgba32> {
     fn set<C: Color>(&mut self, id: (usize, usize), c: &C) {
         let c = Rgba32::from(c);
         assert!(self.rbuf.data.len() > 0);
-        let r : [u8;4] = unsafe { std::mem::transmute(c.r) };
-        let g : [u8;4] = unsafe { std::mem::transmute(c.g) };
-        let b : [u8;4] = unsafe { std::mem::transmute(c.b) };
-        let a : [u8;4] = unsafe { std::mem::transmute(c.a) };
+        let red   : [u8;4] = unsafe { std::mem::transmute(c.r) };
+        let green : [u8;4] = unsafe { std::mem::transmute(c.g) };
+        let blue  : [u8;4] = unsafe { std::mem::transmute(c.b) };
+        let alpha : [u8;4] = unsafe { std::mem::transmute(c.a) };
         //eprintln!("SET: {:?} {:?} {:?} {:?}", r,g,b,a);
         for i in 0 .. 4 {
-            self.rbuf[id][i] = r[i];
-            self.rbuf[id][i+4] = g[i];
-            self.rbuf[id][i+8] = b[i];
-            self.rbuf[id][i+12] = a[i];
+            self.rbuf[id][i]    = red[i];
+            self.rbuf[id][i+4]  = green[i];
+            self.rbuf[id][i+8]  = blue[i];
+            self.rbuf[id][i+12] = alpha[i];
         }
         //self.rbuf[id][ 4.. 8] = unsafe { std::mem::transmute(c.g) };
         //self.rbuf[id][ 8..12] = unsafe { std::mem::transmute(c.b) };

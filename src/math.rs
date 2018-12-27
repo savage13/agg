@@ -61,5 +61,5 @@ pub fn blend_pix<C1: Color, C2: Color>(p: &C1, c: &C2, cover: u64) -> Rgba8 {
     let alpha = lerp_u8(p.alpha8(), c.alpha8(), alpha);
     eprintln!("BLEND PIX: r,g,b,a {:.3} {:.3} {:.3} {:.3}",
               red, green, blue, alpha);
-    Rgba8::new(red, green, blue,alpha)
+    Rgba8::new(red, green, blue, alpha)
 }

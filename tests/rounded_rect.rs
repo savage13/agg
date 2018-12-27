@@ -21,12 +21,12 @@ fn ppm_names() -> (PathBuf,PathBuf) {
 
 #[test]
 fn rounded_rect() {
-    let (w,h,bpp) = (600,400,3);
+    let (w,h) = (600,400);
 
     let m_x = [100., 500. ];
     let m_y = [100., 350. ];
 
-    let pixf = agg::PixfmtRgb24::new(w,h,bpp);
+    let pixf = agg::Pixfmt::<agg::Rgb8>::new(w,h);
 
     let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
 

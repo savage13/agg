@@ -13,12 +13,12 @@ fn rgb64(r: f64, g: f64,b: f64,a: f64) -> agg::Rgba8 {
 
 #[test]
 fn rasterizers() {
-    let (w,h,bpp) = (500,330,3);
+    let (w,h) = (500,330);
 
     let m_x = [100.+120., 369.+120., 143.+120.];
     let m_y = [60.,       170.,      310.0];
 
-    let pixf = agg::PixfmtRgb24::new(w,h,bpp);
+    let pixf = agg::Pixfmt::<agg::Rgb8>::new(w,h);
     let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
     ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
 

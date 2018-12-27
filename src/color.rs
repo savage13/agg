@@ -68,7 +68,7 @@ impl Rgba8 {
         self.b = 0;
         self.a = 0;
     }
-    pub fn premultiply(&self) -> Rgba8pre {
+    pub fn premultiply(self) -> Rgba8pre {
         //if self.a == 158 {
         //    eprint!("COLOR {} {} {} {} => ", self.r, self.g, self.b, self.a);
         //}
@@ -302,11 +302,11 @@ impl From<Srgba8> for Rgba8 {
 }
 impl From<Srgba8> for Rgba32 {
     fn from(c: Srgba8) -> Self {
-        let r = c.red() as f32;
-        let g = c.green() as f32;
-        let b = c.blue() as f32;
-        let a = c.alpha() as f32;
-        Self::new(r,g,b,a)
+        let red   = c.red()   as f32;
+        let green = c.green() as f32;
+        let blue  = c.blue()  as f32;
+        let alpha = c.alpha() as f32;
+        Self::new(red,green,blue,alpha)
     }
 }
 
@@ -357,7 +357,7 @@ impl Rgba32 {
         Self { r, g, b, a }
     }
     pub fn premultiply(&self) -> Self {
-        if self.a == 1.0 {
+        if (self.a - 1.0).abs() <= std::f32::EPSILON {
             Rgba32::new(self.r, self.g, self.b, self.a)
         } else if self.a == 0.0 {
             Rgba32::new(0., 0., 0., self.a)
@@ -371,13 +371,13 @@ impl Rgba32 {
 }
 
 impl Color for Rgba32 {
-    fn   red(&self) -> f64 { self.r as f64 }
-    fn green(&self) -> f64 { self.g as f64 }
-    fn  blue(&self) -> f64 { self.b as f64 }
-    fn alpha(&self) -> f64 { self.a as f64 }
-    fn alpha8(&self) -> u8 { cu8(self.a as f64) }
-    fn red8(&self) -> u8 { cu8(self.r as f64) }
-    fn green8(&self) -> u8 { cu8(self.g as f64) }
-    fn blue8(&self) -> u8 { cu8(self.b as f64) }
+    fn   red(&self)  -> f64 { f64::from(self.r) }
+    fn green(&self)  -> f64 { f64::from(self.g) }
+    fn  blue(&self)  -> f64 { f64::from(self.b) }
+    fn alpha(&self)  -> f64 { f64::from(self.a) }
+    fn alpha8(&self) -> u8  { cu8(self.alpha()) }
+    fn red8(&self)   -> u8  { cu8(self.red()) }
+    fn green8(&self) -> u8  { cu8(self.green()) }
+    fn blue8(&self)  -> u8  { cu8(self.blue()) }
     fn is_premultiplied(&self) -> bool { false }
 }

@@ -3,7 +3,7 @@ extern crate agg;
 
 #[test]
 fn t04_solar_spectrum_alpha() {
-    let mut pix = agg::PixfmtRgb24::new(320, 200, 3);
+    let mut pix = agg::Pixfmt::<agg::Rgb8>::new(320, 200);
     pix.clear();
 
     let mut alpha = agg::PixfmtGray8::new(320, 200, 1);

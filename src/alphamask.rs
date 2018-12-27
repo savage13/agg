@@ -3,18 +3,21 @@
 use crate::math::blend_pix;
 use crate::color::Rgb8;
 use crate::pixfmt::PixfmtGray8;
-use crate::pixfmt::PixfmtRgb24;
+//use crate::pixfmt::PixfmtRgb24;
+use crate::pixfmt::Pixfmt;
+use crate::Pixel;
+use crate::Source;
 
 /// Alpha Mask Adaptor
-pub struct AlphaMaskAdaptor {
-    pub rgb: PixfmtRgb24,
+pub struct AlphaMaskAdaptor<T> where Pixfmt<T>: Pixel + Source {
+    pub rgb: Pixfmt<T>,
     pub alpha: PixfmtGray8,
 }
 
 
-impl AlphaMaskAdaptor {
+impl<T> AlphaMaskAdaptor<T> where Pixfmt<T>: Pixel + Source {
     /// Create a new Alpha Mask Adapator from a two PixelFormats
-    pub fn new(rgb: PixfmtRgb24, alpha: PixfmtGray8) -> Self {
+    pub fn new(rgb: Pixfmt<T>, alpha: PixfmtGray8) -> Self {
         Self { rgb, alpha }
     }
     /// Blend a set of colors starting at (x,y) with a length

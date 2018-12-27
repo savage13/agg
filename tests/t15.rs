@@ -6,9 +6,9 @@ use agg::Render;
 
 #[test]
 fn t15_path_stroke() {
-    let (w,h,bpp) = (100,100,3);
+    let (w,h) = (100,100);
 
-    let pixf = agg::PixfmtRgb24::new(w,h,bpp);
+    let pixf = agg::Pixfmt::<agg::Rgb8>::new(w,h);
 
     let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
 

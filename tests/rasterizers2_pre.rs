@@ -133,7 +133,7 @@ fn rasterizers2_pre() {
 
     let start_angle = 0.0;
     let line_width = 3.0;
-    let width  = w as f64;
+    let _width  = w as f64;
     let height = h as f64;
     let (r1, r2) = (5.0, 70.0);
     let step = 16.0;
