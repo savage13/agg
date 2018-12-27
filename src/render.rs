@@ -6,16 +6,16 @@ use crate::color::Rgba8;
 use crate::POLY_SUBPIXEL_SCALE;
 use crate::POLY_SUBPIXEL_MASK;
 use crate::POLY_SUBPIXEL_SHIFT;
-use crate::raster::POLY_MR_SUBPIXEL_SHIFT;
+use crate::POLY_MR_SUBPIXEL_SHIFT;
 use crate::clip::Rectangle;
-use crate::raster::LineParameters;
+use crate::line_interp::LineParameters;
 use crate::raster::len_i64_xy;
 use crate::clip::{INSIDE, TOP,BOTTOM,LEFT,RIGHT};
-use crate::raster::DistanceInterpolator00;
-use crate::raster::DistanceInterpolator0;
-use crate::raster::RenderOutline;
-use crate::raster::MAX_HALF_WIDTH;
-use crate::raster::line_mr;
+use crate::line_interp::DistanceInterpolator00;
+use crate::line_interp::DistanceInterpolator0;
+use crate::RenderOutline;
+use crate::MAX_HALF_WIDTH;
+use crate::line_interp::line_mr;
 use crate::pixfmt::Pixfmt;
 
 use crate::Source;
@@ -353,10 +353,7 @@ impl LineInterpolator {
         self.xmod += self.count;
     }
     pub fn new_foward_adjusted(y1: i64, y2: i64, count: i64) -> Self {
-
-        let fwd = Self::new(y1, y2, count);
-        //eprintln!("DRAW: DDA: {} {} {} {} {} :: {} {} FORWARD", fwd.y, fwd.left, fwd.rem, fwd.xmod, fwd.count, y1, y2);
-        fwd
+        Self::new(y1, y2, count)
     }
     pub fn new_back_adjusted_2(y: i64, count: i64) -> Self {
         //eprintln!("DRAW: LI::ba2() y,count {} {}", y, count);
@@ -372,9 +369,7 @@ impl LineInterpolator {
             left -= 1;
         }
 
-        let back = Self { y: m_y, left, rem, xmod, count: cnt };
-        //eprintln!("DRAW: DDA: {} {} {} {} {} :: {} {} BACKWARD2", back.y, back.left, back.rem, back.xmod, back.count, 0, y);
-        back
+        Self { y: m_y, left, rem, xmod, count: cnt }
     }
     pub fn new_back_adjusted_1(y1: i64, y2: i64, count: i64) -> Self {
 
@@ -406,6 +401,7 @@ pub const AA_SHIFT : usize = 8;
 pub const AA_SCALE : usize = 1 << AA_SHIFT;
 
 
+#[derive(Debug,Default)]
 pub struct LineProfileAA {
     pub min_width: f64,
     pub smoother_width: f64,
@@ -487,7 +483,7 @@ impl LineProfileAA {
         let ch_center   = subpixel_scale*2;
         let ch_smoother = ch_center + subpixel_center_width;
 
-        let val = self.gamma[(base_val * aa_mask as f64) as usize];
+        let val = self.gamma[(base_val * f64::from(aa_mask)) as usize];
         //eprintln!("-- PROFILE {:4} {:4}", (base_val * aa_mask as f64) as usize, val);
         //ch = ch_center;
         // Fill center portion (on one side)
@@ -496,7 +492,7 @@ impl LineProfileAA {
         }
 
         for i  in 0 .. subpixel_smoother_width {
-            let k = ((base_val - base_val * (i as f64 / subpixel_smoother_width as f64)) * aa_mask as f64) as usize;
+            let k = ((base_val - base_val * (i as f64 / subpixel_smoother_width as f64)) * f64::from(aa_mask)) as usize;
             //eprintln!("-- PROFILE {:4}", self.gamma[k]);
             self.profile[ch_smoother + i] = self.gamma[k];
         }
@@ -715,13 +711,11 @@ impl<T> RenderOutline for RendererOutlineAA<'_, T> where T: PixfmtFunc + Pixel {
     fn cover(&self, d: i64) -> u64 {
         let subpixel_shift = POLY_SUBPIXEL_SHIFT;
         let subpixel_scale = 1 << subpixel_shift;
-        let index = d + subpixel_scale as i64 * 2;
+        let index = d + i64::from(subpixel_scale) * 2;
         assert!(index >= 0);
         //eprintln!("COVER: {}", self.profile.profile[index as usize] as u64);
 
-        let out = self.profile.profile[index as usize] as u64;
-        //eprintln!("   COVER {:4} OUT {:4}", d, out);
-        out
+        u64::from( self.profile.profile[index as usize] )
     }
     fn blend_solid_hspan(&mut self, x: i64, y: i64, len: i64, covers: &[u64]) {
         //eprintln!("DRAW: RO::blend_solid_hspan() x,y {} {} len {} covers.len {}", x, y, len, covers.len() );
@@ -1035,12 +1029,13 @@ impl EllipseInterpolator {
         }
 
         let mut min_m = mx;
-        let mut flag = true;
 
-        if min_m > my {
+        let flag = if min_m > my {
             min_m = my;
-            flag = false;
-        }
+            false
+        } else {
+            true
+        };
 
         self.dx = 0;
         self.dy = 0;
@@ -1355,6 +1350,7 @@ impl LineImagePatternPow2 {
 
 }
 
+#[derive(Debug,Default)]
 pub struct PatternFilterBilinear();
 
 
@@ -1372,7 +1368,7 @@ impl PatternFilterBilinear {
     pub fn pixel_high_res(&self, pix: &Pixfmt<Rgba8>, x: i64, y: i64) -> Rgba8 {
 
         //eprintln!("PIXEL HIGH RES: {:6} {:6}", x, y);
-        let (mut r, mut g, mut b, mut a) = (0i64, 0i64, 0i64, 0i64);
+        let (mut red, mut green, mut blue, mut alpha) = (0i64, 0i64, 0i64, 0i64);
 
         let x_lr = (x as usize) >> POLY_SUBPIXEL_SHIFT;
         let y_lr = (y as usize) >> POLY_SUBPIXEL_SHIFT;
@@ -1383,38 +1379,38 @@ impl PatternFilterBilinear {
         let ptr = pix.get((x_lr,y_lr));
 
         let weight = (POLY_SUBPIXEL_SCALE - x) * (POLY_SUBPIXEL_SCALE - y);
-        r += weight * ptr.r as i64;
-        g += weight * ptr.g as i64;
-        b += weight * ptr.b as i64;
-        a += weight * ptr.a as i64;
+        red   += weight * i64::from(ptr.r);
+        green += weight * i64::from(ptr.g);
+        blue  += weight * i64::from(ptr.b);
+        alpha += weight * i64::from(ptr.a);
         //eprintln!("PIXEL HIGH RES: {:7} {:7} {:7} {:7} w {:7} p {:7} {:7} {:7} {:7} xy {:4} {:4}", r,g,b,a, weight, ptr.r, ptr.g, ptr.b, ptr.a, x_lr,y_lr);
         let ptr = pix.get((x_lr + 1,y_lr));
         let weight = x * (POLY_SUBPIXEL_SCALE - y);
-        r += weight * ptr.r as i64;
-        g += weight * ptr.g as i64;
-        b += weight * ptr.b as i64;
-        a += weight * ptr.a as i64;
+        red   += weight * i64::from(ptr.r);
+        green += weight * i64::from(ptr.g);
+        blue  += weight * i64::from(ptr.b);
+        alpha += weight * i64::from(ptr.a);
         //eprintln!("PIXEL HIGH RES: {:7} {:7} {:7} {:7} w {:7} p {:7} {:7} {:7} {:7} xy {:4} {:4}", r,g,b,a,weight, ptr.r, ptr.g, ptr.b, ptr.a,x_lr+1,y_lr);
         let ptr = pix.get((x_lr,y_lr+1));
         let weight = (POLY_SUBPIXEL_SCALE - x) * y;
-        r += weight * ptr.r as i64;
-        g += weight * ptr.g as i64;
-        b += weight * ptr.b as i64;
-        a += weight * ptr.a as i64;
+        red   += weight * i64::from(ptr.r);
+        green += weight * i64::from(ptr.g);
+        blue  += weight * i64::from(ptr.b);
+        alpha += weight * i64::from(ptr.a);
         //eprintln!("PIXEL HIGH RES: {:7} {:7} {:7} {:7} w {:7} p {:7} {:7} {:7} {:7} xy {:4} {:4}", r,g,b,a, weight, ptr.r, ptr.g, ptr.b, ptr.a, x_lr, y_lr+1);
         let ptr = pix.get((x_lr+1,y_lr+1));
         let weight = x * y;
-        r += weight * ptr.r as i64;
-        g += weight * ptr.g as i64;
-        b += weight * ptr.b as i64;
-        a += weight * ptr.a as i64;
+        red   += weight * i64::from(ptr.r);
+        green += weight * i64::from(ptr.g);
+        blue  += weight * i64::from(ptr.b);
+        alpha += weight * i64::from(ptr.a);
         //eprintln!("PIXEL HIGH RES: {:7} {:7} {:7} {:7} w {:7} p {:7} {:7} {:7} {:7} xy {:4} {:4}", r,g,b,a, weight, ptr.r, ptr.g, ptr.b, ptr.a, x_lr+1,y_lr+1);
-        let r = (r >> (POLY_SUBPIXEL_SHIFT * 2)) as u8;
-        let g = (g >> (POLY_SUBPIXEL_SHIFT * 2)) as u8;
-        let b = (b >> (POLY_SUBPIXEL_SHIFT * 2)) as u8;
-        let a = (a >> (POLY_SUBPIXEL_SHIFT * 2)) as u8;
+        let red   = (red   >> (POLY_SUBPIXEL_SHIFT * 2)) as u8;
+        let green = (green >> (POLY_SUBPIXEL_SHIFT * 2)) as u8;
+        let blue  = (blue  >> (POLY_SUBPIXEL_SHIFT * 2)) as u8;
+        let alpha = (alpha >> (POLY_SUBPIXEL_SHIFT * 2)) as u8;
         //eprintln!("PIXEL HIGH RES: {:7} {:7} {:7} {:7}", r,g,b,a);
-        Rgba8::new(r,g,b,a)
+        Rgba8::new(red,green,blue,alpha)
     }
 }
 
@@ -1493,7 +1489,7 @@ impl LineInterpolatorImage {
             }
             li.inc();
         }
-        dist_pos[MAX_HALF_WIDTH] = 0x7FFF0000;
+        dist_pos[MAX_HALF_WIDTH] = 0x7FFF_0000;
 
         let mut npix = 1;
 
@@ -1914,7 +1910,8 @@ impl DistanceInterpolator4 {
             self.dist_start -= self.dx_start;
             self.dist_pict  -= self.dx_pict;
             self.dist_end   -= self.dx_end;
-        } if dy < 0 {
+        }
+        if dy < 0 {
             self.dist       += self.dx;
             self.dist_start += self.dx_start;
             self.dist_pict  += self.dx_pict;

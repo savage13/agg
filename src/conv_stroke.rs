@@ -15,7 +15,7 @@ pub enum LineCap {
 }
 #[derive(Debug,Copy,Clone,PartialEq)]
 pub enum LineJoin {
-    Miter, MiterRevert, Round, Bevel, MiterRound
+    Miter, MiterRevert, Round, Bevel, MiterRound,  MiterAccurate, None,
 }
 #[derive(Debug,Copy,Clone,PartialEq)]
 pub enum InnerJoin {
@@ -349,6 +349,7 @@ impl<T> ConvStroke<T> where T: VertexSource + Default {
                     out.push(Vertex::line_to(p1.x + dx1, p1.y - dy1));
                     out.push(Vertex::line_to(p1.x + dx2, p1.y - dy2));
                 },
+                LineJoin::None | LineJoin::MiterAccurate => {},
             }
         }
         out

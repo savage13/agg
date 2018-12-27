@@ -1,6 +1,6 @@
 //! Clipping Region
 
-use crate::POLY_SUBPIXEL_SCALE;
+//use crate::POLY_SUBPIXEL_SCALE;
 use crate::cell::RasterizerCell;
 
 /// Rectangle

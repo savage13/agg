@@ -37,7 +37,7 @@ impl GsvText {
     pub fn new() -> Self {
         Self {
             x: 0.0, y: 0.0, start_x: 0.0, width: 10.0, height: 0.0,
-            space: 0.0, line_space: 0.0, font: GsvDefaultFont::new().to_vec(),
+            space: 0.0, line_space: 0.0, font: GsvDefaultFont::get().to_vec(),
             //status: TextStatus::Initial,
             flip: false, big_endian: false,
             //chr: [0_u8;2],
@@ -82,15 +82,15 @@ impl VertexSource for GsvText {
         let glyphs = indices + 257*2;
 
         let mut status = TextStatus::Initial;
-        let base_height : f64 = value(&self.font[4..]) as f64;
-        let mut h = self.height / base_height;
-        let w = if self.width == 0.0 {
-            h
+        let base_height : f64 = f64::from(value(&self.font[4..]));
+        let mut hi = self.height / base_height;
+        let wi = if self.width == 0.0 {
+            hi
         } else {
             self.width / base_height
         };
         if self.flip {
-            h *= -1.0;
+            hi *= -1.0;
         }
 
         loop {
@@ -101,8 +101,8 @@ impl VertexSource for GsvText {
                 TextStatus::NextChar => {
                     match chars.next() {
                         None => break,
-                        Some((_,c)) => {
-                            if c == '\n' {
+                        Some((_,chr)) => {
+                            if chr == '\n' {
                                 x = self.start_x;
                                 y -= if self.flip {
                                     -(self.height + self.line_space)
@@ -110,7 +110,7 @@ impl VertexSource for GsvText {
                                     self.height + self.line_space
                                 };
                             }
-                            let mut idx = c as usize & 0xFF;
+                            let mut idx = chr as usize & 0xFF;
                             idx *= 2;
                             b = glyphs + value(&self.font[indices+idx..]) as usize;
                             e = glyphs + value(&self.font[indices+idx+2..]) as usize;
@@ -124,14 +124,14 @@ impl VertexSource for GsvText {
                 },
                 TextStatus::Glyph => {
                     for i in (b..e).step_by(2) {
-                        let dx = self.font[i] as i8 as i32;
+                        let dx = i32::from(self.font[i] as i8);
                         let mut yc = self.font[i+1] as i8;
                         let yf = (self.font[i+1] & 0x80) as i8;
                         yc <<= 1;
                         yc >>= 1;
-                        let dy = yc as i32;
-                        x += w * dx as f64;
-                        y += h * dy as f64;
+                        let dy = i32::from(yc);
+                        x += wi * f64::from(dx);
+                        y += hi * f64::from(dy);
                         if yf != 0 {
                             out.push(Vertex::move_to(x, y));
                         } else {
@@ -157,7 +157,7 @@ fn value(v: &[u8]) -> i16 {
 pub struct GsvDefaultFont();
 
 impl GsvDefaultFont {
-    pub fn new() -> &'static [u8] {
+    pub fn get() -> &'static [u8] {
         &GSV_DEFAULT_FONT_DATA
     }
 }

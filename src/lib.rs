@@ -45,6 +45,9 @@ pub mod alphamask;
 pub mod render;
 pub mod math;
 pub mod text;
+pub mod outline;
+pub mod outline_aa;
+pub mod line_interp;
 
 pub use crate::path_storage::*;
 pub use crate::conv_stroke::*;
@@ -60,10 +63,17 @@ pub use crate::scan::*;
 pub use crate::alphamask::*;
 pub use crate::render::*;
 pub use crate::text::*;
+pub use crate::line_interp::*;
+pub use crate::outline::*;
+pub use crate::outline_aa::*;
+
 
 const POLY_SUBPIXEL_SHIFT : i64 = 8;
 const POLY_SUBPIXEL_SCALE : i64 = 1<<POLY_SUBPIXEL_SHIFT;
 const POLY_SUBPIXEL_MASK  : i64 = POLY_SUBPIXEL_SCALE - 1;
+const POLY_MR_SUBPIXEL_SHIFT : i64 = 4;
+const MAX_HALF_WIDTH : usize = 64;
+
 
 /// Access raw color component data at the pixel level
 pub trait PixelData {
@@ -165,6 +175,25 @@ pub trait Lines {
     fn pie(&mut self, xc: i64, y: i64, x1: i64, y1: i64, x2: i64, y2: i64);
 }
 
+pub trait LineInterp {
+    fn init(&mut self);
+    fn step_hor(&mut self);
+    fn step_ver(&mut self);
+}
+
+pub trait RenderOutline {
+    fn cover(&self, d: i64) -> u64;
+    fn blend_solid_hspan(&mut self, x: i64, y: i64, len: i64, covers: &[u64]);
+    fn blend_solid_vspan(&mut self, x: i64, y: i64, len: i64, covers: &[u64]);
+}
+
+pub trait DistanceInterpolator {
+    fn dist(&self) -> i64;
+    fn inc_x(&mut self, dy: i64);
+    fn inc_y(&mut self, dx: i64);
+    fn dec_x(&mut self, dy: i64);
+    fn dec_y(&mut self, dx: i64);
+}
 
 /// Blend a Foreground, Background and Alpha Components
 fn blend(fg: Rgb8, bg: Rgb8, alpha: f64) -> Rgb8 {

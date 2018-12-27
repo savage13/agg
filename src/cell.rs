@@ -159,7 +159,7 @@ impl RasterizerCell {
     /// Print the last cell
     fn show_last_cell(&self) {
         if let Some(c) = self.cells.last() {
-            //eprintln!("ADD_CURR_CELL: {} {} area {} cover {} len {}", c.x,c.y,c.area,c.cover, self.cells.len());
+            println!("ADD_CURR_CELL: {} {} area {} cover {} len {}", c.x,c.y,c.area,c.cover, self.cells.len());
         }
     }
     /// Create new cell at (x,y)
