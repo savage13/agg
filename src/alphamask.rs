@@ -1,9 +1,9 @@
 //! Alphamask Adapator
 
-use math::blend_pix;
-use color::Rgb8;
-use pixfmt::PixfmtGray8;
-use pixfmt::PixfmtRgb24;
+use crate::math::blend_pix;
+use crate::color::Rgb8;
+use crate::pixfmt::PixfmtGray8;
+use crate::pixfmt::PixfmtRgb24;
 
 /// Alpha Mask Adaptor
 pub struct AlphaMaskAdaptor {

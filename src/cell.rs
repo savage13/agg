@@ -1,9 +1,9 @@
 
 //! Rendering Cells
 
-use POLY_SUBPIXEL_SCALE;
-use POLY_SUBPIXEL_SHIFT;
-use POLY_SUBPIXEL_MASK;
+use crate::POLY_SUBPIXEL_SCALE;
+use crate::POLY_SUBPIXEL_SHIFT;
+use crate::POLY_SUBPIXEL_MASK;
 
 use std::cmp::min;
 use std::cmp::max;
@@ -95,7 +95,7 @@ impl RasterizerCell {
     ///
     /// Cells are distributed into y bins, then sorted by x value
     pub fn sort_cells(&mut self) {
-        eprintln!("SORT_CELLS MAX_Y: {} N: {} MIN_Y: {}", self.max_y, self.cells.len(), self.min_y);
+        //eprintln!("SORT_CELLS MAX_Y: {} N: {} MIN_Y: {}", self.max_y, self.cells.len(), self.min_y);
         if ! self.sorted_y.is_empty() || self.max_y < 0 {
             return;
         }
@@ -104,13 +104,13 @@ impl RasterizerCell {
         for c in self.cells.iter() {
             if c.y >= 0 {
                 let y = c.y as usize;
-                eprintln!("SORT_CELLS SORTING {:?}", c);
+                //eprintln!("SORT_CELLS SORTING {:?}", c);
                 self.sorted_y[y].push(c.clone());
             }
         }
         // Sort by the x value
         for i in 0 .. self.sorted_y.len() {
-            eprintln!("SORT_CELLS: y: {} len: {}", i, self.sorted_y[i].len());
+            //eprintln!("SORT_CELLS: y: {} len: {}", i, self.sorted_y[i].len());
             self.sorted_y[i].sort_by(|a,b| (a.x).cmp(&b.x));
         }
     }
@@ -159,7 +159,7 @@ impl RasterizerCell {
     /// Print the last cell
     fn show_last_cell(&self) {
         if let Some(c) = self.cells.last() {
-            eprintln!("ADD_CURR_CELL: {} {} area {} cover {} len {}", c.x,c.y,c.area,c.cover, self.cells.len());
+            //eprintln!("ADD_CURR_CELL: {} {} area {} cover {} len {}", c.x,c.y,c.area,c.cover, self.cells.len());
         }
     }
     /// Create new cell at (x,y)
@@ -194,11 +194,13 @@ impl RasterizerCell {
             let m_curr_cell = self.cells.last_mut().unwrap();
             m_curr_cell.cover += y2-y1;
             m_curr_cell.area  += (fx1 + fx2) * (y2-y1);
+            /*
             eprintln!("INCR0 cover {} area {} dcover {} darea {} x,y {} {}",
                       m_curr_cell.cover,
                       m_curr_cell.area,
                       y2-y1,
                       (fx1 + fx2) * (y2-y1), m_curr_cell.x, m_curr_cell.y);
+             */
             return;
         }
         //eprintln!("RENDER_HLINE ADJCENT CELLS SAME LINE {} {}", x1,x2);
@@ -219,11 +221,13 @@ impl RasterizerCell {
             let m_curr_cell = self.cells.last_mut().unwrap();
             m_curr_cell.cover += delta;
             m_curr_cell.area  += (fx1 + first) * delta;
+            /*
             eprintln!("INCR1 cover {} area {} dcover {} darea {} x,y {} {}",
                       m_curr_cell.cover,
                       m_curr_cell.area,
                       delta,
                       (fx1 + first) * delta, m_curr_cell.x, m_curr_cell.y);
+             */
 
         }
         let mut ex1 = ex1 + incr;
@@ -251,11 +255,13 @@ impl RasterizerCell {
                     let m_curr_cell = self.cells.last_mut().unwrap();
                     m_curr_cell.cover += delta;
                     m_curr_cell.area  += POLY_SUBPIXEL_SCALE * delta;
+                    /*
                     eprintln!("INCR2 cover {} area {} dcover {} darea {} x,y {} {}",
                               m_curr_cell.cover,
                               m_curr_cell.area,
                               delta,
                               POLY_SUBPIXEL_SCALE * delta, m_curr_cell.x, m_curr_cell.y);
+                     */
                 }
                 y1 += delta;
                 ex1 += incr;
@@ -267,11 +273,13 @@ impl RasterizerCell {
             let m_curr_cell = self.cells.last_mut().unwrap();
             m_curr_cell.cover += delta;
             m_curr_cell.area  += (fx2 + POLY_SUBPIXEL_SCALE - first) * delta;
+            /*
             eprintln!("INCR3 cover {} area {} dcover {} darea {} x,y {} {}",
                       m_curr_cell.cover,
                       m_curr_cell.area,
                       delta,
                       (fx2 + POLY_SUBPIXEL_SCALE - first) * delta, m_curr_cell.x, m_curr_cell.y);
+             */
         }
     }
 
@@ -281,7 +289,7 @@ impl RasterizerCell {
     ///
     /// Input coordinates are at subpixel scale
     pub fn line(&mut self, x1: i64, y1: i64, x2: i64, y2: i64) {
-        eprintln!("LINE: {} {} -> {} {}", x1,y1, x2,y2);
+        println!("ADD_PATH: LINE: {} {} -> {} {}", x1,y1, x2,y2);
         let dx_limit = 16384 << POLY_SUBPIXEL_SHIFT;
         let dx = x2 - x1;
         // Split long lines in half
@@ -319,7 +327,7 @@ impl RasterizerCell {
         }
 
         if dx == 0 {
-            eprintln!("LINE DX = 0");
+            //eprintln!("LINE DX = 0");
             let ex = x1 >> POLY_SUBPIXEL_SHIFT;
             let two_fx = (x1 - (ex << POLY_SUBPIXEL_SHIFT)) << 1;
 
@@ -357,7 +365,7 @@ impl RasterizerCell {
             }
             return;
         }
-        eprintln!("LINE RENDER MULTPLE LINES {} {}", dx, dy);
+        //eprintln!("LINE RENDER MULTPLE LINES {} {}", dx, dy);
         // Render Multiple Lines
         let (p,first,incr, dy) = if dy < 0 {
             (fy1 * dx, 0, -1, -dy)

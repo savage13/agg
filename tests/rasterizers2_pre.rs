@@ -1,10 +1,12 @@
-
 extern crate agg;
 
 use agg::PixelData;
+use agg::Pixel;
+use agg::PixfmtFunc;
 use agg::Render;
 use agg::Rasterize;
 use agg::VertexSource;
+use agg::SetColor;
 //use std::fs;
 use std::path::PathBuf;
 use std::path::Path;
@@ -87,18 +89,51 @@ impl Spiral {
     }
 }
 
+
+fn chain() -> agg::Pixfmt<agg::Rgba32> {
+    let width  = 16;
+    let height = 7;
+    let mut pix = agg::Pixfmt::<agg::Rgba32>::new(width, height);
+    let raw : [u32; 16*7] = [
+        0x00ffffff, 0x00ffffff, 0x00ffffff, 0x00ffffff, 0xb4c29999, 0xff9a5757, 0xff9a5757, 0xff9a5757, 0xff9a5757, 0xff9a5757, 0xff9a5757, 0xb4c29999, 0x00ffffff, 0x00ffffff, 0x00ffffff, 0x00ffffff,
+        0x00ffffff, 0x00ffffff, 0x0cfbf9f9, 0xff9a5757, 0xff660000, 0xff660000, 0xff660000, 0xff660000, 0xff660000, 0xff660000, 0xff660000, 0xff660000, 0xb4c29999, 0x00ffffff, 0x00ffffff, 0x00ffffff,
+        0x00ffffff, 0x5ae0cccc, 0xffa46767, 0xff660000, 0xff975252, 0x7ed4b8b8, 0x5ae0cccc, 0x5ae0cccc, 0x5ae0cccc, 0x5ae0cccc, 0xa8c6a0a0, 0xff7f2929, 0xff670202, 0x9ecaa6a6, 0x5ae0cccc, 0x00ffffff,
+        0xff660000, 0xff660000, 0xff660000, 0xff660000, 0xff660000, 0xff660000, 0xa4c7a2a2, 0x3affff00, 0x3affff00, 0xff975151, 0xff660000, 0xff660000, 0xff660000, 0xff660000, 0xff660000, 0xff660000,
+        0x00ffffff, 0x5ae0cccc, 0xffa46767, 0xff660000, 0xff954f4f, 0x7ed4b8b8, 0x5ae0cccc, 0x5ae0cccc, 0x5ae0cccc, 0x5ae0cccc, 0xa8c6a0a0, 0xff7f2929, 0xff670202, 0x9ecaa6a6, 0x5ae0cccc, 0x00ffffff,
+        0x00ffffff, 0x00ffffff, 0x0cfbf9f9, 0xff9a5757, 0xff660000, 0xff660000, 0xff660000, 0xff660000, 0xff660000, 0xff660000, 0xff660000, 0xff660000, 0xb4c29999, 0x00ffffff, 0x00ffffff, 0x00ffffff,
+        0x00ffffff, 0x00ffffff, 0x00ffffff, 0x00ffffff, 0xb4c29999, 0xff9a5757, 0xff9a5757, 0xff9a5757, 0xff9a5757, 0xff9a5757, 0xff9a5757, 0xb4c29999, 0x00ffffff, 0x00ffffff, 0x00ffffff, 0x00ffffff];
+
+    let mut colors = vec![];
+    for v in raw.iter() {
+        let r = ((v >> 16) & 0x0000_00ff_u32) as u8;
+        let g = ((v >>  8) & 0x00ff_u32) as u8;
+        let b = ((v      ) & 0x00ff_u32) as u8;
+        let a =  (v >> 24) as u8;
+        let c : agg::Rgba32 = agg::Srgba8::new(r,g,b,a).into();
+        colors.push( c.premultiply() );
+    }
+    let mut k = 0;
+    for j in 0 .. height {
+        for i in 0 .. width {
+            pix.set((i,j), &colors[k]);
+            k += 1;
+        }
+    }
+    pix
+}
+
 #[test]
 fn rasterizers2_pre() {
     let (w,h) = (500, 450);
 
-    let pixf = agg::Pixfmt::<agg::Rgb8pre>::new(w, h);
+    let pixf = agg::Pixfmt::<agg::Rgba8pre>::new(w, h);
     let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
 
     ren_base.clear( agg::Rgba8::new(255, 255, 242, 255) );
 
     let start_angle = 0.0;
     let line_width = 3.0;
-    let _width  = w as f64;
+    let width  = w as f64;
     let height = h as f64;
     let (r1, r2) = (5.0, 70.0);
     let step = 16.0;
@@ -150,28 +185,78 @@ fn rasterizers2_pre() {
         let spiral = Spiral::new(x, y, r1, r2, step, start_angle);
 
         let mut ren_oaa = agg::RendererOutlineAA::with_base(&mut ren_base);
-        let mut ras_oaa = agg::RasterizerOutlineAA::with_renderer(ren_oaa);
         ren_oaa.color(&agg::Rgba8::new(102,77,26,255));
+        ren_oaa.profile.width(3.0);
+        let mut ras_oaa = agg::RasterizerOutlineAA::with_renderer(&mut ren_oaa);
+        ras_oaa.round_cap(true);
         ras_oaa.add_path(&spiral);
     }
     // Anti-Aliased Outline Image
     {
-        // let x = (w - w/5) as f64;
-        // let y = (h - h/4 + 20) as f64;
-        // let spiral = Spiral::new(x, y, r1, r2, step, start_angle);
+        let x = (w - w/5) as f64;
+        let y = (h - h/4 + 20) as f64;
+        let spiral = Spiral::new(x, y, r1, r2, step, start_angle);
 
-        // let mut ren_oaa = agg::RendererOutlineAA::with_base(&mut ren_base);
-        // let mut filter  = agg::PatternFilterBilinear<Rgba8pre>::new();
-        // let mut pat     = agg::LineImagePatternPow2(&mut filter);
-        // let mut ren_img = agg::RendererOutlineImage::with_base_and_pattern(&mut ren_base, &mut pat);
-        // let mut ras_img = agg::RasterizerOutlineAA::with_renderer(ren_oaa);
-        // ren_oaa.color(&agg::Rgba8(102,77,26,255));
-        // ras_oaa.add_path(&spiral);
+        //let ren_oaa = agg::RendererOutlineAA::with_base(&mut ren_base);
+
+        let filter  = agg::PatternFilterBilinear::new();
+        let mut pattern = agg::LineImagePatternPow2::new(filter);
+        let ch = chain();
+        pattern.create( &ch );
+        let mut ren_img = agg::RendererOutlineImg::with_base_and_pattern(&mut ren_base, pattern);
+        let mut ras_img = agg::RasterizerOutlineAA::with_renderer(&mut ren_img);
+        //ren_oaa.color(&agg::Rgba8::new(102,77,26,255));
+        ras_img.round_cap(true);
+        ras_img.add_path(&spiral);
     }
-    
+
+    {
+        let mut ras_aa = agg::RasterizerScanlineAA::new();
+        let mut sl     = agg::ScanlineU8::new();
+        let mut ren_aa = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
+        text(&mut ras_aa, &mut sl, &mut ren_aa, 50.0, 75.0,
+             "Bresenham lines,\n\nregular accuracy");
+        text(&mut ras_aa, &mut sl, &mut ren_aa, (w/2-50) as f64, 75.0,
+             "Bresenham lines,\n\nsubpixel accuracy");
+        text(&mut ras_aa, &mut sl, &mut ren_aa, 50., (h/2+50) as f64,
+             "Anti-aliased lines");
+        text(&mut ras_aa, &mut sl, &mut ren_aa, (w/2-50) as f64, (h/2+50) as f64,
+             "Scanline rasterizer");
+        text(&mut ras_aa, &mut sl, &mut ren_aa, (w - w/5 - 50) as f64, (h/2+50) as f64,
+             "Arbitrary Image Pattern");
+
+    }
+
     let (ppm, test) = ppm_names();
 
-    agg::ppm::write_ppm(&ren_base.pixeldata(), w, h, ppm.clone()).unwrap();
+    // Revove alpha channel from data
+    let data = ren_base.pixeldata();
+    let mut out = vec![];
+    for i in 0 .. data.len() {
+        if i%4 < 3 {
+            out.push(data[i]);
+        }
+    }
+    agg::ppm::write_ppm(&out, w, h, ppm.clone()).unwrap();
     agg::ppm::compare_ppm(ppm, test);
+
+}
+
+fn text<T>(ras: &mut agg::RasterizerScanlineAA,
+           sl: &mut agg::ScanlineU8,
+           ren: &mut agg::RenderingScanlineAASolid<T>,
+           x: f64, y: f64, txt: &str)
+    where T: Pixel + PixfmtFunc
+{
+    let mut t = agg::GsvText::new();
+    t.size(8.0, 0.0);
+    t.text(txt);
+    t.start_point(x,y);
+    t.flip(true);
+    let mut stroke = agg::ConvStroke::new(t);
+    stroke.width(0.7);
+    ras.add_path(&stroke);
+    ren.color(&agg::Rgba8::new(0,0,0,255));
+    agg::render_scanlines(ras, sl, ren);
 
 }

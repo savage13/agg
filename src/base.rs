@@ -1,10 +1,10 @@
 //! Rendering Base
 
-use color::*;
-use PixelData;
-use Color;
-use Pixel;
-use PixfmtFunc;
+use crate::color::*;
+use crate::PixelData;
+use crate::Color;
+use crate::Pixel;
+use crate::PixfmtFunc;
 use std::cmp::min;
 use std::cmp::max;
 
@@ -45,7 +45,9 @@ impl<T> RenderingBase<T> where T: PixfmtFunc + Pixel {
     }
     /// Blend a color from (x,y) with variable covers
     pub fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, covers: &[u64]) {
-        eprintln!("BLEND_SOLID_HSPAN x,y {} {} len {} RENBASE", x, y, len );
+        //eprintln!("blend_color_hspan, cover_full {:?}", covers);
+        //eprintln!("RENBASE BLEND_SOLID_HSPAN x,y {:4} {:4} len {:4}", x, y, len );
+        //eprintln!("DRAW: blend_solid_hspan() x,y {} {} len {} RENBASE", x, y, len );
         let (xmin,xmax,ymin,ymax) = self.limits();
         if y > ymax || y < ymin {
             return;
@@ -60,21 +62,111 @@ impl<T> RenderingBase<T> where T: PixfmtFunc + Pixel {
             x = xmin;
         }
         if x + len > xmax {
-            eprintln!("X+LEN > XMAX");
+            //eprintln!("X+LEN > XMAX");
             len = xmax - x + 1;
             if len <= 0 {
                 return;
             }
         }
-        eprintln!("RENBASE BLEND SOLID HSPAN x,y {} {} OFF {} LEN {} {}", x, y, off, len, covers.len() );
-        //assert_eq!(len as usize, covers[off as usize ..].len());
-        self.pixf.blend_solid_hspan(x, y, len, c, &covers[off as usize ..]);
-        eprintln!("RENBASE BLEND SOLID HSPAN DONE");
+        let covers_win = &covers[off as usize .. (off+len) as usize];
+        //eprintln!("RENBASE BLEND_SOLID_HSPAN x,y {:4} {:4} OFF {:4} LEN {:4} {:4} ", x, y, off, len, covers.len());
+        assert!(len as usize <= covers[off as usize ..].len());
+        self.pixf.blend_solid_hspan(x, y, len, c, covers_win);
+        //eprintln!("RENBASE BLEND SOLID HSPAN DONE");
+    }
+    /// Blend a color from (x,y) with variable covers
+    pub fn blend_solid_vspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, covers: &[u64]) {
+        //eprintln!("RENBASE BLEND_SOLID_VSPAN x,y {:4} {:4} len {:4}", x, y, len );
+        //eprintln!("DRAW: blend_solid_vspan() x,y {} {} len {} RENBASE", x, y, len );
+        let (xmin,xmax,ymin,ymax) = self.limits();
+        if x > xmax || x < xmin {
+            return;
+        }
+        let (mut y, mut len, mut off) = (y,len, 0);
+        if y < ymin {
+            len -= ymin - y;
+            if len <= 0 {
+                return;
+            }
+            off = off + ymin - y; // Woah!!!!
+            y = ymin;
+        }
+        if y + len > ymax {
+            //eprintln!("X+LEN > XMAX");
+            len = ymax - y + 1;
+            if len <= 0 {
+                return;
+            }
+        }
+        let covers_win = &covers[off as usize .. (off+len) as usize];
+        //eprintln!("RENBASE BLEND_SOLID_VSPAN x,y {:4} {:4} OFF {:4} LEN {:4} {:4}", x, y, off, len, covers.len());
+        assert!(len as usize <= covers[off as usize ..].len());
+        self.pixf.blend_solid_vspan(x, y, len, c, covers_win);
+        //eprintln!("RENBASE BLEND SOLID HSPAN DONE");
+    }
+
+    pub fn blend_color_vspan<C: Color>(&mut self, x: i64, y: i64, len: i64, colors: &[C], covers: &[u64], cover: u64) {
+        let (xmin,xmax,ymin,ymax) = self.limits();
+        if x > xmax || x < xmin {
+            return;
+        }
+        let (mut y, mut len, mut off) = (y,len, 0);
+        if y < ymin {
+            len -= ymin - y;
+            if len <= 0 {
+                return;
+            }
+            off = off + ymin - y; // Woah!!!!
+            y = ymin;
+        }
+        if y + len > ymax {
+            //eprintln!("X+LEN > XMAX");
+            len = ymax - y + 1;
+            if len <= 0 {
+                return;
+            }
+        }
+        let covers_win = if covers.is_empty() {
+            &[]
+        } else {
+            &covers[off as usize .. (off+len) as usize]
+        };
+        let colors_win = &colors[off as usize .. (off+len) as usize];
+        self.pixf.blend_color_vspan(x, y, len, colors_win, covers_win, cover);
+    }
+    pub fn blend_color_hspan<C: Color>(&mut self, x: i64, y: i64, len: i64, colors: &[C], covers: &[u64], cover: u64) {
+        let (xmin,xmax,ymin,ymax) = self.limits();
+        if y > ymax || y < ymin {
+            return;
+        }
+        let (mut x, mut len, mut off) = (x,len, 0);
+        if x < xmin {
+            len -= xmin - x;
+            if len <= 0 {
+                return;
+            }
+            off = off + xmin - x; // Woah!!!!
+            x = xmin;
+        }
+        if x + len > xmax {
+            //eprintln!("X+LEN > XMAX");
+            len = xmax - x + 1;
+            if len <= 0 {
+                return;
+            }
+        }
+        let covers_win = if covers.is_empty() {
+            &[]
+        } else {
+            &covers[off as usize .. (off+len) as usize]
+        };
+        let colors_win = &colors[off as usize .. (off+len) as usize];
+        self.pixf.blend_color_hspan(x, y, len, colors_win, covers_win, cover);
     }
 }
 
-impl<'a,T> PixelData<'a> for RenderingBase<T> where T: PixfmtFunc + Pixel {
-    fn pixeldata(&'a self) -> &'a [u8] {
+impl<T> PixelData for RenderingBase<T> where T: PixfmtFunc + Pixel {
+    fn pixeldata(&self) -> &[u8] {
         & self.pixf.rbuf().data
     }
 }

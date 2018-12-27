@@ -1,14 +1,15 @@
 
 //! Pixel Format
 
-use buffer::RenderingBuffer;
-use blend;
-use color::*;
-use math::*;
+use crate::buffer::RenderingBuffer;
+use crate::blend;
+use crate::color::*;
+use crate::math::*;
 
-use Color;
-use Pixel;
-use PixfmtFunc;
+use crate::Color;
+use crate::Source;
+use crate::Pixel;
+use crate::PixfmtFunc;
 
 use std::marker::PhantomData;
 pub struct Pixfmt<T> {
@@ -30,26 +31,114 @@ impl<T> PixfmtFunc for Pixfmt<T> where Pixfmt<T> : Pixel {
         &self.rbuf
     }
     fn blend_hline<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, cover: u64) {
+
         if c.is_transparent() {
             return;
         }
         let (x,y,len) = (x as usize, y as usize, len as usize);
         if c.is_opaque() && cover == Self::cover_mask() {
+            //eprintln!("blend_color_hspan with cover = cover_mask {:4},{:4}", x, y);
             for i in 0 .. len {
+                //eprintln!("   {:4} {:4} {:4} {:4} copy [copy_or_blend_pix(p,c)]", c.red8(), c.green8(), c.blue8(), c.alpha8());
                 self.set((x+i,y), c);
             }
         } else {
+            //eprintln!("blend_color_hspan with cover != cover_mask {:4},{:4}", x, y);
             for i in 0 .. len {
+                //eprintln!("   {:4} {:4} {:4} {:4} blend [copy_or_blend_pix(p,c)]", c.red8(), c.green8(), c.blue8(), c.alpha8());
                 self.blend_pix((x+i,y), c, cover);
             }
         }
     }
-    fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, _len: i64, c: &C, covers: &[u64]) {
+    fn blend_vline<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, cover: u64) {
         if c.is_transparent() {
             return;
         }
+        let (x,y,len) = (x as usize, y as usize, len as usize);
+        if c.is_opaque() && cover == Self::cover_mask() {
+            //eprintln!("blend_color_vspan with cover = cover_mask {:4},{:4}", x, y);
+            for i in 0 .. len {
+                //eprintln!("   {:4} {:4} {:4} {:4} copy [copy_or_blend_pix(p,c)]", c.red8(), c.green8(), c.blue8(), c.alpha8());
+                self.set((x,y+i), c);
+            }
+        } else {
+            //eprintln!("blend_color_vspan with cover != cover_mask {:4},{:4}", x, y);
+            for i in 0 .. len {
+                //eprintln!("   {:4} {:4} {:4} {:4} blend [copy_or_blend_pix(p,c)]", c.red8(), c.green8(), c.blue8(), c.alpha8());
+                self.blend_pix((x,y+i), c, cover);
+            }
+        }
+    }
+
+    fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, _len: i64, c: &C, covers: &[u64]) {
+        //eprintln!("blend_solid_hspan blarg {:?}", covers);
+        //if c.is_transparent() {
+        //    return;
+        //}
+        //eprintln!("   PIXFMT {:4} {:4} color {:3} {:3} {:3} {:3} covers {:3}  blend_solid_hspan {} {:?}",x, y, c.red8(), c.green8(), c.blue8(), c.alpha8(), covers.len(), c.is_transparent(), c);
         for (i, &cover) in covers.iter().enumerate() {
+            //eprintln!("      PIXFMT {:4} {:4} {:4}    blend_solid_hspan",x+i as i64, y, cover);
             self.blend_hline(x+i as i64, y, 1, c, cover);
+        }
+    }
+    fn blend_solid_vspan<C: Color>(&mut self, x: i64, y: i64, _len: i64, c: &C, covers: &[u64]) {
+        //eprintln!("   PIXFMT {:4} {:4} color {:3} {:3} {:3} covers {:3}  blend_solid_vspan",x, y, c.red8(), c.green8(), c.blue8(), covers.len());
+        //if c.is_transparent() {
+        //    return;
+        //}
+        for (i, &cover) in covers.iter().enumerate() {
+            //eprintln!("      PIXFMT {:4} {:4} {:4}    blend_solid_vspan",x, y+i as i64, cover);
+            self.blend_vline(x, y+i as i64, 1, c, cover);
+        }
+    }
+    fn blend_color_vspan<C: Color>(&mut self, x: i64, y: i64, len: i64, colors: &[C], covers: &[u64], cover: u64) {
+        assert_eq!(len as usize, colors.len());
+        let (x,y) = (x as usize, y as usize);
+        if ! covers.is_empty() {
+            assert_eq!(colors.len(), covers.len());
+            eprintln!("blend_color_vspan with covers");
+            for (i,(color,&cover)) in colors.iter().zip(covers.iter()).enumerate() {
+                self.copy_or_blend_pix_with_cover((x,y+i), color, cover);
+            }
+        } else {
+            if cover == 255 {
+                for (i,color) in colors.iter().enumerate() {
+                    if ! color.is_transparent() {
+                        eprintln!("blend_color_vspan with cover = cover_mask {:4},{:4}", x, y+i);
+                    }
+                    self.copy_or_blend_pix((x,y+i), color);
+                }
+            } else {
+                for (i,color) in colors.iter().enumerate() {
+                    self.copy_or_blend_pix_with_cover((x,y+i), color, cover);
+                }
+            }
+        }
+    }
+    fn blend_color_hspan<C: Color>(&mut self, x: i64, y: i64, len: i64, colors: &[C], covers: &[u64], cover: u64) {
+        assert_eq!(len as usize, colors.len());
+        let (x,y) = (x as usize, y as usize);
+        if ! covers.is_empty() {
+            assert_eq!(colors.len(), covers.len());
+            eprintln!("blend_color_hspan with covers");
+            for (i,(color,&cover)) in colors.iter().zip(covers.iter()).enumerate() {
+                self.copy_or_blend_pix_with_cover((x+i,y), color, cover);
+            }
+        } else {
+            if cover == 255 {
+                for (i,color) in colors.iter().enumerate() {
+                    if ! color.is_transparent() {
+                        eprintln!("blend_color_hspan with cover = cover_mask {:4},{:4}", x+i, y);
+                    }
+                    self.copy_or_blend_pix((x+i,y), color);
+                }
+            } else {
+
+                for (i,color) in colors.iter().enumerate() {
+                    eprintln!("blend_color_hspan with cover != cover_mask {:4},{:4}", x, y);
+                    self.copy_or_blend_pix_with_cover((x+i,y), color, cover);
+                }
+            }
         }
     }
 
@@ -80,17 +169,75 @@ impl<T> Pixfmt<T> where Pixfmt<T>: Pixel {
             self.set((x,y+i), c);
         }
     }
-    pub fn blend_color_hspan<C: Color>(&mut self, x: usize, y: usize, _n: usize,
+    pub fn blend_color_hspan_old<C: Color>(&mut self, x: usize, y: usize, _n: usize,
                              c: &[C], _cover: usize) {
         for (i,ci) in c.iter().enumerate() {
             self.set((x+i, y), ci);
         }
+    }
+    fn copy_or_blend_pix<C: Color>(&mut self, id: (usize,usize), color: &C) {
+        if ! color.is_transparent() {
+            if color.is_opaque() {
+                eprintln!("   {:4} {:4} {:4} {:4} copy [copy_or_blend_pix(p,c)]", color.red8(), color.green8(), color.blue8(), color.alpha8());
+                self.set(id, color);
+            } else {
+                eprintln!("   {:4} {:4} {:4} {:4} blend [copy_or_blend_pix(p,c)]", color.red8(), color.green8(), color.blue8(), color.alpha8());
+                self.blend_pix(id, color, 255);
+            }
+        }
+    }
+    fn copy_or_blend_pix_with_cover<C: Color>(&mut self, id: (usize,usize), color: &C, cover: u64) {
+        if ! color.is_transparent() {
+            if color.is_opaque() && cover == 255 {
+                self.set(id, color);
+            } else {
+                self.blend_pix(id, color, cover);
+            }
+        }
+    }
+
+
+}
+
+
+impl Source for Pixfmt<Rgba8> {
+    fn get(&self, id: (usize, usize)) -> Rgba8 {
+        let p = &self.rbuf[id];
+        Rgba8::new(p[0],p[1],p[2],p[3])
+    }
+}
+impl Source for Pixfmt<Rgba8pre> {
+    fn get(&self, id: (usize, usize)) -> Rgba8 {
+        let p = &self.rbuf[id];
+        //eprintln!("COLOR ({},{}) : {} {} {})", id.0,id.1,p[0],p[1],p[2]);
+        Rgba8::new(p[0],p[1],p[2],p[3])
+    }
+}
+impl Source for Pixfmt<Rgb8> {
+    fn get(&self, id: (usize, usize)) -> Rgba8 {
+        let p = &self.rbuf[id];
+        Rgba8::new(p[0],p[1],p[2],255)
+    }
+}
+impl Source for Pixfmt<Rgba32> {
+    fn get(&self, id: (usize, usize)) -> Rgba8 {
+        //let n = (id.0 + id.1 * self.rbuf.width) * Pixfmt::<Rgba32>::bpp();
+        let p = &self.rbuf[id];
+        //eprintln!("GET {:?}", &p[..16]);
+        let r : f32 = unsafe { std::mem::transmute::<[u8;4],f32>([p[0],p[1],p[2],p[3]]) };
+        let g : f32 = unsafe { std::mem::transmute::<[u8;4],f32>([p[4],p[5],p[6],p[7]]) };
+        let b : f32 = unsafe { std::mem::transmute::<[u8;4],f32>([p[8],p[9],p[10],p[11]]) };
+        let a : f32 = unsafe { std::mem::transmute::<[u8;4],f32>([p[12],p[13],p[14],p[15]]) };
+        //eprintln!("GET: {} {} {} {}", r,g,b,a);
+        //eprintln!("GET {:?}", Rgba32::new(r,g,b,a));
+        Rgba8::from(&Rgba32::new(r,g,b,a))
     }
 }
 
 impl Pixel for Pixfmt<Rgba8> {
     fn set<C: Color>(&mut self, id: (usize, usize), c: &C) {
         let c = Rgba8::from(c);
+        assert!(self.rbuf.data.len() > 0);
         self.rbuf[id][0] = c.red8();
         self.rbuf[id][1] = c.green8();
         self.rbuf[id][2] = c.blue8();
@@ -116,16 +263,14 @@ impl Pixel for Pixfmt<Rgb8> {
     fn bpp() -> usize { 3 }
     fn cover_mask() -> u64 { 255 }
     fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: &C, cover: u64) {
+        //eprintln!("BLEND PIX rgb8 in  {:?} cover {}", c, cover);
         let pix0 = self.get(id);
+        //eprintln!("BLEND PIX rgb8 cur {:?}", c);
         let pix  = self.mix_pix(&pix0, &Rgb8::from(c), c.alpha8(), cover);
         self.set(id, &pix);
     }
 }
 impl Pixfmt<Rgba8> {
-    fn get(&self, id: (usize, usize)) -> Rgba8 {
-        let p = &self.rbuf[id];
-        Rgba8::new(p[0],p[1],p[2],p[3])
-    }
     fn mix_pix(&mut self, p: &Rgba8, c: &Rgba8, alpha: u8) -> Rgba8 {
         let red   =    lerp_u8(p.r, c.r, alpha);
         let green =    lerp_u8(p.g, c.g, alpha);
@@ -133,31 +278,37 @@ impl Pixfmt<Rgba8> {
         let alpha =    lerp_u8(p.a, alpha, alpha);//Should be prelerp_u8
         Rgba8::new(red, green, blue, alpha)
     }
-    fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: &C, cover: u64) {
+    fn _blend_pix<C: Color>(&mut self, id: (usize, usize), c: &C, cover: u64) {
         let alpha = multiply_u8(c.alpha8(), cover as u8);
         let pix0 = self.get(id);
         let pix  = self.mix_pix(&pix0, &Rgba8::from(c), alpha);
         self.set(id, &pix);
     }
 }
-impl Pixel for Pixfmt<Rgb8pre> {
+impl Pixel for Pixfmt<Rgba8pre> {
     fn set<C: Color>(&mut self, id: (usize, usize), c: &C) {
-        let c = Rgb8pre::from(c);
+        //let c = Rgba8pre::from(c);
         self.rbuf[id][0] = c.red8();
         self.rbuf[id][1] = c.green8();
         self.rbuf[id][2] = c.blue8();
+        self.rbuf[id][3] = c.alpha8();
     }
-    fn bpp() -> usize { 3 }
+    fn bpp() -> usize { 4 }
     fn cover_mask() -> u64 { 255 }
     fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: &C, cover: u64) {
-        let pix0 = self.get(id);
-        let pix  = self.mix_pix(&pix0, &Rgb8pre::from(c), c.alpha8(), cover);
-        self.set(id, &pix);
+        let p = self.get(id);
+        let p0 = Rgba8pre::new(p.red8(), p.green8(), p.blue8(), p.alpha8());
+        let c0 = Rgba8pre::new(c.red8(), c.green8(), c.blue8(), c.alpha8());
+
+        let p  = self.mix_pix(&p0, &c0, c.alpha8(), cover);
+        //eprintln!("BLEND PIX: p {:4} {:4} {:4} {:4} c: {:4} {:4} {:4} {:4}", p0.r,p0.g,p0.b,c.alpha8(), c0.red8(),c0.green8(),c0.blue8(),c0.alpha8());
+        self.set(id, &p);
+        //eprintln!("         : p {:4} {:4} {:4} {:4}", p.r,p.g,p.b,c.alpha8());
     }
 }
 
 impl Pixfmt<Rgb8> {
-    fn get(&self, id: (usize, usize)) -> Rgb8 {
+    pub fn get(&self, id: (usize, usize)) -> Rgb8 {
         let p = &self.rbuf[id];
         Rgb8::new(p[0],p[1],p[2])
     }
@@ -169,20 +320,21 @@ impl Pixfmt<Rgb8> {
         Rgb8::new(red, green, blue)
     }
 }
-impl Pixfmt<Rgb8pre> {
-    fn get(&self, id: (usize, usize)) -> Rgb8pre {
-        let p = &self.rbuf[id];
-        Rgb8pre::new(p[0],p[1],p[2])
-    }
-    fn mix_pix(&mut self, p: &Rgb8pre, c: &Rgb8pre, alpha: u8, cover: u64) -> Rgb8pre {
-        let alpha = multiply_u8(alpha, cover as u8);
-        let red   = multiply_u8(c.r,   cover as u8);
-        let green = multiply_u8(c.g,   cover as u8);
-        let blue  = multiply_u8(c.b,   cover as u8);
+impl Pixfmt<Rgba8pre> {
+    fn mix_pix(&mut self, p: &Rgba8pre, c: &Rgba8pre, alpha: u8, cover: u64) -> Rgba8pre {
+        let mut alpha = alpha;
+        let (mut red, mut green, mut blue) = (c.r, c.g, c.b);
+        if cover != 255 {
+            alpha = multiply_u8(alpha, cover as u8);
+            red   = multiply_u8(red,   cover as u8);
+            green = multiply_u8(green, cover as u8);
+            blue  = multiply_u8(blue,  cover as u8);
+        }
         let red   = prelerp_u8(p.r, red,   alpha);
         let green = prelerp_u8(p.g, green, alpha);
         let blue  = prelerp_u8(p.b, blue,  alpha);
-        Rgb8pre::new(red, green, blue)
+        let alpha = prelerp_u8(p.a, alpha,  alpha);
+        Rgba8pre::new(red, green, blue, alpha)
     }
 }
 
@@ -236,7 +388,7 @@ impl PixfmtFunc for PixfmtRgb24 {
         let cover_mask = 255;
         if c.is_opaque() && cover == cover_mask {
             for i in 0 .. len {
-                eprintln!("BLEND_HLINE (SET): {:3} {:3} c: {:3} {:3} {:3} cover: {:3}", x+i, y, cu8r(c), cu8g(c), cu8b(c), cover);
+                //eprintln!("BLEND_HLINE (SET): {:3} {:3} c: {:3} {:3} {:3} cover: {:3}", x+i, y, cu8r(c), cu8g(c), cu8b(c), cover);
                 self.set((x+i,y), c);
             }
         } else {
@@ -245,12 +397,14 @@ impl PixfmtFunc for PixfmtRgb24 {
                 //eprintln!("BLEND_HLINE (   ): {:3} {:3} c: {:3} {:3} {:3} cover: {:3} {:3} {:3} {:3}", x+i, y, cu8r(c), cu8g(c), cu8b(c), cover, cu8r(&pix), cu8g(&pix), cu8b(&pix));
                 let pix = blend_pix(&pix0, c, cover);
                 self.set((x+i,y), &pix);
-                let pix1 = self.get((x+i, y));
-                 eprintln!("BLEND_HLINE (   ): {:3} {:3} c: {:3} {:3} {:3} cover: {:3} pix {:3} {:3} {:3} out {:3} {:3} {:3}", x+i, y,
-                           cu8r(c), cu8g(c), cu8b(c),
-                           cover,
-                           cu8r(&pix0), cu8g(&pix0), cu8b(&pix0),
-                           cu8r(&pix1), cu8g(&pix1), cu8b(&pix1));
+                //let pix1 = self.get((x+i, y));
+                /*
+                eprintln!("BLEND_HLINE (   ): {:3} {:3} c: {:3} {:3} {:3} cover: {:3} pix {:3} {:3} {:3} out {:3} {:3} {:3}", x+i, y,
+                          cu8r(c), cu8g(c), cu8b(c),
+                          cover,
+                          cu8r(&pix0), cu8g(&pix0), cu8b(&pix0),
+                          cu8r(&pix1), cu8g(&pix1), cu8b(&pix1));
+                 */
             }
         }
     }
@@ -266,6 +420,35 @@ impl PixfmtFunc for PixfmtRgb24 {
         for (i, &cover) in covers.iter().enumerate() {
             self.blend_hline(x+i as i64,y,1,c,cover);
         }
+    }
+    fn blend_solid_vspan<C: Color>(&mut self, x: i64, y: i64, _len: i64, c: &C, covers: &[u64]) {
+        if c.is_transparent() {
+            return;
+        }
+        for (i, &cover) in covers.iter().enumerate() {
+            self.blend_vline(x, y+i as i64, 1, c, cover);
+        }
+    }
+    fn blend_vline<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, cover: u64) {
+        if c.is_transparent() {
+            return;
+        }
+        let (x,y,len) = (x as usize, y as usize, len as usize);
+        if c.is_opaque() && cover == Self::cover_mask() {
+            for i in 0 .. len {
+                self.set((x,y+i), c);
+            }
+        } else {
+            for i in 0 .. len {
+                self.blend_pix((x,y+i), c, cover);
+            }
+        }
+    }
+    fn blend_color_hspan<C: Color>(&mut self, _x: i64, _y: i64, _len: i64, _colors: &[C], _covers: &[u64], _cover: u64) {
+        unimplemented!("not done");
+    }
+    fn blend_color_vspan<C: Color>(&mut self, _x: i64, _y: i64, _len: i64, _colors: &[C], _covers: &[u64], _cover: u64) {
+        unimplemented!("not done");
     }
 
 }
@@ -496,4 +679,36 @@ fn rfpart(x: f64) -> f64 {
 /// Compute integral part of an f64 number
 fn ipart(x: f64) -> f64 {
     x.floor()
+}
+
+impl Pixel for Pixfmt<Rgba32> {
+    fn set<C: Color>(&mut self, id: (usize, usize), c: &C) {
+        let c = Rgba32::from(c);
+        assert!(self.rbuf.data.len() > 0);
+        let r : [u8;4] = unsafe { std::mem::transmute(c.r) };
+        let g : [u8;4] = unsafe { std::mem::transmute(c.g) };
+        let b : [u8;4] = unsafe { std::mem::transmute(c.b) };
+        let a : [u8;4] = unsafe { std::mem::transmute(c.a) };
+        //eprintln!("SET: {:?} {:?} {:?} {:?}", r,g,b,a);
+        for i in 0 .. 4 {
+            self.rbuf[id][i] = r[i];
+            self.rbuf[id][i+4] = g[i];
+            self.rbuf[id][i+8] = b[i];
+            self.rbuf[id][i+12] = a[i];
+        }
+        //self.rbuf[id][ 4.. 8] = unsafe { std::mem::transmute(c.g) };
+        //self.rbuf[id][ 8..12] = unsafe { std::mem::transmute(c.b) };
+        //self.rbuf[id][12..16] = unsafe { std::mem::transmute(c.a) };
+    }
+    fn bpp() -> usize { 4*4 }
+    fn cover_mask() -> u64 { unimplemented!("no cover mask") }
+    fn blend_pix<C: Color>(&mut self, _id: (usize, usize), _c: &C, _cover: u64) {
+        unimplemented!("no blending");
+        /*
+        let alpha = multiply_u8(c.alpha8(), cover as u8);
+        let pix0 = self.get(id); // Rgba8
+        let pix  = self.mix_pix(&pix0, &Rgba8::from(c), alpha);
+        self.set(id, &pix);
+         */
+    }
 }

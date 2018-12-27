@@ -1,5 +1,5 @@
-use color::Rgba8;
-use Color;
+use crate::color::Rgba8;
+use crate::Color;
 
 /// Interpolate a value between two end points using fixed point math
 ///

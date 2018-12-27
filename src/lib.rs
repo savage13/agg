@@ -44,28 +44,30 @@ pub mod ppm;
 pub mod alphamask;
 pub mod render;
 pub mod math;
+pub mod text;
 
-pub use path_storage::*;
-pub use conv_stroke::*;
-pub use affine_transform::*;
-pub use color::*;
-pub use pixfmt::*;
-pub use buffer::*;
-pub use base::*;
-pub use clip::*;
-pub use cell::*;
-pub use raster::*;
-pub use scan::*;
-pub use alphamask::*;
-pub use render::*;
+pub use crate::path_storage::*;
+pub use crate::conv_stroke::*;
+pub use crate::affine_transform::*;
+pub use crate::color::*;
+pub use crate::pixfmt::*;
+pub use crate::buffer::*;
+pub use crate::base::*;
+pub use crate::clip::*;
+pub use crate::cell::*;
+pub use crate::raster::*;
+pub use crate::scan::*;
+pub use crate::alphamask::*;
+pub use crate::render::*;
+pub use crate::text::*;
 
 const POLY_SUBPIXEL_SHIFT : i64 = 8;
 const POLY_SUBPIXEL_SCALE : i64 = 1<<POLY_SUBPIXEL_SHIFT;
 const POLY_SUBPIXEL_MASK  : i64 = POLY_SUBPIXEL_SCALE - 1;
 
 /// Access raw color component data at the pixel level
-pub trait PixelData<'a> {
-    fn pixeldata(&'a self) -> &'a [u8];
+pub trait PixelData {
+    fn pixeldata(&self) -> &[u8];
 }
 /// Source of vertex points
 pub trait VertexSource {
@@ -98,6 +100,8 @@ pub trait Color: std::fmt::Debug {
     fn is_transparent(&self) -> bool { self.alpha() == 0.0 }
     /// Return if the color is completely opaque, alpha = 1.0
     fn is_opaque(&self) -> bool { self.alpha() >= 1.0 }
+    /// Return if the color has been premultiplied
+    fn is_premultiplied(&self) -> bool;
 }
 /// Render scanlines to Image
 pub trait Render {
@@ -124,6 +128,17 @@ pub trait Rasterize {
     fn add_path<VS: VertexSource>(&mut self, path: &VS);
 }
 
+pub trait SetColor {
+    fn color<C: Color>(&mut self, color: &C);
+}
+pub trait AccurateJoins {
+    fn accurate_join_only(&self) -> bool;
+}
+
+pub trait Source {
+    fn get(&self, id: (usize, usize)) -> Rgba8;
+}
+
 pub trait Pixel {
     fn set<C: Color>(&mut self, id: (usize, usize), c: &C);
     fn cover_mask() -> u64;
@@ -135,6 +150,19 @@ pub trait PixfmtFunc {
     fn rbuf(&self) -> &RenderingBuffer;
     fn blend_hline<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, cover: u64);
     fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, covers: &[u64]);
+    fn blend_vline<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, cover: u64);
+    fn blend_solid_vspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, covers: &[u64]);
+    fn blend_color_hspan<C: Color>(&mut self, x: i64, y: i64, len: i64, colors: &[C], covers: &[u64], cover: u64);
+    fn blend_color_vspan<C: Color>(&mut self, x: i64, y: i64, len: i64, colors: &[C], covers: &[u64], cover: u64);
+}
+
+pub trait Lines {
+    fn line0(&mut self, lp: &LineParameters);
+    fn line1(&mut self, lp: &LineParameters, sx: i64, sy: i64);
+    fn line2(&mut self, lp: &LineParameters, ex: i64, ey: i64);
+    fn line3(&mut self, lp: &LineParameters, sx: i64, sy: i64, ex: i64, ey: i64);
+    fn semidot<F>(&mut self, cmp: F, xc1: i64, yc1: i64, xc2: i64, yc2: i64) where F: Fn(i64) -> bool;
+    fn pie(&mut self, xc: i64, y: i64, x1: i64, y1: i64, x2: i64, y2: i64);
 }
 
 

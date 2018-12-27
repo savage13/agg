@@ -1,9 +1,9 @@
 //! Affine Transforms
 
-use path_storage::Vertex;
-use path_storage::PathStorage;
+use crate::path_storage::Vertex;
+use crate::path_storage::PathStorage;
 
-use VertexSource;
+use crate::VertexSource;
 
 /// Affine Transform
 #[derive(Debug,Default,Copy,Clone)]

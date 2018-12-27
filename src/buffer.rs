@@ -43,13 +43,19 @@ use std::ops::IndexMut;
 impl Index<(usize,usize)> for RenderingBuffer {
     type Output = [u8];
     fn index(&self, index: (usize, usize)) -> &[u8] {
+        assert!(index.0 < self.width, "request {} >= {} width :: index", index.0, self.width);
+        assert!(index.1 < self.height, "request {} >= {} height :: index", index.1, self.height);
         let i = ((index.1 * self.width) + index.0) * self.bpp;
+        assert!(i < self.data.len());
         &self.data[i..]
     }
 }
 impl IndexMut<(usize,usize)> for RenderingBuffer {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut [u8] {
+        assert!(index.0 < self.width, "request {} >= {} width :: index_mut", index.0, self.width);
+        assert!(index.1 < self.height, "request {} >= {} height :: index_mut", index.1, self.height);
         let i = ((index.1 * self.width) + index.0) * self.bpp;
+        assert!(i < self.data.len());
         &mut self.data[i..]
     }
 }

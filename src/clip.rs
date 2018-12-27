@@ -1,10 +1,10 @@
 //! Clipping Region
 
-use POLY_SUBPIXEL_SCALE;
-use cell::RasterizerCell;
+use crate::POLY_SUBPIXEL_SCALE;
+use crate::cell::RasterizerCell;
 
 /// Rectangle
-#[derive(Debug,Default)]
+#[derive(Debug,Default,Copy,Clone)]
 pub struct Rectangle<T: std::cmp::PartialOrd + Copy> {
     /// Minimum x value
     pub x1: T,
@@ -62,26 +62,25 @@ pub const INSIDE : u8 = 0b0000;
 /// See [Liang Barsky](https://en.wikipedia.org/wiki/Liang-Barsky_algorithm)
 ///
 /// See [Cyrus Beck](https://en.wikipedia.org/wiki/Cyrus-Beck_algorithm)
-pub const LEFT   : u8 = 0b0001;
+pub const LEFT   : u8 = 0b0000_0001;
 /// Right of Region
 ///
 /// See [Liang Barsky](https://en.wikipedia.org/wiki/Liang-Barsky_algorithm)
 ///
 /// See [Cyrus Beck](https://en.wikipedia.org/wiki/Cyrus-Beck_algorithm)
-pub const RIGHT  : u8 = 0b0010;
+pub const RIGHT  : u8 = 0b0000_0010;
 /// Below Region
 ///
 /// See [Liang Barsky](https://en.wikipedia.org/wiki/Liang-Barsky_algorithm)
 ///
 /// See [Cyrus Beck](https://en.wikipedia.org/wiki/Cyrus-Beck_algorithm)
-pub const BOTTOM : u8 = 0b0100;
+pub const BOTTOM : u8 = 0b0000_0100;
 /// Above Region
 ///
 /// See [Liang Barsky](https://en.wikipedia.org/wiki/Liang-Barsky_algorithm)
 ///
 /// See [Cyrus Beck](https://en.wikipedia.org/wiki/Cyrus-Beck_algorithm)
-pub const TOP    : u8 = 0b1000;
-
+pub const TOP    : u8 = 0b0000_1000;
 
 /// Determine the loaiton of a point to a broken-down rectangle or range
 ///
@@ -140,8 +139,8 @@ impl Clip {
         let f2 = f2 & (TOP|BOTTOM);
         // Fully Visible in y
         if f1 == INSIDE && f2 == INSIDE {
-            eprintln!("ras.line_to_d({:.2} , {:.2});//1", x1>>8,y1>>8);
-            eprintln!("ras.line_to_d({:.2} , {:.2});//2", x2>>8,y2>>8);
+            println!("ras.line_to_d({:.2} , {:.2});//1", x1>>8,y1>>8);
+            println!("ras.line_to_d({:.2} , {:.2});//2", x2>>8,y2>>8);
             ras.line(x1,y1,x2,y2);
         } else {
             // Both points above or below clip box
@@ -165,8 +164,8 @@ impl Clip {
                 tx2 = x1 + mul_div(b.y2-y1, x2-x1, y2-y1);
                 ty2 = b.y2;
             }
-            eprintln!("ras.line_to_d({:.2} , {:.2}); //3", tx1>>8,ty1>>8);
-            eprintln!("ras.line_to_d({:.2} , {:.2}); //4", tx2>>8,ty2>>8);
+            println!("ras.line_to_d({:.2} , {:.2}); //3", tx1>>8,ty1>>8);
+            println!("ras.line_to_d({:.2} , {:.2}); //4", tx2>>8,ty2>>8);
             ras.line(tx1,tx2,ty1,ty2);
         }
     }
@@ -179,23 +178,23 @@ impl Clip {
         //          x2 / POLY_SUBPIXEL_SCALE, y2 / POLY_SUBPIXEL_SCALE,
         //          x2, y2);
         if let Some(ref b) = self.clip_box {
-            eprintln!("LINE CLIPPING ON");
+            println!("LINE CLIPPING ON");
             let f2 = b.clip_flags(x2,y2);
             // Both points above or below clip box
             let fy1 = (TOP | BOTTOM) & self.clip_flag;
             let fy2 = (TOP | BOTTOM) & f2;
             if fy1 != INSIDE && fy1 == fy2 {
-                eprintln!("LINE OUTSIDE CLIP BOX {:?}", b);
-                eprintln!("LINE xlim {} {} x1 {} x2 {} f {:04b}", b.x1,b.x2,self.x1,x2, self.clip_flag);
-                eprintln!("LINE ylim {} {} y1 {} y2 {} f {:04b}", b.y1,b.y2,self.y1,y2,f2);
+                println!("LINE OUTSIDE CLIP BOX {:?}", b);
+                println!("LINE xlim {} {} x1 {} x2 {} f {:04b}", b.x1,b.x2,self.x1,x2, self.clip_flag);
+                println!("LINE ylim {} {} y1 {} y2 {} f {:04b}", b.y1,b.y2,self.y1,y2,f2);
                 self.x1 = x2;
                 self.y1 = y2;
                 self.clip_flag = f2;
                 return;
             }
             let (x1,y1,f1) = (self.x1, self.y1, self.clip_flag);
-            eprintln!("LINE CLIP: L {} R {} T {} B {} -- {} {}", f1 & LEFT, f1 & RIGHT, f1 & TOP, f1 & BOTTOM, x1>>8, y1>>8);
-            eprintln!("LINE CLIP: L {} R {} T {} B {} -- {} {}", f2 & LEFT, f2 & RIGHT, f2 & TOP, f2 & BOTTOM, x2>>8, y2>>8);
+            println!("LINE CLIP: L {} R {} T {} B {} -- {} {}", f1 & LEFT, f1 & RIGHT, f1 & TOP, f1 & BOTTOM, x1>>8, y1>>8);
+            println!("LINE CLIP: L {} R {} T {} B {} -- {} {}", f2 & LEFT, f2 & RIGHT, f2 & TOP, f2 & BOTTOM, x2>>8, y2>>8);
             match (f1 & (LEFT|RIGHT), f2 & (LEFT|RIGHT)) {
                 (INSIDE,INSIDE) => self.line_clip_y(ras, x1,y1,x2,y2,f1,f2),
                 (INSIDE,RIGHT) => {
@@ -256,7 +255,7 @@ impl Clip {
     ///
     /// Point is saved internally as (x1,y1)
     pub fn move_to(&mut self, x2: i64, y2: i64) {
-        eprintln!("//ras.move_to_d({}, {}); // MOVE TO: {} {}", x2/POLY_SUBPIXEL_SCALE, y2/POLY_SUBPIXEL_SCALE, x2, y2);
+        //eprintln!("//ras.move_to_d({}, {}); // MOVE TO: {} {}", x2/POLY_SUBPIXEL_SCALE, y2/POLY_SUBPIXEL_SCALE, x2, y2);
         self.x1 = x2;
         self.y1 = y2;
         if let Some(ref b) = self.clip_box {

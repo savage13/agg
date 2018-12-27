@@ -1,6 +1,6 @@
 
-use clip::Rectangle;
-use VertexSource;
+use crate::clip::Rectangle;
+use crate::VertexSource;
 
 #[derive(Debug,Copy,Clone,PartialEq)]
 pub enum PathCommand {
@@ -101,12 +101,13 @@ pub enum PathOrientation {
     CounterClockwise
 }
 
+/// Split Path into Individual Segments at MoveTo Boundaries
 pub fn split(path: &[Vertex<f64>]) -> Vec<(usize, usize)> {
     let (mut start, mut end) = (None, None);
     let mut pairs = vec![];
-    println!("SPLIT PATH");
+    //println!("SPLIT PATH");
     for (i,v) in path.iter().enumerate() {
-        println!("SPLIT: item[{}] {:?}  {:?} {:?}", i, v, start, end);
+        //println!("SPLIT: item[{}] {:?}  {:?} {:?}", i, v, start, end);
         match (start, end) {
             (None, None) => {
                 match v.cmd {
@@ -144,7 +145,7 @@ pub fn split(path: &[Vertex<f64>]) -> Vec<(usize, usize)> {
     if let (Some(s), Some(e)) = (start, end) {
         pairs.push((s,e));
     }
-    println!("SPLIT PATH segments: {} {:?} {:?}", pairs.len(), start, end);
+    //println!("SPLIT PATH segments: {} {:?} {:?}", pairs.len(), start, end);
     pairs
 }
 
@@ -317,9 +318,9 @@ impl RoundedRect {
         let first = self.vertices[0];
         self.vertices.push(Vertex::close_polygon(first.x, first.y));
 
-        for v in &self.vertices {
-            println!("RECT: {:?}", v);
-        }
+        //for v in &self.vertices {
+            //println!("RECT: {:?}", v);
+        //}
     }
     pub fn normalize_radius(&mut self) {
         let dx = (self.y[1] - self.y[0]).abs();
@@ -387,7 +388,7 @@ impl Arc {
             .collect();
         angle.push(self.end);
         for a in &angle {
-            eprintln!("ARC: {}", a);
+            //eprintln!("ARC: {}", a);
             let x = self.x + a.cos() * self.rx;
             let y = self.y + a.sin() * self.ry;
             self.vertices.push( Vertex::line_to(x,y) );
