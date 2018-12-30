@@ -1,7 +1,5 @@
 //! Colors
 
-use std::ops::Deref;
-
 use crate::Color;
 use crate::math::multiply_u8;
 
@@ -95,14 +93,14 @@ impl Rgba8 {
 }
 
 impl Color for Rgba8 {
-    fn   red(&self) -> f64 { color_u8_to_f64(self.r) }
-    fn green(&self) -> f64 { color_u8_to_f64(self.g) }
-    fn  blue(&self) -> f64 { color_u8_to_f64(self.b) }
-    fn alpha(&self) -> f64 { color_u8_to_f64(self.a) }
-    fn alpha8(&self) -> u8 { self.a }
-    fn red8(&self) -> u8 { self.r }
-    fn green8(&self) -> u8 { self.g }
-    fn blue8(&self) -> u8 { self.b }
+    fn   red(&self)  -> f64 { color_u8_to_f64(self.r) }
+    fn green(&self)  -> f64 { color_u8_to_f64(self.g) }
+    fn  blue(&self)  -> f64 { color_u8_to_f64(self.b) }
+    fn alpha(&self)  -> f64 { color_u8_to_f64(self.a) }
+    fn alpha8(&self) -> u8  { self.a }
+    fn red8(&self)   -> u8  { self.r }
+    fn green8(&self) -> u8  { self.g }
+    fn blue8(&self)  -> u8  { self.b }
     fn is_premultiplied(&self) -> bool { false }
 }
 
@@ -119,17 +117,20 @@ impl From<Rgb8> for Rgba8 {
 
 /// Gray scale
 #[derive(Debug,Copy,Clone)]
-pub struct Gray8(u8);
-impl Deref for Gray8 {
-    type Target = u8;
-    fn deref(&self) -> &u8 {
-        &self.0
-    }
+pub struct Gray8 {
+    pub value: u8,
+    pub alpha: u8,
 }
 impl Gray8 {
     /// Create a new gray scale value
-    pub fn new(g: u8) -> Self {
-        Gray8( g )
+    pub fn new(value: u8) -> Self {
+        Self { value, alpha: 255 }
+    }
+    pub fn new_with_alpha(value: u8, alpha: u8) -> Self {
+        Self { value, alpha }
+    }
+    pub fn from_slice(v: &[u8]) -> Self {
+        Self::new_with_alpha(v[0],v[1])
     }
 }
 
@@ -146,6 +147,9 @@ impl Rgb8 {
     }
     pub fn gray(g: u8) -> Self {
         Self::new(g,g,g)
+    }
+    pub fn from_slice(v: &[u8]) -> Self {
+        Rgb8 { r: v[0], g: v[1], b: v[2] }
     }
     pub fn from_wavelength_gamma(w: f64, gamma: f64) -> Self {
         let (r,g,b) =
@@ -326,6 +330,15 @@ impl<'a, C> From<&'a C> for Rgba32 where C: Color {
         Self::new(c.red() as f32, c.green() as f32, c.blue() as f32, c.alpha() as f32 )
     }
 }
+impl<'a, C> From<&'a C> for Gray8 where C: Color {
+    fn from(c: &C) -> Self {
+        let value = ((0.2126 * c.red() +
+                      0.7152 * c.green() +
+                      0.0722 * c.blue())
+                     * 255.0).round() as u8;
+        Self::new_with_alpha(value, c.alpha8())
+    }
+}
 /*
 impl<'a, C> From<&'a C> for Rgba8pre where C: Color {
     fn from(c: &C) -> Self {
@@ -379,5 +392,16 @@ impl Color for Rgba32 {
     fn red8(&self)   -> u8  { cu8(self.red()) }
     fn green8(&self) -> u8  { cu8(self.green()) }
     fn blue8(&self)  -> u8  { cu8(self.blue()) }
+    fn is_premultiplied(&self) -> bool { false }
+}
+impl Color for Gray8 {
+    fn   red(&self)  -> f64 { color_u8_to_f64(self.value) }
+    fn green(&self)  -> f64 { color_u8_to_f64(self.value) }
+    fn  blue(&self)  -> f64 { color_u8_to_f64(self.value) }
+    fn alpha(&self)  -> f64 { color_u8_to_f64(self.alpha) }
+    fn alpha8(&self) -> u8  { self.alpha }
+    fn red8(&self)   -> u8  { self.value }
+    fn green8(&self) -> u8  { self.value }
+    fn blue8(&self)  -> u8  { self.value }
     fn is_premultiplied(&self) -> bool { false }
 }

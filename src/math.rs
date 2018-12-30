@@ -15,6 +15,8 @@ pub fn lerp_u8(p: u8, q: u8, a: u8) -> u8 {
     (p + t1) as u8
 }
 
+/// Interpolator a value between two end points pre-calculated by alpha
+///
 pub fn prelerp_u8(p: u8, q: u8, a: u8) -> u8 {
     p.wrapping_add(q).wrapping_sub(multiply_u8(p,a))
 }

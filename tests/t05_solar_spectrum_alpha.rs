@@ -8,14 +8,14 @@ fn t05_solar_spectrum_alpha() {
     let mut pix = agg::Pixfmt::<agg::Rgb8>::new(320, 200);
     pix.clear();
     pix.fill(&agg::Rgb8::black());
-    let mut alpha = agg::PixfmtGray8::new(320, 200, 1);
+    let mut alpha = agg::Pixfmt::<agg::Gray8>::new(320, 200);
 
     let w = pix.rbuf.width;
     let h = pix.rbuf.height;
 
     for i in 0 .. h {
         let v = (255 * i/h) as u8;
-        alpha.copy_hline(0, i, w, agg::Gray8::new(v));
+        alpha.copy_hline(0, i, w, &agg::Gray8::new(v));
     }
 
     let mut span = vec![agg::Rgb8::white(); w];
