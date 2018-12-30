@@ -1,12 +1,16 @@
 //! Alphamask Adapator
 
-use crate::math::blend_pix;
+//use crate::math::blend_pix;
 use crate::color::Rgb8;
 use crate::color::Gray8;
 use crate::pixfmt::Pixfmt;
 
+use crate::Color;
 use crate::Pixel;
 use crate::Source;
+use crate::math::lerp_u8;
+use crate::math::multiply_u8;
+use crate::color::Rgba8;
 
 /// Alpha Mask Adaptor
 pub struct AlphaMaskAdaptor<T> where Pixfmt<T>: Pixel + Source {
@@ -45,4 +49,32 @@ impl<T> AlphaMaskAdaptor<T> where Pixfmt<T>: Pixel + Source {
             self.rgb.set((x+i,y), &pix);
         }
     }
+}
+/// Blend foreground and background pixels with an cover value
+///
+/// Color components are computed by:
+///
+/// out = (alpha * cover) * (c - p)
+///
+/// Computations are conducted using fixed point math
+///
+/// see [Alpha Compositing](https://en.wikipedia.org/wiki/Alpha_compositing)
+
+fn blend_pix<C1: Color, C2: Color>(p: &C1, c: &C2, cover: u64) -> Rgba8 {
+
+    assert!(c.alpha() >= 0.0);
+    assert!(c.alpha() <= 1.0);
+
+    let alpha = multiply_u8(c.alpha8(), cover as u8);
+    eprintln!("BLEND PIX: ALPHA COVER {} {} => {}", c.alpha8(), cover, alpha);
+    eprintln!("BLEND PIX: {:?}", p);
+    eprintln!("BLEND PIX: {:?}", c);
+
+    let red   = lerp_u8(p.red8(),   c.red8(),   alpha);
+    let green = lerp_u8(p.green8(), c.green8(), alpha);
+    let blue  = lerp_u8(p.blue8(),  c.blue8(),  alpha);
+    let alpha = lerp_u8(p.alpha8(), c.alpha8(), alpha);
+    eprintln!("BLEND PIX: r,g,b,a {:.3} {:.3} {:.3} {:.3}",
+              red, green, blue, alpha);
+    Rgba8::new(red, green, blue, alpha)
 }

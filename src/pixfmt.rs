@@ -573,6 +573,26 @@ impl PixfmtAlphaBlend<'_,Pixfmt<Rgb8>,Gray8> {
         let p = self.component( Rgb8::from_slice( &self.ren.pixf.rbuf[id] ) );
         Gray8::new_with_alpha(lerp_u8(p.value, c.value, alpha), alpha)
     }
+    fn copy_or_blend_pix_with_cover<C1: Color>(&mut self, id: (usize,usize), color: &C1, cover: u64) {
+        if ! color.is_transparent() {
+            if color.is_opaque() && cover == Self::cover_mask() {
+                self.set(id, color);
+            } else {
+                self.blend_pix(id, color, cover);
+            }
+        }
+    }
+    fn copy_or_blend_pix<C1: Color>(&mut self, id: (usize,usize), color: &C1) {
+        if ! color.is_transparent() {
+            if color.is_opaque() {
+                self.set(id, color);
+            } else {
+                self.blend_pix(id, color, 255);
+            }
+        }
+    }
+
+    
 }
 
 impl Pixel for PixfmtAlphaBlend<'_,Pixfmt<Rgb8>,Gray8> {
@@ -584,13 +604,13 @@ impl Pixel for PixfmtAlphaBlend<'_,Pixfmt<Rgb8>,Gray8> {
     fn bpp() -> usize { Pixfmt::<Rgb8>::bpp() }
     fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: &C, cover: u64) {
         let alpha = multiply_u8(c.alpha8(), cover as u8);
-        println!("blend_pix color {:?} cover {} alpha {} {}", c, cover, alpha, c.alpha8());
+        //println!("blend_pix color {:?} cover {} alpha {} {}", c, cover, alpha, c.alpha8());
         let c = Rgb8::from(c);
-        println!("          color {:?}", c);
+        //println!("          color {:?}", c);
         let c0 = self.component(c);
-        println!("          color {:?}", c);
+        //println!("          color {:?}", c);
         let p0 = self.mix_pix(id, c0, alpha);
-        println!("          color {:?}", c);
+        //println!("          color {:?}", c);
         self.set(id, &p0);
     }
 }
@@ -617,24 +637,67 @@ impl PixfmtFunc for PixfmtAlphaBlend<'_,Pixfmt<Rgb8>,Gray8> {
         }
     }
     fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, covers: &[u64]) {
+        assert_eq!(len as usize, covers.len());
         for (i, &cover) in covers.iter().enumerate() {
             self.blend_hline(x+i as i64,y,1,c,cover);
         }
     }
     fn blend_vline<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, cover: u64) {
-        panic!("blend_vline");
-        self.ren.pixf.blend_vline(x,y,len,c,cover);
+        if c.is_transparent() {
+            return;
+        }
+        let (x,y,len) = (x as usize, y as usize, len as usize);
+        if c.is_opaque() && cover == Self::cover_mask() {
+            for i in 0 .. len {
+                self.set((x,y+i),c);
+            }
+        } else {
+            for i in 0 .. len {
+                self.blend_pix((x,y+i),c,cover);
+            }
+        }
     }
     fn blend_solid_vspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, covers: &[u64]){
-        panic!("solid_vspan");
-        self.ren.pixf.blend_solid_vspan(x,y,len,c,covers);
+        assert_eq!(len as usize, covers.len());
+        for (i, &cover) in covers.iter().enumerate() {
+            self.blend_vline(x,y+i as i64,1,c,cover);
+        }
     }
     fn blend_color_hspan<C: Color>(&mut self, x: i64, y: i64, len: i64, colors: &[C], covers: &[u64], cover: u64) {
-        panic!("color_hspan");
-        self.ren.pixf.blend_color_hspan(x,y,len,colors,covers,cover);
+
+        assert_eq!(len as usize, colors.len());
+        let (x,y) = (x as usize, y as usize);
+        if ! covers.is_empty() {
+            assert_eq!(colors.len(), covers.len());
+            for (i,(color,&cover)) in colors.iter().zip(covers.iter()).enumerate() {
+                self.copy_or_blend_pix_with_cover((x+i,y), color, cover);
+            }
+        } else if cover == 255 {
+            for (i,color) in colors.iter().enumerate() {
+                self.copy_or_blend_pix((x+i,y), color);
+            }
+        } else {
+            for (i,color) in colors.iter().enumerate() {
+                self.copy_or_blend_pix_with_cover((x+i,y), color, cover);
+            }
+        }
     }
     fn blend_color_vspan<C: Color>(&mut self, x: i64, y: i64, len: i64, colors: &[C], covers: &[u64], cover: u64) {
-        panic!("color_vspan");
-        self.ren.pixf.blend_color_vspan(x,y,len,colors,covers,cover);
+        assert_eq!(len as usize, colors.len());
+        let (x,y) = (x as usize, y as usize);
+        if ! covers.is_empty() {
+            assert_eq!(colors.len(), covers.len());
+            for (i,(color,&cover)) in colors.iter().zip(covers.iter()).enumerate() {
+                self.copy_or_blend_pix_with_cover((x,y+i), color, cover);
+            }
+        } else if cover == Self::cover_mask() {
+            for (i,color) in colors.iter().enumerate() {
+                self.copy_or_blend_pix((x,y+i), color);
+            }
+        } else {
+            for (i,color) in colors.iter().enumerate() {
+                self.copy_or_blend_pix_with_cover((x,y+i), color, cover);
+            }
+        }
     }
 }

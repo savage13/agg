@@ -1,5 +1,3 @@
-use crate::color::Rgba8;
-use crate::Color;
 
 /// Interpolate a value between two end points using fixed point math
 ///
@@ -37,31 +35,69 @@ pub fn multiply_u8(a: u8, b: u8) -> u8 {
     tt as u8
 }
 
-/// Blend foreground and background pixels with an cover value
-///
-/// Color components are computed by:
-///
-/// out = (alpha * cover) * (c - p)
-///
-/// Computations are conducted using fixed point math
-///
-/// see [Alpha Compositing](https://en.wikipedia.org/wiki/Alpha_compositing)
 
-pub fn blend_pix<C1: Color, C2: Color>(p: &C1, c: &C2, cover: u64) -> Rgba8 {
 
-    assert!(c.alpha() >= 0.0);
-    assert!(c.alpha() <= 1.0);
+#[cfg(test)]
+mod tests {
+    use super::multiply_u8;
+    use super::lerp_u8;
+    use super::prelerp_u8;
 
-    let alpha = multiply_u8(c.alpha8(), cover as u8);
-    eprintln!("BLEND PIX: ALPHA COVER {} {} => {}", c.alpha8(), cover, alpha);
-    eprintln!("BLEND PIX: {:?}", p);
-    eprintln!("BLEND PIX: {:?}", c);
+    fn mu864(i: u8, j: u8) -> u8 {
+        let i = i as f64 / 255.0;
+        let j = j as f64 / 255.0;
+        let c = i * j;
+        (c * 255.0).round() as u8
+    }
+    fn lerp_u8_f64(p: u8, q: u8, a: u8) -> u8 {
+        let p = p as f64 / 255.0;
+        let q = q as f64 / 255.0;
+        let a = a as f64 / 255.0;
+        let v = a * (q - p) + p;
+        (v * 255.0).round() as u8
+    }
 
-    let red   = lerp_u8(p.red8(),   c.red8(),   alpha);
-    let green = lerp_u8(p.green8(), c.green8(), alpha);
-    let blue  = lerp_u8(p.blue8(),  c.blue8(),  alpha);
-    let alpha = lerp_u8(p.alpha8(), c.alpha8(), alpha);
-    eprintln!("BLEND PIX: r,g,b,a {:.3} {:.3} {:.3} {:.3}",
-              red, green, blue, alpha);
-    Rgba8::new(red, green, blue, alpha)
+    fn prelerp_u8_f64(p: u8, q: u8, a: u8) -> u8 {
+        let p = p as f64 / 255.0;
+        let q = q as f64 / 255.0;
+        let a = a as f64 / 255.0;
+        let v = p + q - a * p;
+        (v * 255.0).round() as u8
+    }
+
+
+    #[test]
+    fn lerp_u8_test() {
+        for p in 0 .. 255 {
+            for q in 0 .. 255 {
+                for a in 0 .. 255 {
+                    let v = lerp_u8_f64(p,q,a);
+                    assert_eq!(lerp_u8(p,q,a), v,
+                               "lerp({},{},{}) = {}",p,q,a,v);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn perlerp_u8_test() {
+        for p in 0 .. 255 {
+            for q in 0 .. 255 {
+                for a in 0 .. 255 {
+                    let v = prelerp_u8_f64(p,q,a);
+                    assert_eq!(prelerp_u8(p,q,a), v,
+                               "prelerp({},{},{}) = {}",p,q,a,v);
+                }
+            }
+        }
+    }
+    #[test]
+    fn multiply_u8_test() {
+        for i in 0 .. 255 {
+            for j in 0 .. 255 {
+                let v = mu864(i,j);
+                assert_eq!(multiply_u8(i,j), v, "{} * {} = {}", i, j, v);
+            }
+        }
+    }
 }
