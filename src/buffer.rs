@@ -25,6 +25,10 @@ impl RenderingBuffer {
             width, height, bpp, data: vec![0u8; width * height * bpp]
         }
     }
+    /// Size of underlying Rendering Buffer
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
     /// Return slice starting a beginning of a row
     pub fn row_ptr(&mut self, i: usize) -> &mut [u8] {
         debug_assert!(i < self.height);

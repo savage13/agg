@@ -24,7 +24,7 @@ impl<T> RenderingBase<T> where T: PixfmtFunc + Pixel {
     }
     /// Set Image to a single color 
     pub fn clear(&mut self, color: Rgba8) {
-        self.pixf.fill(&color);
+        self.pixf.fill(color);
     }
     /// Get Image size
     pub fn limits(&self) -> (i64,i64,i64,i64) {
@@ -33,7 +33,7 @@ impl<T> RenderingBase<T> where T: PixfmtFunc + Pixel {
         (0, w-1, 0, h-1)
     }
     /// Blend a color along y-row from x1 to x2
-    pub fn blend_hline<C: Color>(&mut self, x1: i64, y: i64, x2: i64, c: &C, cover: u64) {
+    pub fn blend_hline<C: Color>(&mut self, x1: i64, y: i64, x2: i64, c: C, cover: u64) {
         let (xmin,xmax,ymin,ymax) = self.limits();
         let (x1,x2) = if x2 > x1 { (x1,x2) } else { (x2,x1) };
         if y > ymax || y < ymin || x1 > xmax || x2 < xmin {
@@ -44,7 +44,7 @@ impl<T> RenderingBase<T> where T: PixfmtFunc + Pixel {
         self.pixf.blend_hline(x1, y, x2 - x1 + 1, c, cover);
     }
     /// Blend a color from (x,y) with variable covers
-    pub fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, covers: &[u64]) {
+    pub fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: C, covers: &[u64]) {
         //eprintln!("blend_color_hspan, cover_full {:?}", covers);
         //eprintln!("RENBASE BLEND_SOLID_HSPAN x,y {:4} {:4} len {:4}", x, y, len );
         //eprintln!("DRAW: blend_solid_hspan() x,y {} {} len {} RENBASE", x, y, len );
@@ -75,7 +75,7 @@ impl<T> RenderingBase<T> where T: PixfmtFunc + Pixel {
         //eprintln!("RENBASE BLEND SOLID HSPAN DONE");
     }
     /// Blend a color from (x,y) with variable covers
-    pub fn blend_solid_vspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, covers: &[u64]) {
+    pub fn blend_solid_vspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: C, covers: &[u64]) {
         //eprintln!("RENBASE BLEND_SOLID_VSPAN x,y {:4} {:4} len {:4}", x, y, len );
         //eprintln!("DRAW: blend_solid_vspan() x,y {} {} len {} RENBASE", x, y, len );
         let (xmin,xmax,ymin,ymax) = self.limits();

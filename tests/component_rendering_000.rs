@@ -48,19 +48,19 @@ fn component_rendering_000() {
         let pfr = PixfmtAlphaBlend::<PixRgb8,Gray8>::new(&mut ren_base, 0);
         let mut rbr = agg::RenderingBase::with_rgb24(pfr);
         ras.add_path(&er);
-        agg::render_scanlines_aa_solid(&mut ras, &mut sl, &mut rbr, &g8);
+        agg::render_scanlines_aa_solid(&mut ras, &mut sl, &mut rbr, g8);
     }
     {
         let pfg = PixfmtAlphaBlend::<PixRgb8,Gray8>::new(&mut ren_base, 1);
         let mut rbg = agg::RenderingBase::with_rgb24(pfg);
         ras.add_path(&eg);
-        agg::render_scanlines_aa_solid(&mut ras, &mut sl, &mut rbg, &g8);
+        agg::render_scanlines_aa_solid(&mut ras, &mut sl, &mut rbg, g8);
     }
     {
         let pfb = PixfmtAlphaBlend::<PixRgb8,Gray8>::new(&mut ren_base, 2);
         let mut rbb = agg::RenderingBase::with_rgb24(pfb);
         ras.add_path(&eb);
-        agg::render_scanlines_aa_solid(&mut ras, &mut sl, &mut rbb, &g8);
+        agg::render_scanlines_aa_solid(&mut ras, &mut sl, &mut rbb, g8);
     }
 
     let (ppm, test) = ppm_names();

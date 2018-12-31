@@ -46,7 +46,7 @@ pub struct RenderingScanlineAASolid<'a,T> where T: PixfmtFunc + Pixel, T: 'a {
 /// Render a single Scanline (y-row) without Anti-Aliasing (Binary?)
 fn render_scanline_bin_solid<T,C: Color>(sl: &ScanlineU8,
                                            ren: &mut RenderingBase<T>,
-                                         color: &C)
+                                         color: C)
     where T: PixfmtFunc + Pixel
 {
     let cover_full = 255;
@@ -61,7 +61,7 @@ fn render_scanline_bin_solid<T,C: Color>(sl: &ScanlineU8,
 /// Render a single Scanline (y-row) with Anti Aliasing
 fn render_scanline_aa_solid<T,C: Color>(sl: &ScanlineU8,
                                           ren: &mut RenderingBase<T>,
-                                        color: &C)
+                                        color: C)
     where T: PixfmtFunc + Pixel
 {
     let y = sl.y;
@@ -82,7 +82,7 @@ fn render_scanline_aa_solid<T,C: Color>(sl: &ScanlineU8,
 impl<T> Render for RenderingScanlineAASolid<'_,T> where T: PixfmtFunc + Pixel {
     /// Render a single Scanline Row
     fn render(&mut self, sl: &ScanlineU8) {
-        render_scanline_aa_solid(sl, &mut self.base, &self.color);
+        render_scanline_aa_solid(sl, &mut self.base, self.color);
     }
     /// Set the current color
     fn color<C: Color>(&mut self, color: &C) {
@@ -94,7 +94,7 @@ impl<T> Render for RenderingScanlineAASolid<'_,T> where T: PixfmtFunc + Pixel {
 impl<T> Render for RenderingScanlineBinSolid<'_,T> where T: PixfmtFunc + Pixel {
     /// Render a single Scanline Row
     fn render(&mut self, sl: &ScanlineU8) {
-        render_scanline_bin_solid(sl, &mut self.base, &self.color);
+        render_scanline_bin_solid(sl, &mut self.base, self.color);
     }
     /// Set the current Color
     fn color<C: Color>(&mut self, color: &C) {
@@ -148,7 +148,7 @@ pub fn render_scanlines_bin_solid<RAS,C,T>(_ras: &mut RAS,
 pub fn render_scanlines_aa_solid<RAS,C,T>(ras: &mut RAS,
                                         sl: &mut ScanlineU8,
                                         ren: &mut RenderingBase<T>,
-                                        color: &C)
+                                        color: C)
     where RAS: Rasterize,
           C: Color,
           T: PixfmtFunc + Pixel
@@ -217,11 +217,11 @@ impl<'a,T> RendererPrimatives<'a,T> where T: PixfmtFunc + Pixel {
         let line_color = Rgba8::new(0,0,0,255);
         Self { base, fill_color, line_color, x: 0, y: 0 }
     }
-    pub fn line_color<C: Color>(&mut self, line_color: &C) {
-        self.line_color = line_color.into();
+    pub fn line_color<C: Color>(&mut self, line_color: C) {
+        self.line_color = Rgba8::from_trait(line_color);
     }
-    pub fn fill_color<C: Color>(&mut self, fill_color: &C) {
-        self.fill_color = fill_color.into();
+    pub fn fill_color<C: Color>(&mut self, fill_color: C) {
+        self.fill_color = Rgba8::from_trait(fill_color);
     }
     pub fn coord(&self, c: f64) -> i64 {
         (c * POLY_SUBPIXEL_SCALE as f64).round() as i64
@@ -251,13 +251,13 @@ impl<'a,T> RendererPrimatives<'a,T> where T: PixfmtFunc + Pixel {
         if li.ver {
             for _ in 0 .. li.len {
                 //eprintln!("DDA PIX VER {} {}", li.x2, li.y1);
-                self.base.pixf.set((li.x2 as usize, li.y1 as usize), &color);
+                self.base.pixf.set((li.x2 as usize, li.y1 as usize), color);
                 li.vstep();
             }
         } else {
             for _ in 0 .. li.len {
                 //eprintln!("DDA PIX HOR {} {} {} {}", li.x1, li.y2, li.func.y, li.func.y >>8);
-                self.base.pixf.set((li.x1 as usize, li.y2 as usize), &color);
+                self.base.pixf.set((li.x1 as usize, li.y2 as usize), color);
                 li.hstep();
             }
         }
@@ -656,7 +656,7 @@ impl<'a,T> RendererOutlineAA<'a,T> where T: PixfmtFunc + Pixel {
         }
         self.ren.blend_solid_hspan(x0, y1,
                                    (p1 - p0) as i64,
-                                   &self.color,
+                                   self.color,
                                    &covers);
     }
 
@@ -700,7 +700,7 @@ impl<'a,T> RendererOutlineAA<'a,T> where T: PixfmtFunc + Pixel {
         }
         self.ren.blend_solid_hspan(xh0, yh1,
                                    (p1 - p0) as i64,
-                                   &self.color,
+                                   self.color,
                                    &covers);
 
     }
@@ -719,11 +719,11 @@ impl<T> RenderOutline for RendererOutlineAA<'_, T> where T: PixfmtFunc + Pixel {
     }
     fn blend_solid_hspan(&mut self, x: i64, y: i64, len: i64, covers: &[u64]) {
         //eprintln!("DRAW: RO::blend_solid_hspan() x,y {} {} len {} covers.len {}", x, y, len, covers.len() );
-        self.ren.blend_solid_hspan(x, y, len,  &self.color, covers);
+        self.ren.blend_solid_hspan(x, y, len,  self.color, covers);
     }
     fn blend_solid_vspan(&mut self, x: i64, y: i64, len: i64, covers: &[u64]) {
         //eprintln!("DRAW: RO::blend_solid_vspan() x,y {} {} len {} covers.len {}", x, y, len, covers.len() );
-        self.ren.blend_solid_vspan(x, y, len,  &self.color, covers);
+        self.ren.blend_solid_vspan(x, y, len,  self.color, covers);
     }
 }
 
@@ -907,8 +907,8 @@ impl<T> Lines for RendererOutlineAA<'_, T> where T: PixfmtFunc + Pixel {
 }
 
 impl<T> SetColor for RendererOutlineAA<'_, T> where T: PixfmtFunc + Pixel {
-    fn color<C: Color>(&mut self, color: &C) {
-        self.color = Rgba8::from(color);
+    fn color<C: Color>(&mut self, color: C) {
+        self.color = Rgba8::from_trait(color);
     }
 }
 impl<T> AccurateJoins for RendererOutlineAA<'_, T> where T: PixfmtFunc + Pixel {
@@ -1142,7 +1142,7 @@ impl<'a,T> RendererOutlineImg<'a,T> where T: PixfmtFunc + Pixel {
     }
 }
 impl<T> SetColor for RendererOutlineImg<'_, T> where T: PixfmtFunc + Pixel {
-    fn color<C: Color>(&mut self, _color: &C) {
+    fn color<C: Color>(&mut self, _color: C) {
         unimplemented!("no color for outline img");
     }
 }
@@ -1257,7 +1257,7 @@ impl LineImagePattern {
                           x1+x,y1,
                           self.pix.rbuf.width, self.pix.rbuf.height);
                  */
-                self.pix.set((x1+x,y1), &src.get((x,y)));
+                self.pix.set((x1+x,y1), src.get((x,y)));
                 //*d1++ = src.pixel(x, y);
             }
         }
@@ -1277,8 +1277,8 @@ impl LineImagePattern {
                 //*d2++ = color_type(*s2++, 0);
                 //*d1++ = color_type::no_color();
                 //*d2++ = color_type::no_color();
-                self.pix.set((x1+x,y1), &none);
-                self.pix.set((x2+x,y2), &none);
+                self.pix.set((x1+x,y1), none);
+                self.pix.set((x2+x,y2), none);
             }
         }
         let h = self.height + self.dilation * 2;
@@ -1295,8 +1295,8 @@ impl LineImagePattern {
             for x in 0 .. self.dilation as usize {
                 //*d1++ = *s1++;
                 //*--d2 = *--s2;
-                self.pix.set((dx1 + x,y), &self.pix.get((sx1 + x,y)));
-                self.pix.set((dx2 - x - 1,y), &self.pix.get((sx2 - x - 1,y)));
+                self.pix.set((dx1 + x,y), self.pix.get((sx1 + x,y)));
+                self.pix.set((dx2 - x - 1,y), self.pix.get((sx2 - x - 1,y)));
             }
         }
     }

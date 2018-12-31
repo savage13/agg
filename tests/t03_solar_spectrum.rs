@@ -6,11 +6,11 @@ fn draw_black_frame(pix: &mut agg::Pixfmt<agg::Rgb8>) {
     let w = pix.rbuf.width;
     let h = pix.rbuf.height;
     let black = agg::Rgb8::black();
-    pix.copy_hline(0,0,  w,&black);
-    pix.copy_hline(0,h-1,w,&black);
+    pix.copy_hline(0,0,  w,black);
+    pix.copy_hline(0,h-1,w,black);
 
-    pix.copy_vline(0,0,  h,&black);
-    pix.copy_vline(w-1,0,h,&black);
+    pix.copy_vline(0,0,  h,black);
+    pix.copy_vline(w-1,0,h,black);
 }
 
 #[test]

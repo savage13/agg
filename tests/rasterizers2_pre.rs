@@ -109,13 +109,13 @@ fn chain() -> agg::Pixfmt<agg::Rgba32> {
         let g = ((v >>  8) & 0x00ff_u32) as u8;
         let b = ((v      ) & 0x00ff_u32) as u8;
         let a =  (v >> 24) as u8;
-        let c : agg::Rgba32 = agg::Srgba8::new(r,g,b,a).into();
+        let c = agg::Rgba32::from_trait(agg::Srgba8::new(r,g,b,a));
         colors.push( c.premultiply() );
     }
     let mut k = 0;
     for j in 0 .. height {
         for i in 0 .. width {
-            pix.set((i,j), &colors[k]);
+            pix.set((i,j), colors[k]);
             k += 1;
         }
     }
@@ -163,7 +163,7 @@ fn rasterizers2_pre() {
         let mut ren_prim = agg::RendererPrimatives::with_base(&mut ren_base);
         let mut ras_al = agg::RasterizerOutline::with_primative(&mut ren_prim);
         let trans = Roundoff::new(spiral);
-        ras_al.ren.line_color(&agg::Rgba8::new(102, 77, 26, 255));
+        ras_al.ren.line_color(agg::Rgba8::new(102, 77, 26, 255));
         ras_al.add_path(&trans);
     }
     // Aliased Subpixel Accuracy
@@ -175,7 +175,7 @@ fn rasterizers2_pre() {
 
         let mut ren_prim = agg::RendererPrimatives::with_base(&mut ren_base);
         let mut ras_al = agg::RasterizerOutline::with_primative(&mut ren_prim);
-        ras_al.ren.line_color(&agg::Rgba8::new(102, 77, 26, 255));
+        ras_al.ren.line_color(agg::Rgba8::new(102, 77, 26, 255));
         ras_al.add_path(&spiral);
     }
     // Anti-Aliased Outline
@@ -185,7 +185,7 @@ fn rasterizers2_pre() {
         let spiral = Spiral::new(x, y, r1, r2, step, start_angle);
 
         let mut ren_oaa = agg::RendererOutlineAA::with_base(&mut ren_base);
-        ren_oaa.color(&agg::Rgba8::new(102,77,26,255));
+        ren_oaa.color(agg::Rgba8::new(102,77,26,255));
         ren_oaa.profile.width(3.0);
         let mut ras_oaa = agg::RasterizerOutlineAA::with_renderer(&mut ren_oaa);
         ras_oaa.round_cap(true);

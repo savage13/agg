@@ -40,6 +40,9 @@ pub struct Rgba8 {
 }
 
 impl Rgba8 {
+    pub fn from_trait<C: Color>(c: C) -> Self {
+        Self::new(c.red8(), c.green8(), c.blue8(), c.alpha8())
+    }
     /// White Color (255,255,255,255)
     pub fn white() -> Self {
         Self::new(255,255,255,255)
@@ -54,7 +57,8 @@ impl Rgba8 {
     }
     /// Crate new color from a wavelength and gamma 
     pub fn from_wavelength_gamma(w: f64, gamma: f64) -> Self {
-        Rgb8::from_wavelength_gamma(w, gamma).into()
+        let c = Rgb8::from_wavelength_gamma(w, gamma);
+        Self::from_trait(c)
     }
     pub fn clear(&mut self) {
         self.r = 0;
@@ -89,17 +93,6 @@ impl Rgba8 {
 }
 
 
-impl From<Rgba8> for Rgb8 {
-    fn from(c: Rgba8) -> Rgb8 {
-        Rgb8::new( c.r, c.g, c.b )
-    }
-}
-impl From<Rgb8> for Rgba8 {
-    fn from(c: Rgb8) -> Rgba8 {
-        Rgba8::new( c.r, c.g, c.b, 255 )
-    }
-}
-
 /// Gray scale
 #[derive(Debug,Copy,Clone,Default,PartialEq)]
 pub struct Gray8 {
@@ -107,6 +100,10 @@ pub struct Gray8 {
     pub alpha: u8,
 }
 impl Gray8 {
+    pub fn from_trait<C: Color>(c: C) -> Self {
+        let lum = luminance_u8(c.red8(), c.green8(), c.blue8());
+        Self::new_with_alpha( lum, c.alpha8() )
+    }
     /// Create a new gray scale value
     pub fn new(value: u8) -> Self {
         Self { value, alpha: 255 }
@@ -146,6 +143,9 @@ pub fn average(red: f64, green: f64, blue: f64) -> f64 {
 
 
 impl Rgb8 {
+    pub fn from_trait<C: Color>(c: C) -> Self {
+        Self::new(c.red8(), c.green8(), c.blue8())
+    }
     pub fn white() -> Self {
         Self::new(255,255,255)
     }
@@ -236,72 +236,19 @@ pub struct Srgba8 {
 }
 
 impl Srgba8 {
+    pub fn from_rgb<C: Color>(c: C) -> Self {
+        let r = cu8(rgb_to_srgb(c.red()));
+        let g = cu8(rgb_to_srgb(c.green()));
+        let b = cu8(rgb_to_srgb(c.blue()));
+        Self::new(r,g,b,cu8(c.alpha()))
+    }
     /// Create a new Srgba8 color
     pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }
 }
 
-
-impl From<Rgba8> for Srgba8 {
-    fn from(c: Rgba8) -> Self {
-        let r = cu8(rgb_to_srgb(c.red()));
-        let g = cu8(rgb_to_srgb(c.green()));
-        let b = cu8(rgb_to_srgb(c.blue()));
-        Self::new(r,g,b,cu8(c.alpha()))
-    }
-}
-impl<'a> From<&'a Rgba8> for Srgba8 {
-    fn from(c: &Rgba8) -> Self {
-        let r = cu8(rgb_to_srgb(c.red()));
-        let g = cu8(rgb_to_srgb(c.green()));
-        let b = cu8(rgb_to_srgb(c.blue()));
-        Self::new(r,g,b,c.a)
-    }
-}
-
-impl From<Srgba8> for Rgba8 {
-    fn from(c: Srgba8) -> Self {
-        let r = c.red8();
-        let g = c.green8();
-        let b = c.blue8();
-        Self::new(r,g,b,c.a)
-    }
-}
-impl From<Srgba8> for Rgba32 {
-    fn from(c: Srgba8) -> Self {
-        let red   = c.red()   as f32;
-        let green = c.green() as f32;
-        let blue  = c.blue()  as f32;
-        let alpha = c.alpha() as f32;
-        Self::new(red,green,blue,alpha)
-    }
-}
-
-impl<'a, C> From<&'a C> for Rgba8 where C: Color {
-    fn from(c: &C) -> Self {
-        Self::new(c.red8(), c.green8(), c.blue8(), c.alpha8() )
-    }
-}
-impl<'a, C> From<&'a C> for Rgb8 where C: Color {
-    fn from(c: &C) -> Self {
-        Self::new(c.red8(), c.green8(), c.blue8())
-    }
-}
-impl<'a, C> From<&'a C> for Rgba32 where C: Color {
-    fn from(c: &C) -> Self {
-        Self::new(c.red() as f32, c.green() as f32, c.blue() as f32, c.alpha() as f32 )
-    }
-}
-
-impl<'a, C> From<&'a C> for Gray8 where C: Color {
-    fn from(c: &C) -> Self {
-        let value = luminance_u8(c.red8(), c.green8(), c.blue8());
-        Self::new_with_alpha(value, c.alpha8())
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug,Default,Copy,Clone,PartialEq)]
 pub struct Rgba32 {
     pub r: f32,
     pub g: f32,
@@ -310,6 +257,12 @@ pub struct Rgba32 {
 }
 
 impl Rgba32 {
+    pub fn from_trait<C: Color>(c: C) -> Self {
+        Self::new(c.red() as f32,
+                  c.green() as f32,
+                  c.blue() as f32,
+                  c.alpha() as f32)
+    }
     pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
     }
@@ -425,7 +378,7 @@ mod tests {
         ];
         for [r,g,b,z] in &values {
             let c = Rgb8::new(*r,*g,*b);
-            let gray = Gray8::from(&c);
+            let gray = Gray8::from_trait(c);
             assert_eq!(gray.value, *z);
         }
     }
@@ -470,7 +423,7 @@ mod tests {
     fn srgb_test() {
         let s = Srgba8::new(50,150,250,128);
         assert_eq!(s, Srgba8{r:50,g:150,b:250,a:128});
-        let t = Rgba8::from(s);
+        let t = Rgba8::from_trait(s);
         assert_eq!(t, Rgba8{r:8,g:78,b:244,a:128});
     }
 }

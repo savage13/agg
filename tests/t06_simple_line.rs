@@ -9,7 +9,7 @@ fn t06_simple_line() {
     let black = agg::color::Rgb8::black();
     let w = pix.rbuf.width;
     let h = pix.rbuf.height;
-    pix.fill(&agg::color::Rgb8::white());
+    pix.fill(agg::color::Rgb8::white());
     let r = h as f64/2.0;
     let (x0,y0) = (w as f64/2.0, h as f64/2.0);
     for i in (0 .. 360).step_by(1) {

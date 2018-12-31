@@ -13,7 +13,7 @@ fn t04_solar_spectrum_alpha() {
 
     for i in 0 .. h {
         let v = (255 * i/h) as u8;
-        alpha.copy_hline(0, i, w, &agg::Gray8::new(v));
+        alpha.copy_hline(0, i, w, agg::Gray8::new(v));
     }
 
     let mut span = vec![agg::Rgb8::white(); w];

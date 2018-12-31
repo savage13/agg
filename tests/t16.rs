@@ -41,7 +41,7 @@ fn t16_path_stroke_no_clip() {
     ras.add_path(&mut pg);
 
     agg::render_scanlines_aa_solid(&mut ras, &mut sl, &mut ren.base,
-                                  &agg::Rgba8::new(0,0,0,255));
+                                   agg::Rgba8::new(0,0,0,255));
 
     agg::ppm::write_ppm(&ren.pixeldata(), w, h, "agg_test_16.ppm").unwrap();
 

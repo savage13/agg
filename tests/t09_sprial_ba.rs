@@ -9,7 +9,7 @@ fn t09_spiral() {
     let black = agg::Rgb8::black();
     let w = pix.rbuf.width;
     let h = pix.rbuf.height;
-    pix.fill(&agg::Rgb8::white());
+    pix.fill(agg::Rgb8::white());
 
     let (mut x0, mut y0) = (w as f64/2., h as f64/2.);
     let mut r = 0.0;

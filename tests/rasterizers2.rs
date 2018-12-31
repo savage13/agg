@@ -128,7 +128,7 @@ fn rasterizers2() {
         let mut ren_prim = agg::RendererPrimatives::with_base(&mut ren_base);
         let mut ras_al = agg::RasterizerOutline::with_primative(&mut ren_prim);
         let trans = Roundoff::new(spiral);
-        ras_al.ren.line_color(&agg::Rgba8::new(102, 77, 26, 255));
+        ras_al.ren.line_color(agg::Rgba8::new(102, 77, 26, 255));
         ras_al.add_path(&trans);
     }
     // Aliased Subpixel Accuracy
@@ -140,7 +140,7 @@ fn rasterizers2() {
 
         let mut ren_prim = agg::RendererPrimatives::with_base(&mut ren_base);
         let mut ras_al = agg::RasterizerOutline::with_primative(&mut ren_prim);
-        ras_al.ren.line_color(&agg::Rgba8::new(102, 77, 26, 255));
+        ras_al.ren.line_color(agg::Rgba8::new(102, 77, 26, 255));
         ras_al.add_path(&spiral);
     }
 

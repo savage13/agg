@@ -46,7 +46,7 @@ impl<T> AlphaMaskAdaptor<T> where Pixfmt<T>: Pixel + Source {
             let pix = &mut self.rgb.get((x+i,y));
             let alpha = u64::from(self.alpha.rbuf[(x+i,y)][0]);
             let pix = blend_pix(pix, color, alpha);
-            self.rgb.set((x+i,y), &pix);
+            self.rgb.set((x+i,y), pix);
         }
     }
 }

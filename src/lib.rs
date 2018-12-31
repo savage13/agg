@@ -29,6 +29,8 @@
 //   - Check Scanlines (SWEEP SCANLINES) in rasterizer
 //   - Check Pixels    (BLEND_HLINE)
 
+use std::fmt::Debug;
+
 pub mod path_storage;
 pub mod conv_stroke;
 pub mod affine_transform;
@@ -89,8 +91,9 @@ pub trait VertexSource {
     /// This could be turned into an iterator
     fn xconvert(&self) -> Vec<Vertex<f64>>;
 }
+
 /// Access Color properties and compoents
-pub trait Color: std::fmt::Debug {
+pub trait Color: Debug + Copy {
     /// Get red value [0,1] as f64
     fn red(&self) -> f64;
     /// Get green value [0,1] as f64 
@@ -140,7 +143,7 @@ pub trait Rasterize {
 }
 
 pub trait SetColor {
-    fn color<C: Color>(&mut self, color: &C);
+    fn color<C: Color>(&mut self, color: C);
 }
 pub trait AccurateJoins {
     fn accurate_join_only(&self) -> bool;
@@ -151,18 +154,18 @@ pub trait Source {
 }
 
 pub trait Pixel {
-    fn set<C: Color>(&mut self, id: (usize, usize), c: &C);
+    fn set<C: Color>(&mut self, id: (usize, usize), c: C);
     fn cover_mask() -> u64;
     fn bpp() -> usize;
-    fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: &C, cover: u64);
+    fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: C, cover: u64);
 }
 pub trait PixfmtFunc {
-    fn fill<C: Color>(&mut self, color: &C);
+    fn fill<C: Color>(&mut self, color: C);
     fn rbuf(&self) -> &RenderingBuffer;
-    fn blend_hline<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, cover: u64);
-    fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, covers: &[u64]);
-    fn blend_vline<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, cover: u64);
-    fn blend_solid_vspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: &C, covers: &[u64]);
+    fn blend_hline<C: Color>(&mut self, x: i64, y: i64, len: i64, c: C, cover: u64);
+    fn blend_solid_hspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: C, covers: &[u64]);
+    fn blend_vline<C: Color>(&mut self, x: i64, y: i64, len: i64, c: C, cover: u64);
+    fn blend_solid_vspan<C: Color>(&mut self, x: i64, y: i64, len: i64, c: C, covers: &[u64]);
     fn blend_color_hspan<C: Color>(&mut self, x: i64, y: i64, len: i64, colors: &[C], covers: &[u64], cover: u64);
     fn blend_color_vspan<C: Color>(&mut self, x: i64, y: i64, len: i64, colors: &[C], covers: &[u64], cover: u64);
 }
