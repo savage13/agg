@@ -68,9 +68,10 @@ mod tests {
 
     #[test]
     fn lerp_u8_test() {
-        for p in 0 .. 255 {
-            for q in 0 .. 255 {
-                for a in 0 .. 255 {
+        for p in 0 ..= 255 {
+            for q in 0 ..= 255 {
+                for a in 0 ..= 255 {
+                    let (p,q,a) = (p as u8, q as u8, a as u8);
                     let v = lerp_u8_f64(p,q,a);
                     assert_eq!(lerp_u8(p,q,a), v,
                                "lerp({},{},{}) = {}",p,q,a,v);
@@ -81,9 +82,10 @@ mod tests {
 
     #[test]
     fn perlerp_u8_test() {
-        for p in 0 .. 255 {
-            for q in 0 .. 255 {
-                for a in 0 .. 255 {
+        for p in 0 ..= 255 {
+            for q in 0 ..=  255 {
+                for a in 0 ..= 255 {
+                    let (p,q,a) = (p as u8, q as u8, a as u8);
                     let v = prelerp_u8_f64(p,q,a);
                     assert_eq!(prelerp_u8(p,q,a), v,
                                "prelerp({},{},{}) = {}",p,q,a,v);
@@ -93,8 +95,8 @@ mod tests {
     }
     #[test]
     fn multiply_u8_test() {
-        for i in 0 .. 255 {
-            for j in 0 .. 255 {
+        for i in 0 ..= 255  {
+            for j in 0 ..= 255  {
                 let v = mu864(i,j);
                 assert_eq!(multiply_u8(i,j), v, "{} * {} = {}", i, j, v);
             }
