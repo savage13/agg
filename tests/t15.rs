@@ -1,7 +1,6 @@
 
 extern crate agg;
 use agg::PixelData;
-use agg::Rasterize;
 use agg::Render;
 
 #[test]
@@ -10,7 +9,7 @@ fn t15_path_stroke() {
 
     let pixf = agg::Pixfmt::<agg::Rgb8>::new(w,h);
 
-    let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
+    let mut ren_base = agg::RenderingBase::new(pixf);
 
     ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
 
@@ -18,8 +17,7 @@ fn t15_path_stroke() {
 
     ren.color( &agg::Rgba8::new(255,0,0,255) );
 
-    let mut ras = agg::RasterizerScanlineAA::new();
-    let mut sl = agg::ScanlineU8::new();
+    let mut ras = agg::RasterizerScanline::new();
 
     ras.clip_box(40.0, 0.0, w as f64-40.0, h as f64);
 
@@ -28,7 +26,7 @@ fn t15_path_stroke() {
     ras.line_to_d(50.0, 90.0);
     ras.line_to_d(90.0, 10.0);
 
-    agg::render_scanlines(&mut ras, &mut sl, &mut ren);
+    agg::render_scanlines(&mut ras, &mut ren);
 
     // ras.reset();
     // ren.color( agg::Rgba8::new([0,0,0,255]) );
@@ -58,8 +56,7 @@ fn t15_path_stroke() {
     pg.source.line_to(10.0, 10.0);
     ras.add_path(&mut pg);
 
-    agg::render_scanlines_aa_solid(&mut ras, &mut sl, &mut ren.base,
-                                   agg::Rgba8::new(0,0,0,255));
+    agg::render_scanlines_aa_solid(&mut ras, &mut ren.base, agg::Rgba8::new(0,0,0,255));
 
     agg::ppm::write_ppm(&ren.pixeldata(), w, h, "agg_test_15.ppm").unwrap();
 

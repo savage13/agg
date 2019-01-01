@@ -1,14 +1,16 @@
 
 extern crate agg;
 
-use agg::PixfmtFunc;
+use agg::PixelDraw;
+use agg::PixelData;
+use agg::Pixel;
 
 #[test]
 fn t10_simple_lines() {
     let mut pix = agg::Pixfmt::<agg::Rgb8>::new(320,200);
     let black = agg::Rgb8::black();
-    let w = pix.rbuf.width;
-    let h = pix.rbuf.height;
+    let w = pix.width();
+    let h = pix.height();
     pix.fill(agg::Rgb8::white());
     let r = h as f64 *0.48;
     let (x0,y0) = (w as f64/2.0, h as f64/2.0);
@@ -17,6 +19,6 @@ fn t10_simple_lines() {
         let y1 = y0 + r * (i as f64).to_radians().sin();
         pix.line_sp_aa(x0,y0, x1, y1, black);
     }
-    agg::ppm::write_ppm(&pix.rbuf.data, w, h, "agg_test_10.ppm").unwrap();
+    agg::ppm::write_ppm(&pix.pixeldata(), w, h, "agg_test_10.ppm").unwrap();
     agg::ppm::compare_ppm("agg_test_10.ppm", "tests/agg_test_10.ppm");
 }

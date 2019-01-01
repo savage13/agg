@@ -9,7 +9,7 @@ fn t12_clip_box() {
 
     let pixf = agg::Pixfmt::<agg::Rgb8>::new(w,h);
 
-    let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
+    let mut ren_base = agg::RenderingBase::new(pixf);
 
     ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
 
@@ -17,8 +17,7 @@ fn t12_clip_box() {
 
     ren.color( &agg::Rgba8::new(255,0,0,255) );
 
-    let mut ras = agg::RasterizerScanlineAA::new();
-    let mut sl = agg::ScanlineU8::new();
+    let mut ras = agg::RasterizerScanline::new();
 
     ras.clip_box(40.0, 0.0, w as f64-40.0, h as f64);
 
@@ -26,7 +25,7 @@ fn t12_clip_box() {
     ras.line_to_d(50.0, 90.0);
     ras.line_to_d(90.0, 10.0);
 
-    agg::render_scanlines(&mut ras, &mut sl, &mut ren);
+    agg::render_scanlines(&mut ras, &mut ren);
 
     agg::ppm::write_ppm(&ren.pixeldata(), w, h, "agg_test_12.ppm").unwrap();
 

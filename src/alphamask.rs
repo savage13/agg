@@ -44,7 +44,7 @@ impl<T> AlphaMaskAdaptor<T> where Pixfmt<T>: Pixel + Source {
         assert_eq!(n, colors.len());
         for (i, color) in colors.iter().enumerate() {
             let pix = &mut self.rgb.get((x+i,y));
-            let alpha = u64::from(self.alpha.rbuf[(x+i,y)][0]);
+            let alpha = u64::from(self.alpha.raw((x+i,y)).value);
             let pix = blend_pix(pix, color, alpha);
             self.rgb.set((x+i,y), pix);
         }

@@ -4,7 +4,7 @@
 
 /// Contigious area of data
 #[derive(Debug,Default)]
-pub struct Span {
+pub(crate) struct Span {
     /// Starting x position
     pub x: i64,
     /// Length of span
@@ -17,7 +17,7 @@ pub struct Span {
 ///
 /// Represents a single row of an image
 #[derive(Debug,Default)]
-pub struct ScanlineU8 {
+pub(crate) struct ScanlineU8 {
     /// Last x value used
     ///
     /// Used as a state variable

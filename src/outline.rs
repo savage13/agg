@@ -1,17 +1,16 @@
 
 use crate::path_storage::PathCommand;
-use crate::PixfmtFunc;
-use crate::Pixel;
+use crate::PixelDraw;
 use crate::VertexSource;
 use crate::render::RendererPrimatives;
 
-pub struct RasterizerOutline<'a,T> where T: PixfmtFunc + Pixel  {
+pub struct RasterizerOutline<'a,T> where T: PixelDraw {
     pub ren: &'a mut RendererPrimatives<'a,T>,
     pub start_x: i64,
     pub start_y: i64,
     pub vertices: usize,
 }
-impl<'a,T> RasterizerOutline<'a,T> where T: PixfmtFunc + Pixel {
+impl<'a,T> RasterizerOutline<'a,T> where T: PixelDraw {
     pub fn with_primative(ren: &'a mut RendererPrimatives<'a,T>) -> Self {
         Self { start_x: 0, start_y: 0, vertices: 0, ren}
     }

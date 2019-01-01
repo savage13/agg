@@ -4,7 +4,7 @@
 ///
 /// Data is stored as row-major order (C-format)
 #[derive(Debug,Default)]
-pub struct RenderingBuffer {
+pub(crate) struct RenderingBuffer {
     /// Pixel / Component level data of Image
     pub data: Vec<u8>,
     /// Image Width in pixels
@@ -30,11 +30,11 @@ impl RenderingBuffer {
         self.data.len()
     }
     /// Return slice starting a beginning of a row
-    pub fn row_ptr(&mut self, i: usize) -> &mut [u8] {
-        debug_assert!(i < self.height);
-        let row = i * self.width * self.bpp;
-        &mut self.data[row .. ]
-    }
+    // fn row_ptr(&mut self, i: usize) -> &mut [u8] {
+    //     debug_assert!(i < self.height);
+    //     let row = i * self.width * self.bpp;
+    //     &mut self.data[row .. ]
+    // }
     /// Clear an image
     pub fn clear(&mut self) {
         self.data.iter_mut().for_each(|v| *v = 255);

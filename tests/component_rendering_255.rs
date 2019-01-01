@@ -1,5 +1,4 @@
 use agg::PixelData;
-use agg::Rasterize;
 
 use std::path::PathBuf;
 use std::path::Path;
@@ -28,7 +27,7 @@ fn component_rendering_255() {
     let (w, h) = (320, 320);
 
     let pixf = agg::Pixfmt::<agg::Rgb8>::new(w, h);
-    let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
+    let mut ren_base = agg::RenderingBase::new(pixf);
     ren_base.clear(agg::Rgba8::new(255,255,255,255));
     let g8 = Gray8::new_with_alpha(0,alpha);
 
@@ -41,26 +40,25 @@ fn component_rendering_255() {
     eg.init(w2 + 0.87*50.0, h2 - 0.5*50., 100., 100., 100);
     eb.init(w2,             h2 + 50., 100., 100., 100);
 
-    let mut ras = agg::RasterizerScanlineAA::new();
-    let mut sl  = agg::ScanlineU8::new();
+    let mut ras = agg::RasterizerScanline::new();
 
     {
         let pfr = PixfmtAlphaBlend::<PixRgb8,Gray8>::new(&mut ren_base, 0);
-        let mut rbr = agg::RenderingBase::with_rgb24(pfr);
+        let mut rbr = agg::RenderingBase::new(pfr);
         ras.add_path(&er);
-        agg::render_scanlines_aa_solid(&mut ras, &mut sl, &mut rbr, g8);
+        agg::render_scanlines_aa_solid(&mut ras, &mut rbr, g8);
     }
     {
         let pfg = PixfmtAlphaBlend::<PixRgb8,Gray8>::new(&mut ren_base, 1);
-        let mut rbg = agg::RenderingBase::with_rgb24(pfg);
+        let mut rbg = agg::RenderingBase::new(pfg);
         ras.add_path(&eg);
-        agg::render_scanlines_aa_solid(&mut ras, &mut sl, &mut rbg, g8);
+        agg::render_scanlines_aa_solid(&mut ras, &mut rbg, g8);
     }
     {
         let pfb = PixfmtAlphaBlend::<PixRgb8,Gray8>::new(&mut ren_base, 2);
-        let mut rbb = agg::RenderingBase::with_rgb24(pfb);
+        let mut rbb = agg::RenderingBase::new(pfb);
         ras.add_path(&eb);
-        agg::render_scanlines_aa_solid(&mut ras, &mut sl, &mut rbb, g8);
+        agg::render_scanlines_aa_solid(&mut ras, &mut rbb, g8);
     }
 
     let (ppm, test) = ppm_names();

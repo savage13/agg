@@ -6,7 +6,6 @@ use std::path::PathBuf;
 
 use agg::PixelData;
 use agg::Render;
-use agg::Rasterize;
 
 fn ppm_names() -> (PathBuf,PathBuf) {
     let progname = env::args().next().unwrap();
@@ -28,7 +27,7 @@ fn rounded_rect() {
 
     let pixf = agg::Pixfmt::<agg::Rgb8>::new(w,h);
 
-    let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
+    let mut ren_base = agg::RenderingBase::new(pixf);
 
     ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
 
@@ -36,8 +35,7 @@ fn rounded_rect() {
 
     ren.color( &agg::Rgba8::new(255,0,0,255) );
 
-    let mut ras = agg::RasterizerScanlineAA::new();
-    let mut sl = agg::ScanlineU8::new();
+    let mut ras = agg::RasterizerScanline::new();
 
     let mut e = agg::Ellipse::new();
 
@@ -45,7 +43,7 @@ fn rounded_rect() {
     for i in 0 .. 2 {
         e.init(m_x[i], m_y[i], 3., 3., 16);
         ras.add_path(&e);
-        agg::render_scanlines(&mut ras, &mut sl, &mut ren);
+        agg::render_scanlines(&mut ras, &mut ren);
     }
 
     let d = 0.0f64;
@@ -56,7 +54,7 @@ fn rounded_rect() {
     stroke.width( 7.0 );
     ras.add_path(&stroke);
     ren.color(&agg::Rgba8::new(0,0,0,255));
-    agg::render_scanlines(&mut ras, &mut sl, &mut ren);
+    agg::render_scanlines(&mut ras, &mut ren);
 
     // Write out Data
     let (ppm, test) = ppm_names();

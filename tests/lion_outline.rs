@@ -86,15 +86,14 @@ fn lion_outline() {
 
     let (paths, colors) = parse_lion();
     let pixf = agg::Pixfmt::<agg::Rgb8>::new(w,h);
-    let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
+    let mut ren_base = agg::RenderingBase::new(pixf);
     //ren_base.clear( agg::Srgba8::new([255, 255, 255, 255]) );
     ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
     let mut ren = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
     //ren.color( &agg::Srgba8::new([255,0,0,255]) );
     ren.color( &agg::Rgba8::new(255,0,0,255) );
 
-    let mut ras = agg::RasterizerScanlineAA::new();
-    let mut sl = agg::ScanlineU8::new();
+    let mut ras = agg::RasterizerScanline::new();
 
     if paths.len() == 0 {
         return;
@@ -125,8 +124,7 @@ fn lion_outline() {
         .map(|p| agg::ConvStroke::new( p ))
         .collect();
     stroke.iter_mut().for_each(|p| p.width(7.0));
-    agg::render_all_paths(&mut ras, &mut sl, &mut ren,
-                          &stroke, &colors);
+    agg::render_all_paths(&mut ras, &mut ren, &stroke, &colors);
 
     let (ppm, test) = ppm_names();
 

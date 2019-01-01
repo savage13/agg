@@ -3,7 +3,6 @@ extern crate agg;
 
 use agg::PixelData;
 use agg::Render;
-use agg::Rasterize;
 use agg::VertexSource;
 //use std::fs;
 use std::path::PathBuf;
@@ -92,7 +91,7 @@ fn rasterizers2() {
     let (w,h) = (500, 450);
 
     let pixf = agg::Pixfmt::<agg::Rgb8>::new(w, h);
-    let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
+    let mut ren_base = agg::RenderingBase::new(pixf);
 
     ren_base.clear( agg::Rgba8::new(255, 255, 242, 255) );
 
@@ -108,15 +107,14 @@ fn rasterizers2() {
         let y = (h - h / 4 + 20) as f64;
         let spiral = Spiral::new(x, y, r1, r2, step, start_angle);
 
-        let mut ras_aa = agg::RasterizerScanlineAA::new();
-        let mut sl     = agg::ScanlineU8::new();
+        let mut ras_aa = agg::RasterizerScanline::new();
         let mut ren_aa = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
         let mut stroke = agg::ConvStroke::new(spiral);
         stroke.width(line_width);
         //stroke.cap(round_cap);
         ren_aa.color( &agg::Rgba8::new(102, 77, 26, 255));
         ras_aa.add_path(&stroke);
-        agg::render_scanlines(&mut ras_aa, &mut sl, &mut ren_aa);
+        agg::render_scanlines(&mut ras_aa, &mut ren_aa);
 
     }
     // Aliased Pixel Accuracy

@@ -2,9 +2,8 @@
 
 use crate::color::*;
 use crate::PixelData;
+use crate::PixelDraw;
 use crate::Color;
-use crate::Pixel;
-use crate::PixfmtFunc;
 use std::cmp::min;
 use std::cmp::max;
 
@@ -12,14 +11,14 @@ use std::cmp::max;
 /// Rendering Base
 ///
 #[derive(Debug,Default)]
-pub struct RenderingBase<T> where T: PixfmtFunc + Pixel {
+pub struct RenderingBase<T> {
     /// Pixel Format
     pub pixf: T,
 }
 
-impl<T> RenderingBase<T> where T: PixfmtFunc + Pixel {
-    /// Create new RGB24 Rendering Base from Pixel Format
-    pub fn with_rgb24(pixf: T) -> RenderingBase<T> {
+impl<T> RenderingBase<T> where T: PixelDraw {
+    /// Create new Rendering Base from Pixel Format
+    pub fn new(pixf: T) -> RenderingBase<T> {
         RenderingBase { pixf }
     }
     /// Set Image to a single color 
@@ -28,8 +27,8 @@ impl<T> RenderingBase<T> where T: PixfmtFunc + Pixel {
     }
     /// Get Image size
     pub fn limits(&self) -> (i64,i64,i64,i64) {
-        let w = self.pixf.rbuf().width as i64;
-        let h = self.pixf.rbuf().height as i64;
+        let w = self.pixf.width() as i64;
+        let h = self.pixf.height() as i64;
         (0, w-1, 0, h-1)
     }
     /// Blend a color along y-row from x1 to x2
@@ -165,8 +164,8 @@ impl<T> RenderingBase<T> where T: PixfmtFunc + Pixel {
     }
 }
 
-impl<T> PixelData for RenderingBase<T> where T: PixfmtFunc + Pixel {
+impl<T> PixelData for RenderingBase<T> where T: PixelData {
     fn pixeldata(&self) -> &[u8] {
-        & self.pixf.rbuf().data
+        & self.pixf.pixeldata()
     }
 }

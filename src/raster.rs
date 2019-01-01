@@ -8,18 +8,10 @@ use crate::clip::Clip;
 use crate::scan::ScanlineU8;
 use crate::cell::RasterizerCell;
 use crate::path_storage::PathCommand;
-//use crate::render::RendererPrimatives;
 use crate::path_storage::Vertex;
-//use crate::render::LineInterpolator;
-//use crate::render::LineInterpolatorImage;
 
-use crate::Rasterize;
+//use crate::Rasterize;
 use crate::VertexSource;
-//use crate::PixfmtFunc;
-//use crate::Pixel;
-//use crate::SetColor;
-//use crate::AccurateJoins;
-//use crate::Lines;
 
 use std::cmp::min;
 use std::cmp::max;
@@ -66,7 +58,7 @@ impl Default for PathStatus {
 
 /// Rasterizer Anti-Alias using Scanline
 #[derive(Debug, Default)]
-pub struct RasterizerScanlineAA {
+pub struct RasterizerScanline {
     /// Clipping Region
     pub clipper: Clip,
     /// Collection of Rasterizing Cells
@@ -85,18 +77,18 @@ pub struct RasterizerScanlineAA {
     gamma: Vec<u64>,
 }
 
-impl Rasterize for RasterizerScanlineAA {
+impl RasterizerScanline {
     /// Reset Rasterizer
     ///
     /// Reset the RasterizerCell and set PathStatus to Initial
-    fn reset(&mut self) {
+    pub fn reset(&mut self) {
         self.outline.reset();
         self.status = PathStatus::Initial;
     }
     /// Add a Path
     ///
     /// Walks the path from the VertexSource and rasterizes it
-    fn add_path<VS: VertexSource>(&mut self, path: &VS) {
+    pub fn add_path<VS: VertexSource>(&mut self, path: &VS) {
         //path.rewind();
         if ! self.outline.sorted_y.is_empty() {
             self.reset();
@@ -117,7 +109,7 @@ impl Rasterize for RasterizerScanlineAA {
     /// Close active polygon, sort the Rasterizer Cells, set the
     /// scan_y value to the minimum y value and return if any cells
     /// are present
-    fn rewind_scanlines(&mut self) -> bool {
+    pub fn rewind_scanlines(&mut self) -> bool {
         self.close_polygon();
         self.outline.sort_cells();
         if self.outline.total_cells() == 0 {
@@ -133,7 +125,7 @@ impl Rasterize for RasterizerScanlineAA {
     /// For individual y rows adding any to the input Scanline
     ///
     /// Returns true if data exists in the input Scanline
-    fn sweep_scanline(&mut self, sl: &mut ScanlineU8) -> bool {
+    pub(crate) fn sweep_scanline(&mut self, sl: &mut ScanlineU8) -> bool {
         println!("ADD_PATH: SWEEP SCANLINE: Y: {}", self.scan_y);
         loop {
             if self.scan_y < 0 {
@@ -198,17 +190,17 @@ impl Rasterize for RasterizerScanlineAA {
         true
     }
     /// Return minimum x value from the RasterizerCell
-    fn min_x(&self) -> i64 {
+    pub fn min_x(&self) -> i64 {
         self.outline.min_x
     }
     /// Return maximum x value from the RasterizerCell
-    fn max_x(&self) -> i64 {
+    pub fn max_x(&self) -> i64 {
         self.outline.max_x
     }
 }
 
-impl RasterizerScanlineAA {
-    /// Create a new RasterizerScanlineAA
+impl RasterizerScanline {
+    /// Create a new RasterizerScanline
     pub fn new() -> Self {
         Self { clipper: Clip::new(), status: PathStatus::Initial,
                outline: RasterizerCell::new(),
@@ -236,7 +228,7 @@ impl RasterizerScanlineAA {
             .map(|v| (v * aa_mask).round() as u64)
             .collect();
     }
-    /// Create a new RasterizerScanlineAA with a gamma function
+    /// Create a new RasterizerScanline with a gamma function
     ///
     /// See gamma() function for description
     ///

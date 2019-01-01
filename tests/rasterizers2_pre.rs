@@ -2,12 +2,11 @@ extern crate agg;
 
 use agg::PixelData;
 use agg::Pixel;
-use agg::PixfmtFunc;
+use agg::PixelDraw;
 use agg::Render;
-use agg::Rasterize;
 use agg::VertexSource;
 use agg::SetColor;
-//use std::fs;
+
 use std::path::PathBuf;
 use std::path::Path;
 use std::env;
@@ -127,7 +126,7 @@ fn rasterizers2_pre() {
     let (w,h) = (500, 450);
 
     let pixf = agg::Pixfmt::<agg::Rgba8pre>::new(w, h);
-    let mut ren_base = agg::RenderingBase::with_rgb24(pixf);
+    let mut ren_base = agg::RenderingBase::new(pixf);
 
     ren_base.clear( agg::Rgba8::new(255, 255, 242, 255) );
 
@@ -143,15 +142,14 @@ fn rasterizers2_pre() {
         let y = (h - h / 4 + 20) as f64;
         let spiral = Spiral::new(x, y, r1, r2, step, start_angle);
 
-        let mut ras_aa = agg::RasterizerScanlineAA::new();
-        let mut sl     = agg::ScanlineU8::new();
+        let mut ras_aa = agg::RasterizerScanline::new();
         let mut ren_aa = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
         let mut stroke = agg::ConvStroke::new(spiral);
         stroke.width(line_width);
         //stroke.cap(round_cap);
         ren_aa.color( &agg::Rgba8::new(102, 77, 26, 255));
         ras_aa.add_path(&stroke);
-        agg::render_scanlines(&mut ras_aa, &mut sl, &mut ren_aa);
+        agg::render_scanlines(&mut ras_aa, &mut ren_aa);
 
     }
     // Aliased Pixel Accuracy
@@ -211,18 +209,17 @@ fn rasterizers2_pre() {
     }
 
     {
-        let mut ras_aa = agg::RasterizerScanlineAA::new();
-        let mut sl     = agg::ScanlineU8::new();
+        let mut ras_aa = agg::RasterizerScanline::new();
         let mut ren_aa = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
-        text(&mut ras_aa, &mut sl, &mut ren_aa, 50.0, 75.0,
+        text(&mut ras_aa, &mut ren_aa, 50.0, 75.0,
              "Bresenham lines,\n\nregular accuracy");
-        text(&mut ras_aa, &mut sl, &mut ren_aa, (w/2-50) as f64, 75.0,
+        text(&mut ras_aa, &mut ren_aa, (w/2-50) as f64, 75.0,
              "Bresenham lines,\n\nsubpixel accuracy");
-        text(&mut ras_aa, &mut sl, &mut ren_aa, 50., (h/2+50) as f64,
+        text(&mut ras_aa, &mut ren_aa, 50., (h/2+50) as f64,
              "Anti-aliased lines");
-        text(&mut ras_aa, &mut sl, &mut ren_aa, (w/2-50) as f64, (h/2+50) as f64,
+        text(&mut ras_aa, &mut ren_aa, (w/2-50) as f64, (h/2+50) as f64,
              "Scanline rasterizer");
-        text(&mut ras_aa, &mut sl, &mut ren_aa, (w - w/5 - 50) as f64, (h/2+50) as f64,
+        text(&mut ras_aa, &mut ren_aa, (w - w/5 - 50) as f64, (h/2+50) as f64,
              "Arbitrary Image Pattern");
 
     }
@@ -242,11 +239,10 @@ fn rasterizers2_pre() {
 
 }
 
-fn text<T>(ras: &mut agg::RasterizerScanlineAA,
-           sl: &mut agg::ScanlineU8,
+fn text<T>(ras: &mut agg::RasterizerScanline,
            ren: &mut agg::RenderingScanlineAASolid<T>,
            x: f64, y: f64, txt: &str)
-    where T: Pixel + PixfmtFunc
+    where T: PixelDraw
 {
     let mut t = agg::GsvText::new();
     t.size(8.0, 0.0);
@@ -257,6 +253,6 @@ fn text<T>(ras: &mut agg::RasterizerScanlineAA,
     stroke.width(0.7);
     ras.add_path(&stroke);
     ren.color(&agg::Rgba8::new(0,0,0,255));
-    agg::render_scanlines(ras, sl, ren);
+    agg::render_scanlines(ras, ren);
 
 }

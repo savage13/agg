@@ -1,6 +1,9 @@
 
 extern crate agg;
 
+use agg::PixelData;
+use agg::Pixel;
+
 #[test]
 fn t04_solar_spectrum_alpha() {
     let mut pix = agg::Pixfmt::<agg::Rgb8>::new(320, 200);
@@ -8,8 +11,8 @@ fn t04_solar_spectrum_alpha() {
 
     let mut alpha = agg::Pixfmt::<agg::Gray8>::new(320, 200);
 
-    let w = pix.rbuf.width;
-    let h = pix.rbuf.height;
+    let w = pix.width();
+    let h = pix.height();
 
     for i in 0 .. h {
         let v = (255 * i/h) as u8;
@@ -26,7 +29,7 @@ fn t04_solar_spectrum_alpha() {
     for i in 0 .. h {
         mix.blend_color_hspan(0, i, w, &span, 0);
     }
-    agg::ppm::write_ppm(&mix.rgb.rbuf.data, w, h,
+    agg::ppm::write_ppm(&mix.rgb.pixeldata(), w, h,
               "agg_test_04.ppm").unwrap();
 
     agg::ppm::compare_ppm("agg_test_04.ppm", "tests/agg_test_04.ppm");
