@@ -75,7 +75,7 @@ fn render_scanline_aa_solid<T,C: Color>(sl: &ScanlineU8,
         }
     }
 }
-
+#[derive(Debug)]
 pub struct RenderData {
     sl: ScanlineU8
 }
@@ -203,6 +203,7 @@ pub fn render_all_paths<REN,VS,C>(ras: &mut RasterizerScanline,
     }
 
 }
+#[derive(Debug)]
 pub struct RendererPrimatives<'a,T> where T: 'a {
     pub base: &'a mut RenderingBase<T>,
     pub fill_color: Rgba8,
@@ -321,6 +322,7 @@ impl BresehamInterpolator {
 /// Line Interpolator using a Digital differential analyzer (DDA)
 
 /// See [https://en.wikipedia.org/wiki/Digital_differential_analyzer_(graphics_algorithm)]()
+#[derive(Debug)]
 pub struct LineInterpolator {
     pub count: i64,
     pub left: i64,
@@ -516,6 +518,7 @@ impl LineProfileAA {
     }
 }
 
+#[derive(Debug)]
 pub struct RendererOutlineAA<'a,T>  {
     pub ren: &'a mut RenderingBase<T>,
     pub color: Rgba8,
@@ -983,6 +986,7 @@ pub fn clip_move_point(x1: i64, y1: i64, x2: i64, y2: i64, clip_box: Rectangle<i
     Some((x,y))
 }
 
+#[derive(Debug)]
 pub struct EllipseInterpolator {
     pub rx2: i64,
     pub ry2: i64,
@@ -1063,6 +1067,7 @@ impl EllipseInterpolator {
 }
 
 
+#[derive(Debug)]
 pub struct RendererOutlineImg<'a,T> {
     pub ren: &'a mut RenderingBase<T>,
     pub pattern: LineImagePatternPow2,
@@ -1201,6 +1206,7 @@ impl<T> Lines for RendererOutlineImg<'_, T> where T: PixelDraw {
     }
 }
 
+#[derive(Debug)]
 pub struct LineImagePattern {
     pix: Pixfmt<Rgba8>,
     filter: PatternFilterBilinear,
@@ -1310,6 +1316,7 @@ impl LineImagePattern {
     }
 }
 
+#[derive(Debug)]
 pub struct LineImagePatternPow2 {
     base: LineImagePattern,
     mask: u64
@@ -1412,7 +1419,7 @@ impl PatternFilterBilinear {
         Rgba8::new(red,green,blue,alpha)
     }
 }
-
+#[derive(Debug)]
 pub struct LineInterpolatorImage {
     pub lp: LineParameters,
     pub li: LineInterpolator,
@@ -1427,8 +1434,10 @@ pub struct LineInterpolatorImage {
     pub max_extent: i64,
     pub start: i64,
     pub step: i64,
-    pub dist_pos: [i64; MAX_HALF_WIDTH + 1],
-    pub colors: [Rgba8; MAX_HALF_WIDTH * 2 + 4],
+    //pub dist_pos: [i64; MAX_HALF_WIDTH + 1],
+    pub dist_pos: Vec<i64>,
+    //pub colors: [Rgba8; MAX_HALF_WIDTH * 2 + 4],
+    pub colors: Vec<Rgba8>,
 }
 
 impl LineInterpolatorImage {
@@ -1462,8 +1471,8 @@ impl LineInterpolatorImage {
         let max_extent = (width + POLY_SUBPIXEL_SCALE) >> POLY_SUBPIXEL_SHIFT;
         let mut step = 0;
         let start = pattern_start + (max_extent + 2) * pattern_width;
-        let mut dist_pos = [0i64; MAX_HALF_WIDTH + 1];
-        let colors = [Rgba8::black(); MAX_HALF_WIDTH * 2 + 4];
+        let mut dist_pos = vec![0i64; MAX_HALF_WIDTH + 1];
+        let colors = vec![Rgba8::black(); MAX_HALF_WIDTH * 2 + 4];
         let mut di = DistanceInterpolator4::new(lp.x1, lp.y1, lp.x2, lp.y2,
                                                 sx, sy, ex, ey, lp.len, scale_x,
                                                 lp.x1 & ! POLY_SUBPIXEL_MASK,
@@ -1798,7 +1807,7 @@ impl LineInterpolatorImage {
         npix != 0 && self.step < self.count
     }
 }
-
+#[derive(Debug)]
 pub struct DistanceInterpolator4 {
     pub dx: i64,
     pub dy: i64,

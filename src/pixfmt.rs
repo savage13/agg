@@ -15,6 +15,7 @@ use std::marker::PhantomData;
 
 /// Pixel Format Wrapper around raw pixel component data
 ///
+#[derive(Debug)]
 pub struct Pixfmt<T> {
     rbuf: RenderingBuffer,
     phantom: PhantomData<T>,

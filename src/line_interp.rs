@@ -11,6 +11,7 @@ use crate::POLY_SUBPIXEL_SCALE;
 use crate::DistanceInterpolator;
 use crate::RenderOutline;
 
+#[derive(Debug)]
 pub struct LineInterpolatorAA {
     pub lp: LineParameters,
     pub li: LineInterpolator,
@@ -23,8 +24,10 @@ pub struct LineInterpolatorAA {
     pub width: i64,
     pub max_extent: i64,
     pub step: i64,
-    pub dist: [i64; MAX_HALF_WIDTH + 1],
-    pub covers: [u64; MAX_HALF_WIDTH * 2 + 4],
+    //pub dist: [i64; MAX_HALF_WIDTH + 1],
+    pub dist: Vec<i64>,
+    //pub covers: [u64; MAX_HALF_WIDTH * 2 + 4],
+    pub covers: Vec<u64>,
 }
 
 impl LineInterpolatorAA {
@@ -59,7 +62,7 @@ impl LineInterpolatorAA {
         dd <<= POLY_SUBPIXEL_SHIFT;
         let mut li = LineInterpolator::new_foward_adjusted(0, dd, lp.len);
 
-        let mut dist = [0i64; MAX_HALF_WIDTH + 1];
+        let mut dist = vec![0i64; MAX_HALF_WIDTH + 1];
         let stop = width + POLY_SUBPIXEL_SCALE * 2;
         for i in 0 .. MAX_HALF_WIDTH {
             dist[i] = li.y;
@@ -69,7 +72,7 @@ impl LineInterpolatorAA {
             li.inc();
         }
         dist[MAX_HALF_WIDTH] = 0x7FFF_0000 ;
-        let covers = [0u64; MAX_HALF_WIDTH * 2 + 4];
+        let covers = vec![0u64; MAX_HALF_WIDTH * 2 + 4];
         Self { lp, li: m_li, len, x, y, old_x, old_y, count,
                width, max_extent, step,
                dist, covers }
@@ -106,7 +109,7 @@ impl LineInterpolatorAA {
     }
 }
 
-
+#[derive(Debug)]
 pub struct AA0 {
     pub di: DistanceInterpolator1,
     pub li: LineInterpolatorAA,
@@ -187,7 +190,7 @@ impl AA0 {
         self.li.step < self.li.count
     }
 }
-
+#[derive(Debug)]
 pub struct AA1 {
     pub di: DistanceInterpolator2,
     pub li: LineInterpolatorAA,
@@ -380,6 +383,7 @@ impl AA1 {
         self.li.step < self.li.count
     }
 }
+#[derive(Debug)]
 pub struct AA2 {
     pub di: DistanceInterpolator2,
     pub li: LineInterpolatorAA,
@@ -498,6 +502,7 @@ impl AA2 {
         npix != 0 && self.li.step < self.li.count
     }
 }
+#[derive(Debug)]
 pub struct AA3 {
     pub di: DistanceInterpolator3,
     pub li: LineInterpolatorAA,
@@ -711,16 +716,16 @@ impl AA3 {
             dist = self.li.dist[dx] + s1;
         }
         ren.blend_solid_hspan(self.li.x - dx as i64 + 1,
-                                      self.li.y,
-                                      (p1 - p0) as i64,
-                                      &self.li.covers[p0..]);
+                              self.li.y,
+                              (p1 - p0) as i64,
+                              &self.li.covers[p0..p1]);
         self.li.step -= 1;
         npix != 0&& self.li.step < self.li.count
 
     }
 }
 
-
+#[derive(Debug)]
 pub struct DistanceInterpolator00 {
     pub dx1: i64,
     pub dy1: i64,
@@ -752,7 +757,7 @@ impl DistanceInterpolator00 {
         self.dist2 += self.dy2;
     }
 }
-
+#[derive(Debug)]
 pub struct DistanceInterpolator0 {
     pub dx: i64,
     pub dy: i64,
@@ -773,12 +778,13 @@ impl DistanceInterpolator0 {
         self.dist += self.dy;
     }
 }
-
+#[derive(Debug)]
 pub struct DistanceInterpolator1 {
     pub dx: i64,
     pub dy: i64,
     pub dist: i64
 }
+#[derive(Debug)]
 pub struct DistanceInterpolator2 {
     pub dx: i64,
     pub dy: i64,
@@ -787,6 +793,7 @@ pub struct DistanceInterpolator2 {
     pub dist: i64,
     pub dist_start: i64,
 }
+#[derive(Debug)]
 pub struct DistanceInterpolator3 {
     pub dx: i64,
     pub dy: i64,
@@ -943,23 +950,24 @@ impl DistanceInterpolator3 {
         let dy = y2-y1;
         let dx_start = line_mr(sx) - line_mr(x1);
         let dy_start = line_mr(sy) - line_mr(y1);
-        let dx_end   = line_mr(sx) - line_mr(x2);
-        let dy_end   = line_mr(sy) - line_mr(y2);
+        let dx_end   = line_mr(ex) - line_mr(x2);
+        let dy_end   = line_mr(ey) - line_mr(y2);
 
-        let dist = (x + POLY_SUBPIXEL_SHIFT/2 - x2) as f64 * dy as f64 -
-                   (y + POLY_SUBPIXEL_SHIFT/2 - y2) as f64 * dx as f64;
+        let dist = (x + POLY_SUBPIXEL_SCALE/2 - x2) as f64 * dy as f64 -
+                   (y + POLY_SUBPIXEL_SCALE/2 - y2) as f64 * dx as f64;
         let dist = dist.round() as i64;
-        let dist_start = line_mr(x + POLY_SUBPIXEL_SHIFT/2) - line_mr(sx) * dy_start -
-                         line_mr(y + POLY_SUBPIXEL_SHIFT/2) - line_mr(sy) * dx_start;
-        let dist_end   = line_mr(x + POLY_SUBPIXEL_SHIFT/2) - line_mr(ex) * dy_end -
-                         line_mr(y + POLY_SUBPIXEL_SHIFT/2) - line_mr(ey) * dx_end;
+        let dist_start = (line_mr(x + POLY_SUBPIXEL_SCALE/2) - line_mr(sx)) * dy_start -
+                         (line_mr(y + POLY_SUBPIXEL_SCALE/2) - line_mr(sy)) * dx_start;
+        let dist_end   = (line_mr(x + POLY_SUBPIXEL_SCALE/2) - line_mr(ex)) * dy_end -
+                         (line_mr(y + POLY_SUBPIXEL_SCALE/2) - line_mr(ey)) * dx_end;
+
 
         let dx = dx << POLY_SUBPIXEL_SHIFT;
         let dy = dy << POLY_SUBPIXEL_SHIFT;
         let dx_start = dx_start << POLY_MR_SUBPIXEL_SHIFT;
         let dy_start = dy_start << POLY_MR_SUBPIXEL_SHIFT;
-        let dx_end   = dx_start << POLY_MR_SUBPIXEL_SHIFT;
-        let dy_end   = dy_start << POLY_MR_SUBPIXEL_SHIFT;
+        let dx_end   = dx_end << POLY_MR_SUBPIXEL_SHIFT;
+        let dy_end   = dy_end << POLY_MR_SUBPIXEL_SHIFT;
         Self {
             dx, dy, dx_start, dy_start, dx_end, dy_end, dist_start, dist_end, dist
         }
@@ -971,62 +979,62 @@ impl DistanceInterpolator for DistanceInterpolator3 {
         self.dist
     }
     fn inc_x(&mut self, dy: i64) {
-        self.dist       += self.dy; 
-        self.dist_start += self.dy_start; 
+        self.dist       += self.dy;
+        self.dist_start += self.dy_start;
         self.dist_end   += self.dy_end;
         if dy > 0 {
-            self.dist       -= self.dx; 
-            self.dist_start -= self.dx_start; 
+            self.dist       -= self.dx;
+            self.dist_start -= self.dx_start;
             self.dist_end   -= self.dx_end;
         }
         if dy < 0 {
-            self.dist       += self.dx; 
-            self.dist_start += self.dx_start; 
+            self.dist       += self.dx;
+            self.dist_start += self.dx_start;
             self.dist_end   += self.dx_end;
         }
     }
     fn inc_y(&mut self, dx: i64) {
-        self.dist       -= self.dx; 
-        self.dist_start -= self.dx_start; 
+        self.dist       -= self.dx;
+        self.dist_start -= self.dx_start;
         self.dist_end   -= self.dx_end;
         if dx > 0 {
-            self.dist       += self.dy; 
-            self.dist_start += self.dy_start; 
+            self.dist       += self.dy;
+            self.dist_start += self.dy_start;
             self.dist_end   += self.dy_end;
         }
         if dx < 0 {
-            self.dist       -= self.dy; 
-            self.dist_start -= self.dy_start; 
+            self.dist       -= self.dy;
+            self.dist_start -= self.dy_start;
             self.dist_end   -= self.dy_end;
         }
     }
     fn dec_x(&mut self, dy: i64) {
-        self.dist       -= self.dy; 
-        self.dist_start -= self.dy_start; 
+        self.dist       -= self.dy;
+        self.dist_start -= self.dy_start;
         self.dist_end   -= self.dy_end;
         if dy > 0 {
-            self.dist       -= self.dx; 
-            self.dist_start -= self.dx_start; 
+            self.dist       -= self.dx;
+            self.dist_start -= self.dx_start;
             self.dist_end   -= self.dx_end;
         }
         if dy < 0 {
-            self.dist       += self.dx; 
-            self.dist_start += self.dx_start; 
+            self.dist       += self.dx;
+            self.dist_start += self.dx_start;
             self.dist_end   += self.dx_end;
         }
     }
     fn dec_y(&mut self, dx: i64) {
-        self.dist       += self.dx; 
-        self.dist_start += self.dx_start; 
+        self.dist       += self.dx;
+        self.dist_start += self.dx_start;
         self.dist_end   += self.dx_end;
         if dx > 0 {
-            self.dist       += self.dy; 
-            self.dist_start += self.dy_start; 
+            self.dist       += self.dy;
+            self.dist_start += self.dy_start;
             self.dist_end   += self.dy_end;
         }
         if dx < 0 {
-            self.dist       -= self.dy; 
-            self.dist_start -= self.dy_start; 
+            self.dist       -= self.dy;
+            self.dist_start -= self.dy_start;
             self.dist_end   -= self.dy_end;
         }
     }
