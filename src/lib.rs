@@ -1,48 +1,24 @@
-
-// How does this work / Data Flow
-//    ren = RenAA( RenBase( Pixfmt( data ) ) )
-//    ras = Raster()
-//    sl  = Scanline()
-//  Raster Operations
-//    line, move, add_path
-//    clip.line()
-//       clip.line_clip_y()
-//        line()
-//         render_hline()    -- 'INCR[0,1,2,3]'
-//          set_curr_cell()
-//         set_curr_cell()
-//     Output: Cells with X, Cover, and Area
-//  Render to Image
-//   render_scanlines(ras, sl, ren)
-//     rewind_scanline
-//       close_polygon()
-//       sort_cells() -- 'SORT_CELLS: SORTING'
-//     scanline_reset
-//     sweep_scanlines()
-//       render_scanline - Individual horizontal (y) lines
-//         blend_solid_hspan
-//         blend_hline
-//           blend_hline (pixfmt)
-
-// When difference occur:
-//   - Check Input Path (ADD_PATH) in rasterizer
-//   - Check Scanlines (SWEEP SCANLINES) in rasterizer
-//   - Check Pixels    (BLEND_HLINE)
-
-
 //! Anti Grain Geometry - Rust implementation
 //!
 //! Originally derived from version 2.4 of [AGG](http://antigrain.com)
 //!
-//! There are multiple ways to put draw pixels including:
+//! This crate implments the drawing / painting 2D algorithms developed in the Anti Grain Geometry C++ library. Quoting from the author in the documentation
+//!
+//! **Anti-Grain Geometry** is not a solid graphic library and it's not very easy to use. I consider **AGG** as a **"tool to create other tools"**. It means that there's no **"Graphics"** object or something like that, instead, **AGG** consists of a number of loosely coupled algorithms that can be used together or separately. All of them have well defined interfaces and absolute minimum of implicit or explicit dependencies.
+//!
+//!
+//! # Anti-Aliasing and Subpixel Accuracy
+//!
+//! One primary strenght of AGG are the combination of drawing with subpixel accuracy with anti-aliasing effects.  There are many examples within the documentation and reproduced here.
+//!
+//! # Drawing
+//!
+//! There are multiple ways to put / draw pixels including:
 //!
 //!   - Scanline Renderers
 //!     - Antialiased or Aliased (Binary)
 //!   - Outline Renderer, possibly with Images
 //!   - Raw Pixel Manipulation
-//!
-//! Everything happens through [`Pixfmt`] which presents a pixel formatted
-//!   view of the raw image data.
 //!
 //! # Scanline Renderer
 //!
@@ -70,7 +46,7 @@
 //!        let pix = Pixfmt::<Rgb8>::new(100,100);
 //!        let mut ren_base = agg::RenderingBase::new(pix);
 //!        ren_base.clear( Rgba8::new(255, 255, 255, 255) );
-//!        {
+//!
 //!        let mut ren = RendererOutlineAA::with_base(&mut ren_base);
 //!        ren.color(agg::Rgba8::new(102,77,26,255));
 //!        ren.profile.width(3.0);
@@ -81,11 +57,34 @@
 //!        path.line_to(90.0, 10.0);
 //!
 //!        let mut ras = RasterizerOutlineAA::with_renderer(&mut ren);
-//!        ras.add_path(&path);}
-//!        agg::ppm::write_ppm(&ren_base.pixeldata(), 100,100, "outline_aa.ppm").unwrap();
+//!        ras.add_path(&path);
+//!        agg::ppm::write_ppm(&ren_base.pixeldata(), 100,100,
+//!              "outline_aa.ppm").unwrap();
 //!
 //! # Primative Renderer
 //!
+//! Render for primative shapes: lines, rectangles, and ellipses; filled or
+//!    outlined. 
+//!
+//!        use agg::{Pixfmt,Rgb8,Rgba8,RenderingBase,SetColor};
+//!        use agg::{RendererPrimatives,RasterizerOutline};
+//!        use agg::PixelData;
+//!        let pix = Pixfmt::<Rgb8>::new(100,100);
+//!        let mut ren_base = agg::RenderingBase::new(pix);
+//!        ren_base.clear( Rgba8::new(255, 255, 255, 255) );
+//!
+//!        let mut ren = RendererPrimatives::with_base(&mut ren_base);
+//!        ren.line_color(agg::Rgba8::new(0,0,0,255));
+//!
+//!        let mut path = agg::PathStorage::new();
+//!        path.move_to(10.0, 10.0);
+//!        path.line_to(50.0, 90.0);
+//!        path.line_to(90.0, 10.0);
+//!
+//!        let mut ras = RasterizerOutline::with_primative(&mut ren);
+//!        ras.add_path(&path);
+//!        agg::ppm::write_ppm(&ren_base.pixeldata(), 100,100,
+//!              "primative.ppm").unwrap();
 //!
 //!
 //! # Raw Pixel Manipulation

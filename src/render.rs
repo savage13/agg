@@ -31,6 +31,8 @@ use crate::SetColor;
 use crate::AccurateJoins;
 use crate::Lines;
 
+use crate::outline::Subpixel;
+
 /// Aliased Renderer
 #[derive(Debug)]
 pub struct RenderingScanlineBinSolid<'a,T> where T: 'a {
@@ -205,18 +207,21 @@ pub fn render_all_paths<REN,VS,C>(ras: &mut RasterizerScanline,
 }
 #[derive(Debug)]
 pub struct RendererPrimatives<'a,T> where T: 'a {
-    pub base: &'a mut RenderingBase<T>,
-    pub fill_color: Rgba8,
-    pub line_color: Rgba8,
-    pub x: i64,
-    pub y: i64,
+    base: &'a mut RenderingBase<T>,
+    fill_color: Rgba8,
+    line_color: Rgba8,
+    x: Subpixel,
+    y: Subpixel,
 }
 
 impl<'a,T> RendererPrimatives<'a,T> where T: PixelDraw {
     pub fn with_base(base: &'a mut RenderingBase<T>) -> Self {
         let fill_color = Rgba8::new(0,0,0,255);
         let line_color = Rgba8::new(0,0,0,255);
-        Self { base, fill_color, line_color, x: 0, y: 0 }
+        Self { base, fill_color, line_color,
+               x: Subpixel::from(0),
+               y: Subpixel::from(0)
+        }
     }
     pub fn line_color<C: Color>(&mut self, line_color: C) {
         self.line_color = Rgba8::from_trait(line_color);
@@ -224,26 +229,27 @@ impl<'a,T> RendererPrimatives<'a,T> where T: PixelDraw {
     pub fn fill_color<C: Color>(&mut self, fill_color: C) {
         self.fill_color = Rgba8::from_trait(fill_color);
     }
-    pub fn coord(&self, c: f64) -> i64 {
-        (c * POLY_SUBPIXEL_SCALE as f64).round() as i64
+    pub(crate) fn coord(&self, c: f64) -> Subpixel {
+        Subpixel::from( (c * POLY_SUBPIXEL_SCALE as f64).round() as i64 )
     }
-    pub fn move_to(&mut self, x: i64, y: i64) {
+    pub(crate) fn move_to(&mut self, x: Subpixel, y: Subpixel) {
         self.x = x;
         self.y = y;
         //eprintln!("DDA MOVE: {} {}", x>>8, y>>8);
     }
-    pub fn line_to(&mut self, x: i64, y: i64) {
+    pub(crate) fn line_to(&mut self, x: Subpixel, y: Subpixel) {
         //eprintln!("DDA LINE: {} {}", x>>8, y>>8);
         let (x0,y0) = (self.x, self.y);
         self.line(x0, y0, x, y);
         self.x = x;
         self.y = y;
     }
-    fn line(&mut self, x1: i64, y1: i64, x2: i64, y2: i64) {
+    fn line(&mut self, x1: Subpixel, y1: Subpixel, x2: Subpixel, y2: Subpixel) {
         //let cover_shift = POLY_SUBPIXEL_SCALE;
         //let cover_size = 1 << cover_shift;
         //let cover_mask = cover_size - 1;
         //let cover_full = cover_mask;
+        let mask = T::cover_mask();
         let color = self.line_color;
         let mut li = BresehamInterpolator::new(x1,y1,x2,y2);
         if li.len == 0 {
@@ -251,14 +257,15 @@ impl<'a,T> RendererPrimatives<'a,T> where T: PixelDraw {
         }
         if li.ver {
             for _ in 0 .. li.len {
-                //eprintln!("DDA PIX VER {} {}", li.x2, li.y1);
-                self.base.pixf.set((li.x2 as usize, li.y1 as usize), color);
+                //self.base.pixf.set((li.x2 as usize, li.y1 as usize), color);
+                self.base.blend_hline(li.x2, li.y1, li.x2, color, mask);
                 li.vstep();
             }
         } else {
             for _ in 0 .. li.len {
                 //eprintln!("DDA PIX HOR {} {} {} {}", li.x1, li.y2, li.func.y, li.func.y >>8);
-                self.base.pixf.set((li.x1 as usize, li.y2 as usize), color);
+                //self.base.pixf.set((li.x1 as usize, li.y2 as usize), color);
+                self.base.blend_hline(li.x1, li.y2, li.x1, color, mask);
                 li.hstep();
             }
         }
@@ -282,11 +289,11 @@ struct BresehamInterpolator {
 }
 
 impl BresehamInterpolator {
-    fn new(x1_hr: i64, y1_hr: i64, x2_hr: i64, y2_hr: i64) -> Self {
-        let x1 = x1_hr >> POLY_SUBPIXEL_SHIFT;
-        let x2 = x2_hr >> POLY_SUBPIXEL_SHIFT;
-        let y1 = y1_hr >> POLY_SUBPIXEL_SHIFT;
-        let y2 = y2_hr >> POLY_SUBPIXEL_SHIFT;
+    fn new(x1_hr: Subpixel, y1_hr: Subpixel, x2_hr: Subpixel, y2_hr: Subpixel) -> Self {
+        let x1 = i64::from(x1_hr);
+        let x2 = i64::from(x2_hr);
+        let y1 = i64::from(y1_hr);
+        let y2 = i64::from(y2_hr);
         let dy = (y2 - y1).abs();
         let dx = (x2 - x1).abs();
         let ver = dy > dx;
@@ -297,7 +304,8 @@ impl BresehamInterpolator {
             if x2 > x1 { 1 } else { -1 }
         };
         let (z1,z2) = if ver { (x1_hr,x2_hr) } else { (y1_hr,y2_hr) };
-        let func = LineInterpolator::new(z1,z2,len);
+        // XXX  - value() should not be used
+        let func = LineInterpolator::new(z1.value(), z2.value(), len);
         //eprintln!("DDA: {} {} {} {} LINE", x1_hr, y1_hr, x2_hr, y2_hr);
         let y2 = func.y >> POLY_SUBPIXEL_SHIFT;
         let x2 = func.y >> POLY_SUBPIXEL_SHIFT;
@@ -332,7 +340,8 @@ pub struct LineInterpolator {
 }
 
 impl LineInterpolator {
-    pub fn new(y1: i64, y2: i64, count: i64) -> Self {
+    // Values should be in Subpixel coordinates
+    pub fn new(y1: i64, y2: i64, count: i64) -> Self { 
         let cnt = std::cmp::max(1,count);
         let mut left = (y2 - y1) / cnt;
         let mut rem  = (y2 - y1) % cnt;
