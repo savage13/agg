@@ -22,21 +22,33 @@
 //!
 //! # Scanline Renderer
 //!
-//!  The simplest scanline renderer is [`render`], but others renderers are also
-//!    available with more defined capabilities include [`render_scanlines`],
+//!  The multitude of renderers here include [`render_scanlines`],
 //!    [`render_all_paths`], [`render_scanlines_aa_solid`] and
 //!    [`render_scanlines_bin_solid`]
 //!
-//!        use agg::{Pixfmt,Rgba8,RenderingBase,RasterizerScanline};
-//!        let pix = Pixfmt::<Rgba8>::new(10,10);
-//!        let mut ren_base = agg::RenderingBase::new(pix);
+//!       use agg::PixelData;
+//!       use agg::Render;
+
+//!       // Create a blank image 10x10 pixels
+//!       let pix = agg::Pixfmt::<agg::Rgb8>::new(100,100);
+//!       let mut ren_base = agg::RenderingBase::new(pix);
+//!       ren_base.clear(agg::Rgba8::white());
+
+//!       // Draw a polygon from (10,10) - (50,90) - (90,10)
+//!       let mut ras = agg::RasterizerScanline::new();
+//!       ras.move_to_d(10.0, 10.0);
+//!       ras.line_to_d(50.0, 90.0);
+//!       ras.line_to_d(90.0, 10.0);
+
+//!       // Render the line to the image
+//!       let mut ren = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
+//!       ren.color(&agg::Rgba8::black());
+//!       agg::render_scanlines(&mut ras, &mut ren);
+
+//!       // Save the image to a file
+//!       agg::ppm::write_ppm(&ren_base.pixeldata(), 100,100,
+//!                           "little_black_triangle.ppm").unwrap();
 //!
-//!        let mut ras = RasterizerScanline::new();
-//!        ras.move_to_d(1.0, 1.0);
-//!        ras.line_to_d(5.0, 9.0);
-//!        ras.line_to_d(9.0, 1.0);
-//!
-//!        agg::render(&mut ren_base, &mut ras, true);
 //!
 //! # Outline AntiAlias Renderer
 //!
@@ -476,7 +488,9 @@ fn blend(fg: Rgb8, bg: Rgb8, alpha: f64) -> Rgb8 {
 //     alpha * cover
 // }
 
-pub fn render<T>(base: &mut RenderingBase<T>, ras: &mut RasterizerScanline, antialias: bool)
+fn render<T>(base: &mut RenderingBase<T>,
+                 ras: &mut RasterizerScanline,
+                 antialias: bool)
       where T: PixelDraw
 {
     if antialias {

@@ -31,7 +31,8 @@ fn t21_line_join() {
         let mut ras = agg::RasterizerScanline::new();
         ras.add_path(&stroke);
 
-        agg::render(&mut ren_base, &mut ras, true);
+        let mut ren = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
+        agg::render_scanlines(&mut ras, &mut ren);
     }
     let mut ras = agg::RasterizerScanline::new();
     let mut ren = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
