@@ -18,6 +18,7 @@ agg = "0.1.0"
 
 ![Little Black Triangle](https://github.com/savage13/agg/blob/master/tests/little_black_triangle.png)
 
+```rust
     use agg::PixelData;
     use agg::Render;
 
@@ -40,9 +41,7 @@ agg = "0.1.0"
     // Save the image to a file
     agg::ppm::write_ppm(&ren_base.pixeldata(), 100,100,
                         "little_black_triangle.ppm").unwrap();
-
-
-
+```
 
 ## Features
 
