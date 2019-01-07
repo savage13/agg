@@ -1,7 +1,7 @@
 [package]
 name = "agg"
 version = "0.1.0"
-authors = ["Brian Savage <savage@uri.edu>"]
+authors = ["Brian Savage <savage13@gmail.com>"]
 edition = "2018"
 
 [dependencies]
