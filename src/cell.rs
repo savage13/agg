@@ -52,7 +52,7 @@ impl Cell {
 #[derive(Debug,Default)]
 pub struct RasterizerCell {
     /// Cells
-    pub cells: Vec<Cell>,
+    cells: Vec<Cell>,
     /// Minimum x value of current cells
     pub min_x: i64,
     /// Maximum x value of current cells

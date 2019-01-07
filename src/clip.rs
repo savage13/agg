@@ -91,7 +91,7 @@ pub const TOP    : u8 = 0b0000_1000;
 /// - [BOTTOM](constant.BOTTOM.html)
 /// - [TOP](constant.TOP.html)
 ///
-pub fn clip_flags<T: std::cmp::PartialOrd>(x: &T, y: &T, x1: &T, y1: &T, x2: &T, y2: &T) -> u8 {
+fn clip_flags<T: std::cmp::PartialOrd>(x: &T, y: &T, x1: &T, y1: &T, x2: &T, y2: &T) -> u8 {
     let mut code = INSIDE;
     if x < x1 { code |= LEFT; }
     if x > x2 { code |= RIGHT; }

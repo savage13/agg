@@ -5,5 +5,4 @@ authors = ["Brian Savage <savage@uri.edu>"]
 edition = "2018"
 
 [dependencies]
-# num-traits = "0.2"
-# fixed = "0.1"
+freetype-rs = "0.19.0"

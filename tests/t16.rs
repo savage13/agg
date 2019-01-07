@@ -28,15 +28,16 @@ fn t16_path_stroke_no_clip() {
 
     agg::render_scanlines(&mut ras, &mut ren);
 
-    let ps = agg::PathStorage::new();
+    let mut ps = agg::PathStorage::new();
+    ps.remove_all();
+    ps.move_to(10.0, 10.0);
+    ps.line_to(50.0, 90.0);
+    ps.line_to(90.0, 10.0);
+    ps.line_to(10.0, 10.0);
+    
     let mut pg = agg::ConvStroke::new(ps);
 
     pg.width(2.0);
-    pg.source.remove_all();
-    pg.source.move_to(10.0, 10.0);
-    pg.source.line_to(50.0, 90.0);
-    pg.source.line_to(90.0, 10.0);
-    pg.source.line_to(10.0, 10.0);
     ras.add_path(&mut pg);
 
     agg::render_scanlines_aa_solid(&mut ras, &mut ren.base, agg::Rgba8::new(0,0,0,255));

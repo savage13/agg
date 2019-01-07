@@ -1,6 +1,6 @@
 #[test]
 fn t20_outline_render() {
-    use agg::{Pixfmt,Rgb8,Rgba8,RenderingBase,SetColor};
+    use agg::{Pixfmt,Rgb8,Rgba8,SetColor};
     use agg::{RendererOutlineAA,RasterizerOutlineAA};
     use agg::PixelData;
     let pix = Pixfmt::<Rgb8>::new(100,100);

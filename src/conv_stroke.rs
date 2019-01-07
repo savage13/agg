@@ -8,6 +8,7 @@ use crate::path_storage::cross;
 use crate::path_storage::split;
 
 use crate::VertexSource;
+use std::f64::consts::PI;
 
 #[derive(Debug,Copy,Clone,PartialEq)]
 pub enum LineCap {
@@ -28,17 +29,17 @@ impl Default for InnerJoin { fn default() -> InnerJoin { InnerJoin::Miter } }
 
 #[derive(Debug,Default)]
 pub struct ConvStroke<T: VertexSource + Default> {
-    pub source: T,//PathStorage,
-    pub width: f64,
-    pub width_abs: f64,
-    pub width_eps: f64,
-    pub width_sign: f64,
-    pub miter_limit: f64,
-    pub inner_miter_limit: f64,
-    pub approx_scale: f64,
-    pub line_cap: LineCap,
-    pub line_join: LineJoin,
-    pub inner_join: InnerJoin,
+    source: T,//PathStorage,
+    width: f64,
+    width_abs: f64,
+    width_eps: f64,
+    width_sign: f64,
+    miter_limit: f64,
+    inner_miter_limit: f64,
+    approx_scale: f64,
+    line_cap: LineCap,
+    line_join: LineJoin,
+    inner_join: InnerJoin,
 }
 
 impl<T> VertexSource for ConvStroke<T> where T: VertexSource + Default {
@@ -73,7 +74,7 @@ impl<T> ConvStroke<T> where T: VertexSource + Default {
         self.width_sign = if self.width < 0.0 { -1.0 } else { 1.0 };
         //eprintln!("SET WIDTH");
     }
-    pub fn calc_cap(&self, v0: &Vertex<f64>, v1: &Vertex<f64>) -> Vec<Vertex<f64>> {
+    fn calc_cap(&self, v0: &Vertex<f64>, v1: &Vertex<f64>) -> Vec<Vertex<f64>> {
         //eprintln!("JOIN: CAP: v0 {} {}", v0.x, v0.y);
         //eprintln!("JOIN: CAP: v1 {} {}", v1.x, v1.y);
         let mut out = vec![];
@@ -100,10 +101,44 @@ impl<T> ConvStroke<T> where T: VertexSource + Default {
         }
         out
     }
-    pub fn calc_arc(&self, _x: f64, _y: f64, _dx1: f64, _dy1: f64, _dx2: f64, _dy2: f64) -> Vec<Vertex<f64>> {
-        unimplemented!("calc_arc");
+    fn calc_arc(&self, x: f64, y: f64, dx1: f64, dy1: f64, dx2: f64, dy2: f64) -> Vec<Vertex<f64>> {
+        let mut out = vec![];
+        let mut a1 = (dy1 * self.width_sign).atan2(dx1 * self.width_sign);
+        let mut a2 = (dy2 * self.width_sign).atan2(dx2 * self.width_sign);
+        //let da = a1 - a2;
+        //int i, n;
+
+        let mut da = 2.0 * (self.width_abs / (self.width_abs + 0.125 / self.approx_scale)).acos();
+        out.push(Vertex::line_to(x + dx1, y + dy1));
+        if self.width_sign > 0.0 {
+            if a1 > a2 {
+                a2 += 2.0 * PI;
+            }
+            let n = ((a2 - a1) / da) as i64;
+            da = (a2 - a1) / (n + 1) as f64;
+            a1 += da;
+            for _ in 0 .. n {
+                out.push(Vertex::line_to(x + a1.cos() * self.width,
+                                         y + a1.sin() * self.width));
+                a1 += da;
+            }
+        } else {
+            if a1 < a2 {
+                a2 -= 2.0 * PI;
+            }
+            let n = ((a1 - a2) / da) as i64;
+            da = (a1 - a2) / (n + 1) as f64;
+            a1 -= da;
+            for _ in 0 .. n {
+                out.push(Vertex::line_to(x + a1.cos() * self.width,
+                                         y + a1.sin() * self.width));
+                a1 -= da;
+            }
+        }
+        out.push(Vertex::line_to(x + dx2, y + dy2));
+        out
     }
-    pub fn calc_miter(&self,
+    fn calc_miter(&self,
                       p0: &Vertex<f64>,
                       p1: &Vertex<f64>,
                       p2: &Vertex<f64>,
@@ -217,7 +252,7 @@ impl<T> ConvStroke<T> where T: VertexSource + Default {
         //}
         out
     }
-    pub fn calc_intersection(&self,
+    fn calc_intersection(&self,
                              ax: f64, ay: f64, bx: f64, by: f64,
                              cx: f64, cy: f64, dx: f64, dy: f64)
                              -> Option<(f64, f64)> {
@@ -232,13 +267,14 @@ impl<T> ConvStroke<T> where T: VertexSource + Default {
         let y = ay + r * (by-ay);
         Some((x,y))
     }
-    pub fn calc_join(&self,
+    fn calc_join(&self,
                      p0: &Vertex<f64>,
                      p1: &Vertex<f64>,
                      p2: &Vertex<f64>) -> Vec<Vertex<f64>> {
         let mut out = vec![];
         let len1 = len(p1,p0);
         let len2 = len(p2,p1);
+
         //eprintln!("LINEOUT: V0: {:?} {}", p0, len1);
         //eprintln!("LINEOUT: V1: {:?} {}", p1, len2);
         //eprintln!("LINEOUT: V2: {:?}", p2);
@@ -255,7 +291,7 @@ impl<T> ConvStroke<T> where T: VertexSource + Default {
         //eprintln!("LINEOUT: {} {} {} {}", dx1, dy1, dx2, dy2);
         let cp = cross(p0, p1, p2);
         if cp != 0.0 && cp.is_sign_positive() == self.width.is_sign_positive() {
-            //println!("LINE: INNER JOIN");
+            println!("LINE: INNER JOIN");
             // Inner Join
             let mut limit = if len1 < len2 {
                 len1 / self.width_abs
@@ -265,8 +301,12 @@ impl<T> ConvStroke<T> where T: VertexSource + Default {
             if limit < self.inner_miter_limit {
                 limit = self.inner_miter_limit;
             }
+            println!("INNER_JOIN {:?}", self.inner_join);
             match self.inner_join {
                 InnerJoin::Bevel => {
+                    println!("INNER_JOIN BEVEL {} {} -> {} {}",
+                             p1.x + dx1, p1.y - dy1,
+                             p1.x + dx2, p1.y - dy2);
                     out.push(Vertex::line_to(p1.x + dx1, p1.y - dy1));
                     out.push(Vertex::line_to(p1.x + dx2, p1.y - dy2));
                 },
@@ -296,7 +336,7 @@ impl<T> ConvStroke<T> where T: VertexSource + Default {
                 }
             }
         } else {
-            //eprintln!("LINEOUT: OUTER JOIN");
+            eprintln!("LINEOUT: OUTER JOIN");
             // Outer Join
             let dx = (dx1 + dx2) / 2.0;
             let dy = (dy1 + dy2) / 2.0;
@@ -354,8 +394,42 @@ impl<T> ConvStroke<T> where T: VertexSource + Default {
         }
         out
     }
-
-    pub fn stroke(&self) -> Vec<Vertex<f64>> {
+    /// Set Line cap style to [LineCap](enum.LineCap.html)
+    ///
+    pub fn line_cap(&mut self, line_cap: LineCap) {
+        self.line_cap = line_cap;
+    }
+    /// Set Line Join style to [LineJoin](enum.LineJoin.html)
+    ///
+    /// Available options are
+    ///   - `Miter`
+    ///   - `MiterRevert`
+    ///   - `RoundJoin`
+    ///   - `Bevel`
+    ///   - `MiterRound`
+    ///
+    /// Variants of `MiterAccurate` and `None` are not available and will
+    /// be reset to `Miter`
+    ///
+    pub fn line_join(&mut self, line_join: LineJoin) {
+        self.line_join = line_join;
+        if self.line_join == LineJoin::MiterAccurate {
+            self.line_join = LineJoin::Miter;
+        }
+        if self.line_join == LineJoin::None {
+            self.line_join = LineJoin::Miter;
+        }
+    }
+    /// Set Inner Join style to [InnerJoin](enum.InnerJoin.html)
+    pub fn inner_join(&mut self, inner_join: InnerJoin) {
+        self.inner_join = inner_join;
+    }
+    // miter_limit
+    //     miter_limit_theta
+    //     inner_miter_limit
+    //     approximation_scale
+    //     shorten
+    fn stroke(&self) -> Vec<Vertex<f64>> {
         //println!("LINEOUT: STROKE PATH");
         let mut all_out = vec![];
         let v0 = &self.source.xconvert();

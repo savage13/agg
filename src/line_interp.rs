@@ -13,21 +13,21 @@ use crate::RenderOutline;
 
 #[derive(Debug)]
 pub struct LineInterpolatorAA {
-    pub lp: LineParameters,
-    pub li: LineInterpolator,
-    pub len: i64,
-    pub x: i64,
-    pub y: i64,
-    pub old_x: i64,
-    pub old_y: i64,
-    pub count: i64,
-    pub width: i64,
-    pub max_extent: i64,
-    pub step: i64,
+    lp: LineParameters,
+    li: LineInterpolator,
+    len: i64,
+    x: i64,
+    y: i64,
+    old_x: i64,
+    old_y: i64,
+    count: i64,
+    width: i64,
+    max_extent: i64,
+    step: i64,
     //pub dist: [i64; MAX_HALF_WIDTH + 1],
-    pub dist: Vec<i64>,
+    dist: Vec<i64>,
     //pub covers: [u64; MAX_HALF_WIDTH * 2 + 4],
-    pub covers: Vec<u64>,
+    covers: Vec<u64>,
 }
 
 impl LineInterpolatorAA {
@@ -110,9 +110,9 @@ impl LineInterpolatorAA {
 }
 
 #[derive(Debug)]
-pub struct AA0 {
-    pub di: DistanceInterpolator1,
-    pub li: LineInterpolatorAA,
+pub(crate) struct AA0 {
+    di: DistanceInterpolator1,
+    li: LineInterpolatorAA,
 }
 impl AA0 {
     pub fn new(lp: LineParameters, subpixel_width: i64) -> Self {
@@ -191,9 +191,9 @@ impl AA0 {
     }
 }
 #[derive(Debug)]
-pub struct AA1 {
-    pub di: DistanceInterpolator2,
-    pub li: LineInterpolatorAA,
+pub(crate) struct AA1 {
+    di: DistanceInterpolator2,
+    li: LineInterpolatorAA,
 }
 impl AA1 {
     pub fn new(lp: LineParameters, sx: i64, sy: i64, subpixel_width: i64) -> Self {
@@ -292,7 +292,7 @@ impl AA1 {
         li.li.adjust_forward();
         Self { li, di }
     }
-    pub fn count(&self) -> i64 {        self.li.count    }
+    //pub fn count(&self) -> i64 {        self.li.count    }
     pub fn vertical(&self) -> bool {        self.li.lp.vertical    }
     pub fn step_hor<R: RenderOutline>(&mut self, ren: &mut R) -> bool {
         let s1 = self.li.step_hor_base(&mut self.di);
@@ -384,9 +384,9 @@ impl AA1 {
     }
 }
 #[derive(Debug)]
-pub struct AA2 {
-    pub di: DistanceInterpolator2,
-    pub li: LineInterpolatorAA,
+pub(crate) struct AA2 {
+    di: DistanceInterpolator2,
+    li: LineInterpolatorAA,
 }
 impl AA2 {
     pub fn new(lp: LineParameters, ex: i64, ey: i64, subpixel_width: i64) -> Self {
@@ -399,7 +399,7 @@ impl AA2 {
         li.step -= li.max_extent;
         Self {  li, di }
     }
-    pub fn count(&self) -> i64 {        self.li.count    }
+    //pub fn count(&self) -> i64 {        self.li.count    }
     pub fn vertical(&self) -> bool {        self.li.lp.vertical    }
     pub fn step_hor<R: RenderOutline>(&mut self, ren: &mut R) -> bool {
         let s1 = self.li.step_hor_base(&mut self.di);
@@ -503,9 +503,9 @@ impl AA2 {
     }
 }
 #[derive(Debug)]
-pub struct AA3 {
-    pub di: DistanceInterpolator3,
-    pub li: LineInterpolatorAA,
+pub(crate) struct AA3 {
+    di: DistanceInterpolator3,
+    li: LineInterpolatorAA,
 }
 impl AA3 {
     pub fn new(lp: LineParameters, sx: i64, sy: i64, ex: i64, ey: i64, subpixel_width: i64) -> Self {
@@ -608,7 +608,7 @@ impl AA3 {
         li.step -= li.max_extent;
         Self { li, di }
     }
-    pub fn count(&self) -> i64 {        self.li.count    }
+    //pub fn count(&self) -> i64 {        self.li.count    }
     pub fn vertical(&self) -> bool {        self.li.lp.vertical    }
     pub fn step_hor<R: RenderOutline>(&mut self, ren: &mut R) -> bool {
         let s1 = self.li.step_hor_base(&mut self.di);
@@ -726,11 +726,11 @@ impl AA3 {
 }
 
 #[derive(Debug)]
-pub struct DistanceInterpolator00 {
-    pub dx1: i64,
-    pub dy1: i64,
-    pub dx2: i64,
-    pub dy2: i64,
+pub(crate) struct DistanceInterpolator00 {
+    dx1: i64,
+    dy1: i64,
+    dx2: i64,
+    dy2: i64,
     pub dist1: i64,
     pub dist2: i64,
 }
@@ -758,9 +758,9 @@ impl DistanceInterpolator00 {
     }
 }
 #[derive(Debug)]
-pub struct DistanceInterpolator0 {
-    pub dx: i64,
-    pub dy: i64,
+pub(crate) struct DistanceInterpolator0 {
+    dx: i64,
+    dy: i64,
     pub dist: i64,
 }
 
@@ -779,31 +779,31 @@ impl DistanceInterpolator0 {
     }
 }
 #[derive(Debug)]
-pub struct DistanceInterpolator1 {
-    pub dx: i64,
-    pub dy: i64,
+struct DistanceInterpolator1 {
+    dx: i64,
+    dy: i64,
     pub dist: i64
 }
 #[derive(Debug)]
-pub struct DistanceInterpolator2 {
-    pub dx: i64,
-    pub dy: i64,
-    pub dx_start: i64,
-    pub dy_start: i64,
-    pub dist: i64,
-    pub dist_start: i64,
+struct DistanceInterpolator2 {
+    dx: i64,
+    dy: i64,
+    dx_start: i64,
+    dy_start: i64,
+    dist: i64,
+    dist_start: i64,
 }
 #[derive(Debug)]
-pub struct DistanceInterpolator3 {
-    pub dx: i64,
-    pub dy: i64,
-    pub dx_start: i64,
-    pub dy_start: i64,
-    pub dx_end: i64,
-    pub dy_end: i64,
-    pub dist: i64,
-    pub dist_start: i64,
-    pub dist_end: i64,
+struct DistanceInterpolator3 {
+    dx: i64,
+    dy: i64,
+    dx_start: i64,
+    dy_start: i64,
+    dx_end: i64,
+    dy_end: i64,
+    dist: i64,
+    dist_start: i64,
+    dist_end: i64,
 }
 impl DistanceInterpolator1 {
     pub fn new(x1: i64, y1: i64, x2: i64, y2: i64, x: i64, y: i64) -> Self {
@@ -860,7 +860,7 @@ impl DistanceInterpolator for DistanceInterpolator1 {
 }
 
 
-pub fn line_mr(x: i64) -> i64 {
+pub(crate) fn line_mr(x: i64) -> i64 {
     x >> (POLY_SUBPIXEL_SHIFT - POLY_MR_SUBPIXEL_SHIFT)
 }
 
@@ -1129,16 +1129,16 @@ impl LineParameters {
             (x,y)
         }
     }
-    pub fn interp0(&self, subpixel_width: i64) -> AA0 {
+    pub(crate) fn interp0(&self, subpixel_width: i64) -> AA0 {
         AA0::new(*self, subpixel_width)
     }
-    pub fn interp1(&self, sx: i64, sy: i64, subpixel_width: i64) -> AA1 {
+    pub(crate) fn interp1(&self, sx: i64, sy: i64, subpixel_width: i64) -> AA1 {
         AA1::new(*self, sx, sy, subpixel_width)
     }
-    pub fn interp2(&self, ex: i64, ey: i64, subpixel_width: i64) -> AA2 {
+    pub(crate) fn interp2(&self, ex: i64, ey: i64, subpixel_width: i64) -> AA2 {
         AA2::new(*self, ex, ey, subpixel_width)
     }
-    pub fn interp3(&self, sx: i64, sy: i64, ex: i64, ey: i64, subpixel_width: i64) -> AA3 {
+    pub(crate) fn interp3(&self, sx: i64, sy: i64, ex: i64, ey: i64, subpixel_width: i64) -> AA3 {
         AA3::new(*self, sx, sy, ex, ey, subpixel_width)
     }
     pub fn interp_image(&self, sx: i64, sy: i64, ex: i64, ey: i64, subpixel_width: i64, pattern_start: i64, pattern_width: i64, scale_x: f64) -> LineInterpolatorImage {

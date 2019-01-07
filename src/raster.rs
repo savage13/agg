@@ -297,10 +297,10 @@ impl RasterizerScanline {
 
 
 
-pub fn len_i64(a: &Vertex<i64>, b: &Vertex<i64>) -> i64 {
+pub(crate) fn len_i64(a: &Vertex<i64>, b: &Vertex<i64>) -> i64 {
     len_i64_xy(a.x, a.y, b.x, b.y)
 }
-pub fn len_i64_xy(x1: i64, y1: i64, x2: i64, y2: i64) -> i64 {
+pub(crate) fn len_i64_xy(x1: i64, y1: i64, x2: i64, y2: i64) -> i64 {
     let dx = x1 as f64 - x2 as f64;
     let dy = y1 as f64 - y2 as f64;
     (dx*dx + dy*dy).sqrt().round() as i64

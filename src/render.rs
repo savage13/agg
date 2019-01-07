@@ -33,6 +33,8 @@ use crate::Lines;
 
 use crate::outline::Subpixel;
 
+const LINE_MAX_LENGTH : i64 = 1 << (POLY_SUBPIXEL_SHIFT + 10);
+
 /// Aliased Renderer
 #[derive(Debug)]
 pub struct RenderingScanlineBinSolid<'a,T> where T: 'a {
@@ -331,11 +333,11 @@ impl BresehamInterpolator {
 
 /// See [https://en.wikipedia.org/wiki/Digital_differential_analyzer_(graphics_algorithm)]()
 #[derive(Debug)]
-pub struct LineInterpolator {
-    pub count: i64,
-    pub left: i64,
-    pub rem: i64,
-    pub xmod: i64,
+pub(crate) struct LineInterpolator {
+    count: i64,
+    left: i64,
+    rem: i64,
+    xmod: i64,
     pub y: i64,
 }
 
@@ -360,9 +362,9 @@ impl LineInterpolator {
     pub fn adjust_forward(&mut self) {
         self.xmod -= self.count;
     }
-    pub fn adjust_backward(&mut self) {
-        self.xmod += self.count;
-    }
+    // pub fn adjust_backward(&mut self) {
+    //     self.xmod += self.count;
+    // }
     pub fn new_foward_adjusted(y1: i64, y2: i64, count: i64) -> Self {
         Self::new(y1, y2, count)
     }
@@ -382,13 +384,12 @@ impl LineInterpolator {
 
         Self { y: m_y, left, rem, xmod, count: cnt }
     }
-    pub fn new_back_adjusted_1(y1: i64, y2: i64, count: i64) -> Self {
+    // pub fn new_back_adjusted_1(y1: i64, y2: i64, count: i64) -> Self {
 
-        let mut back = Self::new(y1, y2, count);
-        back.count += count;
-        //eprintln!("DRAW: DDA: {} {} {} {} {} :: {} {} BACKWARD1", back.y, back.left, back.rem, back.xmod, back.count, y1, y2);
-        back
-    }
+    //     let mut back = Self::new(y1, y2, count);
+    //     back.count += count;
+    //     back
+    // }
     pub fn inc(&mut self) {
         //eprintln!("DRAW: LI++ y,mod,rem,lft,cnt {} {} {} {} {}", self.y, self.xmod, self.rem, self.left, self.count);
         self.xmod += self.rem;
@@ -408,9 +409,6 @@ impl LineInterpolator {
         self.y -= self.left;
     }
 }
-pub const AA_SHIFT : usize = 8;
-pub const AA_SCALE : usize = 1 << AA_SHIFT;
-
 
 #[derive(Debug,Default)]
 pub struct LineProfileAA {
@@ -423,7 +421,7 @@ pub struct LineProfileAA {
 
 impl LineProfileAA {
     pub fn new() -> Self {
-        let gamma : Vec<_> = (0..AA_SCALE).map(|x| x as u8).collect();
+        let gamma : Vec<_> = (0..POLY_SUBPIXEL_SCALE).map(|x| x as u8).collect();
         Self { min_width: 1.0, smoother_width: 1.0, subpixel_width: 0,
                profile: vec![], gamma }
     }
@@ -529,13 +527,12 @@ impl LineProfileAA {
 
 #[derive(Debug)]
 pub struct RendererOutlineAA<'a,T>  {
-    pub ren: &'a mut RenderingBase<T>,
-    pub color: Rgba8,
-    pub clip_box: Option<Rectangle<i64>>,
+    ren: &'a mut RenderingBase<T>,
+    color: Rgba8,
+    clip_box: Option<Rectangle<i64>>,
     pub profile: LineProfileAA,
 }
 
-pub const LINE_MAX_LENGTH : i64 = 1 << (POLY_SUBPIXEL_SHIFT + 10);
 
 impl<'a,T> RendererOutlineAA<'a,T> where T: PixelDraw {
     pub fn with_base(ren: &'a mut RenderingBase<T>) -> Self {
@@ -725,6 +722,7 @@ impl<T> RenderOutline for RendererOutlineAA<'_, T> where T: PixelDraw {
         let subpixel_scale = 1 << subpixel_shift;
         let index = d + i64::from(subpixel_scale) * 2;
         assert!(index >= 0);
+        println!("index {} profile {}", index, self.profile.profile.len());
         //eprintln!("COVER: {}", self.profile.profile[index as usize] as u64);
 
         u64::from( self.profile.profile[index as usize] )
@@ -929,7 +927,7 @@ impl<T> AccurateJoins for RendererOutlineAA<'_, T> where T: PixelDraw {
     }
 }
 
-pub fn clip_line_segment(x1: i64, y1: i64, x2: i64, y2: i64, clip_box: Rectangle<i64>) -> (i64, i64, i64, i64, u8) {
+fn clip_line_segment(x1: i64, y1: i64, x2: i64, y2: i64, clip_box: Rectangle<i64>) -> (i64, i64, i64, i64, u8) {
     let f1 = clip_box.clip_flags(x1,y1);
     let f2 = clip_box.clip_flags(x2,y2);
     let mut ret = 0;
@@ -973,7 +971,7 @@ pub fn clip_line_segment(x1: i64, y1: i64, x2: i64, y2: i64, clip_box: Rectangle
     (x1,y1,x2,y2,ret)
 }
 
-pub fn clip_move_point(x1: i64, y1: i64, x2: i64, y2: i64, clip_box: Rectangle<i64>, x: i64, y: i64, flags: u8) -> Option<(i64,i64)>{
+fn clip_move_point(x1: i64, y1: i64, x2: i64, y2: i64, clip_box: Rectangle<i64>, x: i64, y: i64, flags: u8) -> Option<(i64,i64)>{
     let (mut x, mut y) = (x,y);
     if flags & (LEFT | RIGHT) != 0 {
         if x1 == x2 {
@@ -996,16 +994,16 @@ pub fn clip_move_point(x1: i64, y1: i64, x2: i64, y2: i64, clip_box: Rectangle<i
 }
 
 #[derive(Debug)]
-pub struct EllipseInterpolator {
-    pub rx2: i64,
-    pub ry2: i64,
-    pub two_rx2: i64,
-    pub two_ry2: i64,
-    pub dx: i64,
-    pub dy: i64,
-    pub inc_x: i64,
-    pub inc_y: i64,
-    pub cur_f: i64,
+struct EllipseInterpolator {
+    rx2: i64,
+    ry2: i64,
+    two_rx2: i64,
+    two_ry2: i64,
+    dx: i64,
+    dy: i64,
+    inc_x: i64,
+    inc_y: i64,
+    cur_f: i64,
 }
 
 impl EllipseInterpolator {
@@ -1078,11 +1076,11 @@ impl EllipseInterpolator {
 
 #[derive(Debug)]
 pub struct RendererOutlineImg<'a,T> {
-    pub ren: &'a mut RenderingBase<T>,
-    pub pattern: LineImagePatternPow2,
-    pub start: i64,
-    pub scale_x: f64,
-    pub clip_box: Option<Rectangle<i64>>,
+    ren: &'a mut RenderingBase<T>,
+    pattern: LineImagePatternPow2,
+    start: i64,
+    scale_x: f64,
+    clip_box: Option<Rectangle<i64>>,
 }
 impl<T> AccurateJoins for RendererOutlineImg<'_, T>  {
     fn accurate_join_only(&self) -> bool{
@@ -1430,23 +1428,23 @@ impl PatternFilterBilinear {
 }
 #[derive(Debug)]
 pub struct LineInterpolatorImage {
-    pub lp: LineParameters,
-    pub li: LineInterpolator,
-    pub di: DistanceInterpolator4,
+    lp: LineParameters,
+    li: LineInterpolator,
+    di: DistanceInterpolator4,
     //pub plen: i64,
-    pub x: i64,
-    pub y: i64,
-    pub old_x: i64,
-    pub old_y: i64,
-    pub count: i64,
-    pub width: i64,
-    pub max_extent: i64,
-    pub start: i64,
-    pub step: i64,
+    x: i64,
+    y: i64,
+    old_x: i64,
+    old_y: i64,
+    count: i64,
+    width: i64,
+    max_extent: i64,
+    start: i64,
+    step: i64,
     //pub dist_pos: [i64; MAX_HALF_WIDTH + 1],
-    pub dist_pos: Vec<i64>,
+    dist_pos: Vec<i64>,
     //pub colors: [Rgba8; MAX_HALF_WIDTH * 2 + 4],
-    pub colors: Vec<Rgba8>,
+    colors: Vec<Rgba8>,
 }
 
 impl LineInterpolatorImage {
@@ -1817,20 +1815,20 @@ impl LineInterpolatorImage {
     }
 }
 #[derive(Debug)]
-pub struct DistanceInterpolator4 {
-    pub dx: i64,
-    pub dy: i64,
-    pub dx_start: i64,
-    pub dy_start: i64,
-    pub dx_pict: i64,
-    pub dy_pict: i64,
-    pub dx_end: i64,
-    pub dy_end: i64,
-    pub dist: i64,
-    pub dist_start: i64,
-    pub dist_pict: i64,
-    pub dist_end: i64,
-    pub len: i64,
+struct DistanceInterpolator4 {
+    dx: i64,
+    dy: i64,
+    dx_start: i64,
+    dy_start: i64,
+    dx_pict: i64,
+    dy_pict: i64,
+    dx_end: i64,
+    dy_end: i64,
+    dist: i64,
+    dist_start: i64,
+    dist_pict: i64,
+    dist_end: i64,
+    len: i64,
 }
 
 impl DistanceInterpolator4 {
@@ -1875,30 +1873,30 @@ impl DistanceInterpolator4 {
             dist, dist_pict, dist_start, dist_end, len
         }
     }
-    pub fn inc_x(&mut self) {
-        self.dist += self.dy;
-        self.dist_start += self.dy_start;
-        self.dist_pict += self.dy_pict;
-        self.dist_end += self.dy_end;
-    }
-    pub fn dec_x(&mut self) {
-        self.dist -= self.dy;
-        self.dist_start -= self.dy_start;
-        self.dist_pict -= self.dy_pict;
-        self.dist_end -= self.dy_end;
-    }
-    pub fn inc_y(&mut self) {
-        self.dist -= self.dx;
-        self.dist_start -= self.dx_start;
-        self.dist_pict -= self.dx_pict;
-        self.dist_end -= self.dx_end;
-    }
-    pub fn dec_y(&mut self) {
-        self.dist += self.dx;
-        self.dist_start += self.dx_start;
-        self.dist_pict += self.dx_pict;
-        self.dist_end += self.dx_end;
-    }
+    // pub fn inc_x(&mut self) {
+    //     self.dist += self.dy;
+    //     self.dist_start += self.dy_start;
+    //     self.dist_pict += self.dy_pict;
+    //     self.dist_end += self.dy_end;
+    // }
+    // pub fn dec_x(&mut self) {
+    //     self.dist -= self.dy;
+    //     self.dist_start -= self.dy_start;
+    //     self.dist_pict -= self.dy_pict;
+    //     self.dist_end -= self.dy_end;
+    // }
+    // pub fn inc_y(&mut self) {
+    //     self.dist -= self.dx;
+    //     self.dist_start -= self.dx_start;
+    //     self.dist_pict -= self.dx_pict;
+    //     self.dist_end -= self.dx_end;
+    // }
+    // pub fn dec_y(&mut self) {
+    //     self.dist += self.dx;
+    //     self.dist_start += self.dx_start;
+    //     self.dist_pict += self.dx_pict;
+    //     self.dist_end += self.dx_end;
+    // }
     pub fn inc_x_by(&mut self, dy: i64) {
         self.dist       += self.dy;
         self.dist_start += self.dy_start;

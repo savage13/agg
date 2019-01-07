@@ -2,9 +2,9 @@
 //!
 //! Originally derived from version 2.4 of [AGG](http://antigrain.com)
 //!
-//! This crate implments the drawing / painting 2D algorithms developed in the Anti Grain Geometry C++ library. Quoting from the author in the documentation
+//! This crate implments the drawing / painting 2D algorithms developed in the Anti Grain Geometry C++ library. Quoting from the author in the documentation:
 //!
-//! **Anti-Grain Geometry** is not a solid graphic library and it's not very easy to use. I consider **AGG** as a **"tool to create other tools"**. It means that there's no **"Graphics"** object or something like that, instead, **AGG** consists of a number of loosely coupled algorithms that can be used together or separately. All of them have well defined interfaces and absolute minimum of implicit or explicit dependencies.
+//! > **Anti-Grain Geometry** is not a solid graphic library and it's not very easy to use. I consider **AGG** as a **"tool to create other tools"**. It means that there's no **"Graphics"** object or something like that, instead, **AGG** consists of a number of loosely coupled algorithms that can be used together or separately. All of them have well defined interfaces and absolute minimum of implicit or explicit dependencies.
 //!
 //!
 //! # Anti-Aliasing and Subpixel Accuracy
@@ -114,6 +114,8 @@
 //! [`blend_color_hspan`]: pixfmt/trait.PixelDraw.html#method.blend_color_hspan
 //! [`blend_color_vspan`]: pixfmt/trait.PixelDraw.html#method.blend_color_vspan
 use std::fmt::Debug;
+
+pub use freetype as ft;
 
 pub mod path_storage;
 pub mod conv_stroke;
@@ -484,4 +486,155 @@ pub fn render<T>(base: &mut RenderingBase<T>, ras: &mut RasterizerScanline, anti
         let mut ren = RenderingScanlineBinSolid::with_base(base);
         render_scanlines(ras, &mut ren);
     };
+}
+
+
+fn string_width(txt: &str, font: &ft::Face) -> f64 {
+    let mut width = 0.0;
+    for c in txt.chars() {
+        let glyph_index = font.get_char_index(c as usize);
+        font.load_glyph(glyph_index, ft::face::LoadFlag::DEFAULT).unwrap();
+        let glyph = font.glyph();
+        glyph.render_glyph(ft::RenderMode::Normal).unwrap();
+        let adv = glyph.advance();
+        width += adv.x as f64
+    }
+    width / 64.0
+}
+
+pub fn line_height(font: &ft::Face) -> f64 {
+    let met = font.size_metrics().unwrap();
+    (met.ascender - met.descender) as f64 / 64.0
+}
+
+pub fn draw_text<T: PixelDraw>(txt: &str, x: i64, y: i64, font: &ft::Face, ren_base: &mut RenderingBase<T>) {
+    let color = Rgba8::new(0,0,0,255);
+    let (mut x, mut y) = (x,y);
+    let width  = string_width(txt, font);
+    let height = line_height(font);
+    // Shift to center justification, x and y
+    let dx = (width / 2.0).round() as i64;
+    let dy = (height / 2.0).round() as i64;
+    x -= dx;
+    y += dy;
+    for c in txt.chars() {
+        let glyph_index = font.get_char_index(c as usize);
+        font.load_glyph(glyph_index, ft::face::LoadFlag::DEFAULT).unwrap();
+        font.glyph().render_glyph(ft::RenderMode::Normal).unwrap();
+        let g = font.glyph().bitmap();
+        let left = font.glyph().bitmap_left() as i64;
+        let top  = font.glyph().bitmap_top() as i64;
+        let buf : Vec<_> = g.buffer().iter().map(|&x| x as u64).collect();
+        let rows = g.rows() as i64;
+        let pitch = g.pitch().abs() as usize;
+        let width = g.width() as i64;
+        for i in 0 .. rows {
+            ren_base.blend_solid_hspan(x + left, y-top+i, width,
+                                       color, &buf[pitch*i as usize..]);
+        }
+        let adv = font.glyph().advance();
+        x += (adv.x as f64 / 64.0).round() as i64;
+        y += (adv.y as f64 / 64.0).round() as i64;
+    }
+}
+
+#[derive(Debug,Copy,Clone,PartialEq)]
+pub enum XAlign {
+    Left, Center, Right
+}
+#[derive(Debug,Copy,Clone,PartialEq)]
+pub enum YAlign {
+    Top, Center, Bottom
+}
+
+pub struct Label<'a> {
+    txt: String,
+    x: f64,
+    y: f64,
+    xa: XAlign,
+    ya: YAlign,
+    color: Rgba8,
+    font: &'a ft::Face,
+}
+
+impl<'a> Label<'a> {
+    pub fn new(txt: &str, x: f64, y: f64, font: &'a ft::Face) -> Self {
+        Self {
+            txt: txt.to_string(), x, y,
+            xa: XAlign::Left,
+            ya: YAlign::Bottom,
+            color: Rgba8::black(),
+            font
+        }
+    }
+    pub fn xalign(mut self, xalign: XAlign) -> Self {
+        self.xa = xalign;
+        self
+    }
+    pub fn yalign(mut self, yalign: YAlign) -> Self {
+        self.ya = yalign;
+        self
+    }
+    pub fn color(mut self, color: Rgba8) -> Self {
+        self.color = color;
+        self
+    }
+    pub fn draw<T: PixelDraw>(&mut self, ren: &mut RenderingBase<T>) {
+        draw_text_subpixel(&self.txt, self.x, self.y,
+                           self.xa, self.ya, self.color,
+                           self.font, ren);
+    }
+}
+
+// https://www.freetype.org/freetype2/docs/glyphs/glyphs-5.html
+// 2. Subpixel positioning
+fn draw_text_subpixel<T: PixelDraw>(txt: &str, x: f64, y: f64,
+                                    xalign: XAlign,
+                                    yalign: YAlign,
+                                    color: Rgba8,
+                                    font: &ft::Face,
+                                    ren_base: &mut RenderingBase<T>) {
+    let (mut x, mut y) = (x,y);
+    let width  = string_width(txt, font);
+
+    let asc = font.size_metrics().unwrap().ascender as f64 / 64.0;
+    x += match xalign {
+        XAlign::Left => 0.0,
+        XAlign::Right => -width,
+        XAlign::Center => -width/2.0,
+    };
+    y += match yalign {
+        YAlign::Top => asc,
+        YAlign::Bottom => 0.0,
+        YAlign::Center => asc / 2.0,
+    };
+
+    for c in txt.chars() {
+        let glyph_index = font.get_char_index(c as usize);
+        font.load_glyph(glyph_index, ft::face::LoadFlag::DEFAULT).unwrap();
+
+        let glyph = font.glyph().get_glyph().unwrap();
+        let dt = ft::Vector {
+            x: ((x - x.floor()) * 64.0).round() as i64,
+            y: ((y - y.floor()) * 64.0).round() as i64
+        };
+        glyph.transform(None, Some(dt)).unwrap();
+        let g = glyph.to_bitmap(ft::RenderMode::Normal, None).unwrap();
+        let left = g.left() as i64;
+        let top  = g.top() as i64;
+        let bit  = g.bitmap();
+        let buf : Vec<_> = bit.buffer().iter().map(|&x| x as u64).collect();
+        let rows  = bit.rows() as i64;
+        let width = bit.width() as i64;
+        let pitch = bit.pitch().abs() as usize;
+        for i in 0 .. rows {
+            ren_base.blend_solid_hspan(x.floor() as i64 + left,
+                                       y.floor() as i64 + i - top,
+                                       width,
+                                       color, &buf[pitch*i as usize..]);
+        }
+
+        x += glyph.advance_x() as f64 / 65536.0;
+        y += glyph.advance_y() as f64 / 65536.0;
+    }
 }
