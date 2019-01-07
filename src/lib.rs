@@ -488,19 +488,19 @@ fn blend(fg: Rgb8, bg: Rgb8, alpha: f64) -> Rgb8 {
 //     alpha * cover
 // }
 
-fn render<T>(base: &mut RenderingBase<T>,
-                 ras: &mut RasterizerScanline,
-                 antialias: bool)
-      where T: PixelDraw
-{
-    if antialias {
-        let mut ren = RenderingScanlineAASolid::with_base(base);
-        render_scanlines(ras, &mut ren);
-    } else {
-        let mut ren = RenderingScanlineBinSolid::with_base(base);
-        render_scanlines(ras, &mut ren);
-    };
-}
+// fn render<T>(base: &mut RenderingBase<T>,
+//                  ras: &mut RasterizerScanline,
+//                  antialias: bool)
+//       where T: PixelDraw
+// {
+//     if antialias {
+//         let mut ren = RenderingScanlineAASolid::with_base(base);
+//         render_scanlines(ras, &mut ren);
+//     } else {
+//         let mut ren = RenderingScanlineBinSolid::with_base(base);
+//         render_scanlines(ras, &mut ren);
+//     };
+// }
 
 
 fn string_width(txt: &str, font: &ft::Face) -> f64 {
