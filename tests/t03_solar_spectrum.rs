@@ -1,7 +1,6 @@
 
 extern crate agg;
-use agg::PixelDraw;
-use agg::PixelData;
+use agg::DrawPixel;
 use agg::Pixel;
 
 fn draw_black_frame(pix: &mut agg::Pixfmt<agg::Rgb8>) {
@@ -32,6 +31,6 @@ fn t03_solar_specturm() {
     for i in 0 .. h {
         pix.blend_color_hspan(0, i as i64, w as i64, &span, &[], 255);
     }
-    agg::ppm::write_ppm(&pix.pixeldata(), pix.width(), pix.height(), "agg_test_03.ppm").unwrap();
+    agg::ppm::write_ppm(&pix.as_bytes(), pix.width(), pix.height(), "agg_test_03.ppm").unwrap();
     agg::ppm::compare_ppm("agg_test_03.ppm", "tests/agg_test_03.ppm");
 }

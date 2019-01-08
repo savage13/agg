@@ -1,8 +1,6 @@
 extern crate agg;
 
-use agg::PixelData;
 use agg::Pixel;
-use agg::PixelDraw;
 use agg::Render;
 use agg::VertexSource;
 use agg::SetColor;
@@ -227,7 +225,7 @@ fn rasterizers2_pre() {
     let (ppm, test) = ppm_names();
 
     // Revove alpha channel from data
-    let data = ren_base.pixeldata();
+    let data = ren_base.as_bytes();
     let mut out = vec![];
     for i in 0 .. data.len() {
         if i%4 < 3 {
@@ -242,7 +240,7 @@ fn rasterizers2_pre() {
 fn text<T>(ras: &mut agg::RasterizerScanline,
            ren: &mut agg::RenderingScanlineAASolid<T>,
            x: f64, y: f64, txt: &str)
-    where T: PixelDraw
+    where T: agg::DrawPixel
 {
     let mut t = agg::GsvText::new();
     t.size(8.0, 0.0);

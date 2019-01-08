@@ -3,7 +3,6 @@ extern crate agg;
 
 use std::fs;
 
-use agg::PixelData;
 use agg::Render;
 
 fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Rgba8>){
@@ -102,7 +101,7 @@ fn lion_cw_aa() {
     println!("polygons: {}", t.len());
     agg::render_all_paths(&mut ras, &mut ren, &t, &colors);
 
-    agg::ppm::write_ppm(&ren.pixeldata(), w, h, "lion_cw_aa.ppm").unwrap();
+    agg::ppm::write_ppm(&ren.as_bytes(), w, h, "lion_cw_aa.ppm").unwrap();
 
     agg::ppm::compare_ppm("lion_cw_aa.ppm", "tests/lion_cw_aa.ppm");
 

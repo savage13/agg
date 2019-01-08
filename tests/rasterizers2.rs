@@ -1,7 +1,6 @@
 
 extern crate agg;
 
-use agg::PixelData;
 use agg::Render;
 use agg::VertexSource;
 //use std::fs;
@@ -144,7 +143,7 @@ fn rasterizers2() {
 
     let (ppm, test) = ppm_names();
 
-    agg::ppm::write_ppm(&ren_base.pixeldata(), w, h, ppm.clone()).unwrap();
+    agg::ppm::write_ppm(&ren_base.as_bytes(), w, h, ppm.clone()).unwrap();
     agg::ppm::compare_ppm(ppm, test);
 
 }

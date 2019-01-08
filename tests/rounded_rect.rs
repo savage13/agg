@@ -4,7 +4,6 @@ use std::env;
 use std::path::Path;
 use std::path::PathBuf;
 
-use agg::PixelData;
 use agg::Render;
 
 fn ppm_names() -> (PathBuf,PathBuf) {
@@ -58,7 +57,7 @@ fn rounded_rect() {
 
     // Write out Data
     let (ppm, test) = ppm_names();
-    agg::ppm::write_ppm(&ren.pixeldata(), w, h, ppm.clone()).unwrap();
+    agg::ppm::write_ppm(&ren.as_bytes(), w, h, ppm.clone()).unwrap();
     agg::ppm::compare_ppm(ppm, test);
 }
 

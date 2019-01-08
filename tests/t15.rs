@@ -1,6 +1,6 @@
 
 extern crate agg;
-use agg::PixelData;
+
 use agg::Render;
 
 #[test]
@@ -59,7 +59,7 @@ fn t15_path_stroke() {
 
     agg::render_scanlines_aa_solid(&mut ras, &mut ren.base, agg::Rgba8::new(0,0,0,255));
 
-    agg::ppm::write_ppm(&ren.pixeldata(), w, h, "agg_test_15.ppm").unwrap();
+    agg::ppm::write_ppm(&ren.as_bytes(), w, h, "agg_test_15.ppm").unwrap();
 
     agg::ppm::compare_ppm("agg_test_15.ppm", "tests/agg_test_15.ppm");
 }

@@ -26,14 +26,13 @@
 //!    [`render_all_paths`], [`render_scanlines_aa_solid`] and
 //!    [`render_scanlines_bin_solid`]
 //!
-//!       use agg::PixelData;
 //!       use agg::Render;
-
+//!
 //!       // Create a blank image 10x10 pixels
 //!       let pix = agg::Pixfmt::<agg::Rgb8>::new(100,100);
 //!       let mut ren_base = agg::RenderingBase::new(pix);
 //!       ren_base.clear(agg::Rgba8::white());
-
+//!
 //!       // Draw a polygon from (10,10) - (50,90) - (90,10)
 //!       let mut ras = agg::RasterizerScanline::new();
 //!       ras.move_to_d(10.0, 10.0);
@@ -46,7 +45,7 @@
 //!       agg::render_scanlines(&mut ras, &mut ren);
 
 //!       // Save the image to a file
-//!       agg::ppm::write_ppm(&ren_base.pixeldata(), 100,100,
+//!       agg::ppm::write_ppm(&ren_base.as_bytes(), 100,100,
 //!                           "little_black_triangle.ppm").unwrap();
 //!
 //!
@@ -54,7 +53,6 @@
 //!
 //!        use agg::{Pixfmt,Rgb8,Rgba8,RenderingBase,SetColor};
 //!        use agg::{RendererOutlineAA,RasterizerOutlineAA};
-//!        use agg::PixelData;
 //!        let pix = Pixfmt::<Rgb8>::new(100,100);
 //!        let mut ren_base = agg::RenderingBase::new(pix);
 //!        ren_base.clear( Rgba8::new(255, 255, 255, 255) );
@@ -70,7 +68,7 @@
 //!
 //!        let mut ras = RasterizerOutlineAA::with_renderer(&mut ren);
 //!        ras.add_path(&path);
-//!        agg::ppm::write_ppm(&ren_base.pixeldata(), 100,100,
+//!        agg::ppm::write_ppm(&ren_base.as_bytes(), 100,100,
 //!              "outline_aa.ppm").unwrap();
 //!
 //! # Primative Renderer
@@ -80,7 +78,7 @@
 //!
 //!        use agg::{Pixfmt,Rgb8,Rgba8,RenderingBase,SetColor};
 //!        use agg::{RendererPrimatives,RasterizerOutline};
-//!        use agg::PixelData;
+//!
 //!        let pix = Pixfmt::<Rgb8>::new(100,100);
 //!        let mut ren_base = agg::RenderingBase::new(pix);
 //!        ren_base.clear( Rgba8::new(255, 255, 255, 255) );
@@ -95,7 +93,7 @@
 //!
 //!        let mut ras = RasterizerOutline::with_primative(&mut ren);
 //!        ras.add_path(&path);
-//!        agg::ppm::write_ppm(&ren_base.pixeldata(), 100,100,
+//!        agg::ppm::write_ppm(&ren_base.as_bytes(), 100,100,
 //!              "primative.ppm").unwrap();
 //!
 //!
@@ -172,10 +170,6 @@ const POLY_MR_SUBPIXEL_SHIFT : i64 = 4;
 const MAX_HALF_WIDTH : usize = 64;
 
 
-/// Access raw color component data at the pixel level
-pub trait PixelData {
-    fn pixeldata(&self) -> &[u8];
-}
 /// Source of vertex points
 pub trait VertexSource {
     /// Rewind the vertex source (unused)

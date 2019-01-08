@@ -1,6 +1,5 @@
 
 extern crate agg;
-use agg::PixelData;
 use agg::Render;
 
 use std::fs;
@@ -128,7 +127,7 @@ fn lion_outline_width1() {
 
     let (ppm, test) = ppm_names();
 
-    agg::ppm::write_ppm(&ren.pixeldata(), w, h, ppm.clone()).unwrap();
+    agg::ppm::write_ppm(&ren.as_bytes(), w, h, ppm.clone()).unwrap();
     agg::ppm::compare_ppm(ppm, test);
 
 }

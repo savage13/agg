@@ -1,7 +1,6 @@
 
 #[test]
 fn t00_example() {
-    use agg::PixelData;
     use agg::Render;
 
     // Create a blank image 10x10 pixels
@@ -21,6 +20,6 @@ fn t00_example() {
     agg::render_scanlines(&mut ras, &mut ren);
 
     // Save the image to a file
-    agg::ppm::write_ppm(&ren_base.pixeldata(), 100,100,
+    agg::ppm::write_ppm(&ren_base.as_bytes(), 100,100,
                         "little_black_triangle.ppm").unwrap();
 }

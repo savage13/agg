@@ -1,6 +1,6 @@
 
 extern crate agg;
-use agg::PixelData;
+
 use agg::Render;
 
 #[test]
@@ -27,7 +27,7 @@ fn t14_with_gamma() {
 
     agg::render_scanlines(&mut ras, &mut ren);
 
-    agg::ppm::write_ppm(&ren.pixeldata(), w, h, "agg_test_14.ppm").unwrap();
+    agg::ppm::write_ppm(&ren.as_bytes(), w, h, "agg_test_14.ppm").unwrap();
 
     agg::ppm::compare_ppm("agg_test_14.ppm", "tests/agg_test_14.ppm");
 }

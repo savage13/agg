@@ -1,6 +1,5 @@
 
 extern crate agg;
-use agg::PixelData;
 use agg::Render;
 
 fn rgb64(r: f64, g: f64,b: f64,a: f64) -> agg::Rgba8 {
@@ -57,6 +56,6 @@ fn rasterizers_gamma() {
         ras.gamma( |v| if v < gamma { 0.0 } else { 1.0 }  );
         agg::render_scanlines(&mut ras, &mut ren_bin);
     }
-    agg::ppm::write_ppm(&ren_base.pixeldata(), w, h, "rasterizers_gamma.ppm").unwrap();
+    agg::ppm::write_ppm(&ren_base.as_bytes(), w, h, "rasterizers_gamma.ppm").unwrap();
     agg::ppm::compare_ppm("rasterizers_gamma.ppm", "tests/rasterizers_gamma.ppm");
 }

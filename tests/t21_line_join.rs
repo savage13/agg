@@ -1,7 +1,5 @@
 
 use agg::{Pixfmt,Rgb8,Rgba8};
-use agg::PixelData;
-use agg::PixelDraw;
 use agg::Render;
 
 #[test]
@@ -40,7 +38,7 @@ fn t21_line_join() {
     text(&mut ras, &mut ren, 125.0, 90.0, "Round");
     text(&mut ras, &mut ren, 225.0, 90.0, "Bevel");
 
-    agg::ppm::write_ppm(&ren_base.pixeldata(), 300,100,
+    agg::ppm::write_ppm(&ren_base.as_bytes(), 300,100,
                         "line_join.ppm").unwrap();
 
 }
@@ -49,7 +47,7 @@ fn t21_line_join() {
 fn text<T>(ras: &mut agg::RasterizerScanline,
            ren: &mut agg::RenderingScanlineAASolid<T>,
            x: f64, y: f64, txt: &str)
-    where T: PixelDraw
+    where T: agg::DrawPixel
 {
     let mut t = agg::GsvText::new();
     t.size(12.0, 0.0);

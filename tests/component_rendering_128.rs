@@ -1,4 +1,3 @@
-use agg::PixelData;
 
 use std::path::PathBuf;
 use std::path::Path;
@@ -63,6 +62,6 @@ fn component_rendering_128() {
 
     let (ppm, test) = ppm_names();
 
-    agg::ppm::write_ppm(&ren_base.pixeldata(), w, h, ppm.clone()).unwrap();
+    agg::ppm::write_ppm(&ren_base.as_bytes(), w, h, ppm.clone()).unwrap();
     agg::ppm::compare_ppm(ppm, test);
 }

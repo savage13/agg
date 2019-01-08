@@ -1,7 +1,6 @@
 
 extern crate agg;
 
-use agg::PixelData;
 use agg::Pixel;
 
 fn draw_black_frame(pix: &mut agg::Pixfmt<agg::Rgb8>) {
@@ -32,6 +31,6 @@ fn t02_pixel_formats() {
         pix.copy_pixel(i, i, c);
     }
 
-    agg::ppm::write_ppm(&pix.pixeldata(), pix.width(), pix.height(), "agg_test_02.ppm").unwrap();
+    agg::ppm::write_ppm(&pix.as_bytes(), pix.width(), pix.height(), "agg_test_02.ppm").unwrap();
     agg::ppm::compare_ppm("agg_test_02.ppm", "tests/agg_test_02.ppm");
 }

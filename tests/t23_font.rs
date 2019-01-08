@@ -1,6 +1,4 @@
 
-use agg::PixelData;
-
 #[test]
 fn t23_font() {
     //let ft = agg::FreeType::init();
@@ -21,7 +19,7 @@ fn t23_font() {
 
     ren_base.blend_hline(50,57,50,agg::Rgba8::new(255,0,0,255),255);
 
-    agg::ppm::write_ppm(&ren_base.pixeldata(), 100,100,
+    agg::ppm::write_ppm(&ren_base.as_bytes(), 100,100,
                         "font.ppm").unwrap();
 
 }

@@ -9,7 +9,6 @@ use crate::Color;
 use crate::Source;
 use crate::Pixel;
 use crate::PixelDraw;
-use crate::PixelData;
 
 use std::marker::PhantomData;
 
@@ -279,13 +278,6 @@ impl<T> Pixfmt<T> where Pixfmt<T>: PixelDraw {
     }
 }
 
-/// Access Pixeldata from a Pixfmt<T>
-///
-impl<T> PixelData for Pixfmt<T> {
-    fn pixeldata(&self) -> &[u8] {
-        & self.rbuf.data
-    }
-}
 
 impl<T> PixelDraw for Pixfmt<T> where Pixfmt<T> : Pixel { }
 

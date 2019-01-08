@@ -20,7 +20,6 @@ use crate::pixfmt::Pixfmt;
 use crate::raster::RasterizerScanline;
 
 use crate::Source;
-use crate::PixelData;
 use crate::VertexSource;
 use crate::Render;
 //use crate::Rasterize;
@@ -125,15 +124,8 @@ impl<'a,T> RenderingScanlineAASolid<'a,T> where T: PixelDraw {
         let color = Rgba8::black();
         Self { base, color }
     }
-}
-impl<T> PixelData for RenderingScanlineAASolid<'_,T> where T: PixelData {
-    fn pixeldata(&self) -> &[u8] {
-        & self.base.pixeldata()
-    }
-}
-impl<T> PixelData for RenderingScanlineBinSolid<'_,T> where T: PixelData {
-    fn pixeldata(&self) -> & [u8] {
-        self.base.pixeldata()
+    pub fn as_bytes(&self) -> &[u8] {
+        self.base.as_bytes()
     }
 }
 
