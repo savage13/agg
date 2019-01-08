@@ -22,9 +22,9 @@ use crate::raster::RasterizerScanline;
 use crate::Source;
 use crate::VertexSource;
 use crate::Render;
-//use crate::Rasterize;
 use crate::Color;
-use crate::PixelDraw;
+use crate::DrawPixel;
+use crate::DrawOutline;
 use crate::Pixel;
 use crate::SetColor;
 use crate::AccurateJoins;
@@ -51,7 +51,7 @@ pub struct RenderingScanlineAASolid<'a,T> where T: 'a {
 fn render_scanline_bin_solid<T,C: Color>(sl: &ScanlineU8,
                                          ren: &mut RenderingBase<T>,
                                          color: C)
-    where T: PixelDraw
+    where T: DrawPixel
 {
     let cover_full = 255;
     for span in &sl.spans {
@@ -66,7 +66,7 @@ fn render_scanline_bin_solid<T,C: Color>(sl: &ScanlineU8,
 fn render_scanline_aa_solid<T,C: Color>(sl: &ScanlineU8,
                                         ren: &mut RenderingBase<T>,
                                         color: C)
-    where T: PixelDraw 
+    where T: DrawPixel
 {
     let y = sl.y;
     for span in & sl.spans {
@@ -88,7 +88,7 @@ impl RenderData {
     }
 }
 
-impl<T> Render for RenderingScanlineAASolid<'_,T> where T: PixelDraw {
+impl<T> Render for RenderingScanlineAASolid<'_,T> where T: DrawPixel {
     /// Render a single Scanline Row
     fn render(&mut self, data: &RenderData) {
         render_scanline_aa_solid(&data.sl, &mut self.base, self.color);
@@ -100,7 +100,7 @@ impl<T> Render for RenderingScanlineAASolid<'_,T> where T: PixelDraw {
     }
 
 }
-impl<T> Render for RenderingScanlineBinSolid<'_,T> where T: PixelDraw {
+impl<T> Render for RenderingScanlineBinSolid<'_,T> where T: DrawPixel {
     /// Render a single Scanline Row
     fn render(&mut self, data: &RenderData) {
         render_scanline_bin_solid(&data.sl, &mut self.base, self.color);
@@ -111,14 +111,18 @@ impl<T> Render for RenderingScanlineBinSolid<'_,T> where T: PixelDraw {
                                 color.blue8(), color.alpha8());
     }
 }
-impl<'a,T> RenderingScanlineBinSolid<'a,T> where T: PixelDraw {
+impl<'a,T> RenderingScanlineBinSolid<'a,T> where T: DrawPixel {
     /// Create a new Renderer from a Rendering Base
     pub fn with_base(base: &'a mut RenderingBase<T>) -> Self {
         let color = Rgba8::black();
         Self { base, color }
     }
+    pub fn as_bytes(&self) -> &[u8] {
+        self.base.as_bytes()
+    }
+
 }
-impl<'a,T> RenderingScanlineAASolid<'a,T> where T: PixelDraw {
+impl<'a,T> RenderingScanlineAASolid<'a,T> where T: DrawPixel {
     /// Create a new Renderer from a Rendering Base
     pub fn with_base(base: &'a mut RenderingBase<T>) -> Self {
         let color = Rgba8::black();
@@ -139,7 +143,7 @@ pub fn render_scanlines_bin_solid<C,T>(ras: &mut RasterizerScanline,
                                        ren: &mut RenderingBase<T>,
                                        color: C)
     where C: Color,
-          T: PixelDraw
+          T: DrawPixel
 {
     let mut sl = ScanlineU8::new();
     if ras.rewind_scanlines() {
@@ -155,7 +159,7 @@ pub fn render_scanlines_aa_solid<C,T>(ras: &mut RasterizerScanline,
                                       ren: &mut RenderingBase<T>,
                                       color: C)
     where C: Color,
-          T: PixelDraw 
+          T: DrawPixel
 {
     let mut sl = ScanlineU8::new();
     if ras.rewind_scanlines() {
@@ -208,7 +212,7 @@ pub struct RendererPrimatives<'a,T> where T: 'a {
     y: Subpixel,
 }
 
-impl<'a,T> RendererPrimatives<'a,T> where T: PixelDraw {
+impl<'a,T> RendererPrimatives<'a,T> where T: DrawPixel {
     pub fn with_base(base: &'a mut RenderingBase<T>) -> Self {
         let fill_color = Rgba8::new(0,0,0,255);
         let line_color = Rgba8::new(0,0,0,255);
@@ -525,17 +529,18 @@ pub struct RendererOutlineAA<'a,T>  {
     pub profile: LineProfileAA,
 }
 
+impl<'a,T> DrawOutline for RendererOutlineAA<'a,T> where T: DrawPixel {}
 
-impl<'a,T> RendererOutlineAA<'a,T> where T: PixelDraw {
+impl<'a,T> RendererOutlineAA<'a,T> where T: DrawPixel {
     pub fn with_base(ren: &'a mut RenderingBase<T>) -> Self {
         let profile = LineProfileAA::new();
         Self { ren, color: Rgba8::black(), clip_box: None, profile }
     }
-    pub fn subpixel_width(&self) -> i64 {
+    fn subpixel_width(&self) -> i64 {
         self.profile.subpixel_width
     }
 
-    pub fn line0_no_clip(&mut self, lp: &LineParameters) {
+    fn line0_no_clip(&mut self, lp: &LineParameters) {
         if lp.len > LINE_MAX_LENGTH {
             let (lp1, lp2) = lp.divide();
             self.line0_no_clip(&lp1);
@@ -557,7 +562,7 @@ impl<'a,T> RendererOutlineAA<'a,T> where T: PixelDraw {
             }
         }
     }
-    pub fn line1_no_clip(&mut self, lp: &LineParameters, sx: i64, sy: i64) {
+    fn line1_no_clip(&mut self, lp: &LineParameters, sx: i64, sy: i64) {
         //eprintln!("DRAW: line1_no_clip() {} {} {} {}", lp.x1, lp.y1, lp.x2, lp.y2);
         if lp.len > LINE_MAX_LENGTH {
             let (lp1, lp2) = lp.divide();
@@ -579,7 +584,7 @@ impl<'a,T> RendererOutlineAA<'a,T> where T: PixelDraw {
             }
         }
     }
-    pub fn line2_no_clip(&mut self, lp: &LineParameters, ex: i64, ey: i64) {
+    fn line2_no_clip(&mut self, lp: &LineParameters, ex: i64, ey: i64) {
         if lp.len > LINE_MAX_LENGTH {
             let (lp1,lp2) = lp.divide();
             self.line2_no_clip(&lp1, lp1.x2 + (lp1.y2 - lp1.y1), lp1.y2 - (lp1.x2 - lp1.x1));
@@ -599,7 +604,7 @@ impl<'a,T> RendererOutlineAA<'a,T> where T: PixelDraw {
             }
         }
     }
-    pub fn line3_no_clip(&mut self, lp: &LineParameters, sx: i64, sy: i64, ex: i64, ey: i64) {
+    fn line3_no_clip(&mut self, lp: &LineParameters, sx: i64, sy: i64, ex: i64, ey: i64) {
         if lp.len > LINE_MAX_LENGTH {
             let (lp1, lp2) = lp.divide();
             let mx = lp1.x2 + (lp1.y2 - lp1.y1);
@@ -708,7 +713,7 @@ impl<'a,T> RendererOutlineAA<'a,T> where T: PixelDraw {
 
 }
 
-impl<T> RenderOutline for RendererOutlineAA<'_, T> where T: PixelDraw {
+impl<T> RenderOutline for RendererOutlineAA<'_, T> where T: DrawPixel {
     fn cover(&self, d: i64) -> u64 {
         let subpixel_shift = POLY_SUBPIXEL_SHIFT;
         let subpixel_scale = 1 << subpixel_shift;
@@ -729,7 +734,7 @@ impl<T> RenderOutline for RendererOutlineAA<'_, T> where T: PixelDraw {
     }
 }
 
-impl<T> Lines for RendererOutlineAA<'_, T> where T: PixelDraw {
+impl<T> Lines for RendererOutlineAA<'_, T> where T: DrawPixel {
     fn line3(&mut self, lp: &LineParameters, sx: i64, sy: i64, ex: i64, ey: i64) {
         //eprintln!("DRAW: line3() {:?}", lp);
         if let Some(clip_box) = self.clip_box {
@@ -908,12 +913,12 @@ impl<T> Lines for RendererOutlineAA<'_, T> where T: PixelDraw {
 
 }
 
-impl<T> SetColor for RendererOutlineAA<'_, T> where T: PixelDraw {
+impl<T> SetColor for RendererOutlineAA<'_, T> where T: DrawPixel {
     fn color<C: Color>(&mut self, color: C) {
         self.color = Rgba8::from_trait(color);
     }
 }
-impl<T> AccurateJoins for RendererOutlineAA<'_, T> where T: PixelDraw {
+impl<T> AccurateJoins for RendererOutlineAA<'_, T> where T: DrawPixel {
     fn accurate_join_only(&self) -> bool{
         false
     }
@@ -1080,7 +1085,9 @@ impl<T> AccurateJoins for RendererOutlineImg<'_, T>  {
     }
 }
 
-impl<'a,T> RendererOutlineImg<'a,T> where T: PixelDraw {
+impl<'a,T> DrawOutline for RendererOutlineImg<'a, T> where T: DrawPixel {}
+
+impl<'a,T> RendererOutlineImg<'a,T> where T: DrawPixel {
     pub fn with_base_and_pattern(ren: &'a mut RenderingBase<T>, pattern: LineImagePatternPow2) -> Self {
         Self { ren, pattern, start: 0, scale_x: 1.0, clip_box: None  }
     }
@@ -1090,27 +1097,27 @@ impl<'a,T> RendererOutlineImg<'a,T> where T: PixelDraw {
     pub fn start_x(&mut self, s: f64) {
         self.start = (s * POLY_SUBPIXEL_SCALE as f64).round() as i64;
     }
-    pub fn subpixel_width(&self) -> i64 {
+    fn subpixel_width(&self) -> i64 {
         self.pattern.line_width()
     }
-    pub fn pattern_width(&self) -> i64 {
+    fn pattern_width(&self) -> i64 {
         self.pattern.pattern_width()
     }
-    pub fn width(&self) -> f64 {
-        self.subpixel_width() as f64 / POLY_SUBPIXEL_SCALE as f64
-    }
-    pub fn pixel(&mut self, x: i64, y: i64) -> Rgba8 {
+    // fn width(&self) -> f64 {
+    //     self.subpixel_width() as f64 / POLY_SUBPIXEL_SCALE as f64
+    // }
+    fn pixel(&mut self, x: i64, y: i64) -> Rgba8 {
         //eprintln!("PIXEL {} {}", x, y);
         self.pattern.pixel(x, y)
     }
-    pub fn blend_color_hspan(&mut self, x: i64, y: i64, len: i64, colors: &[Rgba8]) {
+    fn blend_color_hspan(&mut self, x: i64, y: i64, len: i64, colors: &[Rgba8]) {
         //eprintln!("LENGTH COLORS {}", colors.len());
         //assert_eq!(len as usize, colors.len());
         //for (i,color) in colors.iter().enumerate() {
         self.ren.blend_color_hspan(x, y, len, colors, &[], 255);
         //}
     }
-    pub fn blend_color_vspan(&mut self, x: i64, y: i64, len: i64, colors: &[Rgba8]) {
+    fn blend_color_vspan(&mut self, x: i64, y: i64, len: i64, colors: &[Rgba8]) {
         //eprintln!("LENGTH COLORS {}", colors.len());
         assert_eq!(len as usize, colors.len());
         self.ren.blend_color_vspan(x, y, len, colors, &[], 255);
@@ -1118,7 +1125,7 @@ impl<'a,T> RendererOutlineImg<'a,T> where T: PixelDraw {
         //    self.ren.blend_solid_hspan(x, y+i as i64, 1, color, &[255]);
         //}
     }
-    pub fn line3_no_clip(&mut self, lp: &LineParameters, sx: i64, sy: i64, ex: i64, ey: i64) {
+    fn line3_no_clip(&mut self, lp: &LineParameters, sx: i64, sy: i64, ex: i64, ey: i64) {
         if lp.len > LINE_MAX_LENGTH {
             let (lp1, lp2) = lp.divide();
             let mx = lp1.x2 + (lp1.y2 - lp1.y1);
@@ -1144,12 +1151,12 @@ impl<'a,T> RendererOutlineImg<'a,T> where T: PixelDraw {
         self.start += (lp.len as f64/ self.scale_x).round() as i64;
     }
 }
-impl<T> SetColor for RendererOutlineImg<'_, T> where T: PixelDraw {
+impl<T> SetColor for RendererOutlineImg<'_, T> where T: DrawPixel {
     fn color<C: Color>(&mut self, _color: C) {
         unimplemented!("no color for outline img");
     }
 }
-impl<T> Lines for RendererOutlineImg<'_, T> where T: PixelDraw {
+impl<T> Lines for RendererOutlineImg<'_, T> where T: DrawPixel {
     fn line0(&mut self, _lp: &LineParameters) {
     }
     fn line1(&mut self, _lp: &LineParameters, _sx: i64, _sy: i64) {
@@ -1229,7 +1236,7 @@ impl LineImagePattern {
                pix: Pixfmt::new(1,1)
         }
     }
-    pub fn create<T>(&mut self, src: &Pixfmt<T>) where Pixfmt<T>: Source + Pixel {
+    pub fn create<T>(&mut self, src: &T) where T: Source + Pixel {
         self.height = src.height() as u64;
         self.width  = src.width() as u64;
         self.width_hr = src.width() as i64 * POLY_SUBPIXEL_SCALE;
@@ -1326,7 +1333,7 @@ impl LineImagePatternPow2 {
         let base = LineImagePattern::new( filter );
         Self { base, mask: POLY_SUBPIXEL_MASK as u64}
     }
-    pub fn create<T>(&mut self, src: &Pixfmt<T>) where Pixfmt<T>: Source + Pixel {
+    pub fn create<T>(&mut self, src: &T) where T: Source + Pixel {
         self.base.create(src);
         self.mask = 1;
         while self.mask < self.base.width {
@@ -1608,7 +1615,7 @@ impl LineInterpolatorImage {
         self.lp.vertical
     }
     pub fn step_ver<T>(&mut self, ren: &mut RendererOutlineImg<T>) -> bool
-    where T: PixelDraw 
+    where T: DrawPixel
     {
         //eprintln!("STEP_VER: di.dist_start {}", self.di.dist_start);
         self.li.inc();
@@ -1715,7 +1722,7 @@ impl LineInterpolatorImage {
 
     }
     pub fn step_hor<T>(&mut self, ren: &mut RendererOutlineImg<T>) -> bool
-    where T: PixelDraw 
+    where T: DrawPixel
     {
         self.li.inc();
         self.x += self.lp.inc;

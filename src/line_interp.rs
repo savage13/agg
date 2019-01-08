@@ -77,7 +77,7 @@ impl LineInterpolatorAA {
                width, max_extent, step,
                dist, covers }
     }
-    pub fn step_hor_base<DI>(&mut self, di: &mut DI) -> i64
+    pub(crate) fn step_hor_base<DI>(&mut self, di: &mut DI) -> i64
         where DI: DistanceInterpolator
     {
         self.li.inc();
@@ -91,7 +91,7 @@ impl LineInterpolatorAA {
         self.old_y = self.y;
         di.dist() / self.len
     }
-    pub fn step_ver_base<DI>(&mut self, di: &mut DI) -> i64
+    pub(crate) fn step_ver_base<DI>(&mut self, di: &mut DI) -> i64
         where DI: DistanceInterpolator
     {
         self.li.inc();

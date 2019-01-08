@@ -1,8 +1,7 @@
 //! Rendering Base
 
 use crate::color::*;
-use crate::PixelData;
-use crate::PixelDraw;
+use crate::DrawPixel;
 use crate::Color;
 use std::cmp::min;
 use std::cmp::max;
@@ -10,18 +9,21 @@ use std::cmp::max;
 
 /// Rendering Base
 ///
-#[derive(Debug,Default)]
+#[derive(Debug)]
 pub struct RenderingBase<T> {
     /// Pixel Format
     pub pixf: T,
 }
 
-impl<T> RenderingBase<T> where T: PixelDraw {
+impl<T> RenderingBase<T> where T: DrawPixel {
     /// Create new Rendering Base from Pixel Format
     pub fn new(pixf: T) -> RenderingBase<T> {
         RenderingBase { pixf }
     }
-    /// Set Image to a single color 
+    pub fn as_bytes(&self) -> &[u8] {
+        self.pixf.as_bytes()
+    }
+    /// Set Image to a single color
     pub fn clear(&mut self, color: Rgba8) {
         self.pixf.fill(color);
     }
@@ -164,8 +166,3 @@ impl<T> RenderingBase<T> where T: PixelDraw {
     }
 }
 
-impl<T> PixelData for RenderingBase<T> where T: PixelData {
-    fn pixeldata(&self) -> &[u8] {
-        & self.pixf.pixeldata()
-    }
-}

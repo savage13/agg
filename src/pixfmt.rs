@@ -1,14 +1,13 @@
 //! Pixel Format
 
 use crate::buffer::RenderingBuffer;
-use crate::blend;
 use crate::color::*;
 use crate::math::*;
 
 use crate::Color;
 use crate::Source;
 use crate::Pixel;
-use crate::PixelDraw;
+use crate::DrawPixel;
 
 use std::marker::PhantomData;
 
@@ -20,7 +19,7 @@ pub struct Pixfmt<T> {
     phantom: PhantomData<T>,
 }
 
-impl<T> Pixfmt<T> where Pixfmt<T>: PixelDraw {
+impl<T> Pixfmt<T> where Pixfmt<T>: DrawPixel {
     /// Create new Pixel Format of width * height * bpp
     ///
     /// Allocates memory of width * height * bpp
@@ -32,6 +31,16 @@ impl<T> Pixfmt<T> where Pixfmt<T>: PixelDraw {
                phantom: PhantomData
         }
     }
+    /// Fill with a color
+    pub fn fill<C: Color>(&mut self, color: C) {
+        let (w,h) = (self.width(), self.height());
+        for i in 0 .. w {
+            for j in 0 .. h {
+                self.set((i,j),color);
+            }
+        }
+    }
+
     /// Size of Rendering Buffer in bytes; width * height * bpp
     pub fn size(&self) -> usize {
         self.rbuf.len()
@@ -140,146 +149,10 @@ impl<T> Pixfmt<T> where Pixfmt<T>: PixelDraw {
             self.set((x,y+i), c);
         }
     }
-    /// Draw a line from `(x1,y1)` to `(x2,y2)` of color `c`
-    ///
-    /// Uses [Xiaolin Wu's line drawing algorithm](https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm) which include Anti-Aliasing
-    ///
-    #[deprecated(since="0.1.0", note="please use `path_storage` and friends instead")]
-    pub fn line_sp_aa(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, c: Rgb8) {
-        let steep = (x2-x1).abs() < (y2-y1).abs();
-        let (x1,y1,x2,y2) = if steep   { (y1,x1,y2,x2) } else { (x1,y1,x2,y2) };
-        let (x1,y1,x2,y2) = if x2 < x1 { (x2,y2,x1,y1) } else { (x1,y1,x2,y2) };
-        let dx = x2-x1;
-        let dy = y2-y1;
-        let gradient = if dx.abs() <= 1e-6 { 1.0 } else { dy/dx };
-
-        let white = Rgb8::white();
-        // Handle First Endpoint
-        let (_xend, yend, _xgap, xpx11, ypx11, v1, v2) = endpoint(x1,y1,gradient);
-        let v1 = blend(c, white, v1);
-        let v2 = blend(c, white, v2);
-        if steep {
-            self.set((ypx11,  xpx11), v1);
-            self.set((ypx11+1,xpx11), v2);
-        } else {
-            self.set((xpx11,  ypx11),  v1);
-            self.set((xpx11,  ypx11+1),v2);
-        }
-        let mut intery = yend + gradient;
-        // Handle Second Endpoint
-
-        let (_xend, _yend, _xgap, xpx12, ypx12, v1, v2) = endpoint(x2,y2,gradient);
-        let v1 = blend(c, white, v1);
-        let v2 = blend(c, white, v2);
-        if steep {
-            self.set((ypx12,  xpx12),   v1);
-            self.set((ypx12+1,xpx12),   v2);
-        } else {
-            self.set((xpx12,  ypx12),   v1);
-            self.set((xpx12,  ypx12+1), v2);
-        }
-        // In Between Points
-        for xp in xpx11 + 1 .. xpx12 {
-            let yp = ipart(intery) as usize;
-            let (p0,p1) = if steep { ((yp,xp),(yp+1,xp)) } else { ((xp,yp),(xp,yp+1)) };
-
-            let (v1,v2) = ( rfpart(intery), fpart(intery) );
-            //let v0 = blend(c, self.get(p0), v1);
-            //let v1 = blend(c, self.get(p1), v2);
-            //self.set(p0,&v0);
-            //self.set(p1,&v1);
-            self.blend_pix(p0, c, (v1*255.) as u64);
-            self.blend_pix(p1, c, (v2*255.) as u64);
-
-            intery += gradient;
-        }
-    }
-
-    /// Draw a line from `(x1,y1)` to `(x2,y2)` of color `c` using a
-    ///   subpixel algorithm
-    ///
-    /// Line is Aliased (not-anti-aliased)
-    ///
-    #[deprecated(since="0.1.0", note="please use `path_storage` and friends instead")]
-    pub fn line_sp(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, c: Rgb8) {
-        //println!("({}, {}) - ({}, {})", x1,y1,x2,y2);
-        let x1 = (x1 * 256.0).round() as i64 / 256;
-        let y1 = (y1 * 256.0).round() as i64 / 256;
-        let x2 = (x2 * 256.0).round() as i64 / 256;
-        let y2 = (y2 * 256.0).round() as i64 / 256;
-        //println!("   ({}, {}) - ({}, {})", x1,y1,x2,y2);
-
-        let steep = (x2-x1).abs() < (y2-y1).abs();
-        let (x1,y1,x2,y2) = if steep   { (y1,x1,y2,x2) } else { (x1,y1,x2,y2) };
-        let (x1,y1,x2,y2) = if x2 < x1 { (x2,y2,x1,y1) } else { (x1,y1,x2,y2) };
-
-        let count = (x2-x1).abs();
-        let count = std::cmp::max(count, 1);
-        let dy = y2-y1;
-
-        let mut left = dy / count;
-        let mut rem  = dy % count;
-        let mut xmod = rem;
-        let mut y = y1;
-        //println!("   count, left, rem, dy: {} {} {} {}", count, left, rem, dy);
-        if xmod <= 0 {
-            xmod += count;
-            rem  += count;
-            left -= 1;
-        }
-        xmod -= count;
-
-        for x in x1..x2 {
-            if steep {
-                self.set((y as usize, x as usize), c);
-            } else {
-                self.set((x as usize, y as usize), c);
-            }
-            xmod += rem;
-            y += left;
-            if xmod > 0 {
-                xmod -= count;
-                y += 1;
-            }
-        }
-    }
-
-    /// Draw a line from `(x1,y1)` to `(x2,y2)` of color `c`
-    ///
-    /// Uses [Bresenham's line drawing algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm)
-    ///
-    ///
-    #[deprecated(since="0.1.0", note="please use `path_storage` and friends instead")]
-    pub fn line(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, c: Rgb8) {
-        let steep = (y2-y1).abs() > (x2-x1).abs();
-
-        let (x1,y1,x2,y2) = if steep { (y1,x1,y2,x2) } else { (x1,y1,x2,y2) };
-        let (x1,y1,x2,y2) = if x1>x2 { (x2,y2,x1,y1) } else { (x1,y1,x2,y2) };
-        let dx = x2-x1;
-        let dy = (y2-y1).abs();
-        let mut error = dx / 2.0;
-
-        let pos   = y1<y2;
-        let mut y = y1.floor() as usize;
-        let x1    = x1.floor() as usize;
-        let x2    = x2.floor() as usize;
-        for x in x1 .. x2 {
-            if steep {
-                self.set((y,x), c);
-            } else {
-                self.set((x,y), c);
-            }
-            error -= dy;
-            if error <= 0.0 {
-                y = if pos { y+1 } else { y-1 };
-                error += dx;
-            }
-        }
-    }
 }
 
 
-impl<T> PixelDraw for Pixfmt<T> where Pixfmt<T> : Pixel { }
+impl<T> DrawPixel for Pixfmt<T> where Pixfmt<T> : Pixel { }
 
 impl Source for Pixfmt<Rgba8> {
     fn get(&self, id: (usize, usize)) -> Rgba8 {
@@ -316,17 +189,33 @@ impl Source for Pixfmt<Rgba32> {
     }
 }
 
+macro_rules! impl_pixel { 
+    () => {
+        /// Height of rendering buffer in pixels
+        fn height(&self) -> usize {
+            self.rbuf.height
+        }
+        /// Width of rendering buffer in pixels
+        fn width(&self) -> usize {
+            self.rbuf.width
+        }
+        /// Return a underlying raw pixel/component data
+        fn as_bytes(&self) -> &[u8] {
+            &self.rbuf.data
+        }
+        fn fill<C: Color>(&mut self, color: C) {
+            let (w,h) = (self.width(), self.height());
+            for i in 0 .. h {
+                self.copy_hline(0,i,w,color);
+            }
+        }
+    }
+}
+
 impl Pixel for Pixfmt<Rgba8> {
+    impl_pixel!();
     fn bpp() -> usize { 4 }
     fn cover_mask() -> u64 { 255 }
-    /// Height of rendering buffer in pixels
-    fn height(&self) -> usize {
-        self.rbuf.height
-    }
-    /// Width of rendering buffer in pixels
-    fn width(&self) -> usize {
-        self.rbuf.width
-    }
     fn set<C: Color>(&mut self, id: (usize, usize), c: C) {
         let c = Rgba8::from_trait(c);
         assert!(! self.rbuf.data.is_empty() );
@@ -345,6 +234,7 @@ impl Pixel for Pixfmt<Rgba8> {
 }
 
 impl Pixel for Pixfmt<Rgb8> {
+    impl_pixel!();
     fn set<C: Color>(&mut self, id: (usize, usize), c: C) {
         let c = Rgb8::from_trait(c);
         self.rbuf[id][0] = c.red8();
@@ -359,14 +249,6 @@ impl Pixel for Pixfmt<Rgb8> {
         //eprintln!("BLEND PIX rgb8 cur {:?}", c);
         let pix  = self.mix_pix(pix0, Rgb8::from_trait(c), c.alpha8(), cover);
         self.set(id, pix);
-    }
-    /// Height of rendering buffer in pixels
-    fn height(&self) -> usize {
-        self.rbuf.height
-    }
-    /// Width of rendering buffer in pixels
-    fn width(&self) -> usize {
-        self.rbuf.width
     }
 }
 impl Pixfmt<Gray8> {
@@ -395,6 +277,7 @@ impl Pixfmt<Rgba8> {
     }
 }
 impl Pixel for Pixfmt<Rgba8pre> {
+    impl_pixel!();
     fn set<C: Color>(&mut self, id: (usize, usize), c: C) {
         //let c = Rgba8pre::from(c);
         self.rbuf[id][0] = c.red8();
@@ -411,15 +294,6 @@ impl Pixel for Pixfmt<Rgba8pre> {
         let p  = self.mix_pix(p0, c0, c.alpha8(), cover);
         self.set(id, p);
     }
-    /// Height of rendering buffer in pixels
-    fn height(&self) -> usize {
-        self.rbuf.height
-    }
-    /// Width of rendering buffer in pixels
-    fn width(&self) -> usize {
-        self.rbuf.width
-    }
-
 }
 
 impl Pixfmt<Rgb8> {
@@ -450,35 +324,8 @@ impl Pixfmt<Rgba8pre> {
     }
 }
 
-
-/// Compute endpoint values of a line in Xiaolin Wu's line algorithm
-fn endpoint(x: f64, y: f64, gradient: f64) -> (f64,f64,f64,usize,usize,f64,f64) {
-    let xend = x.round();
-    let yend = y + gradient * (xend - x);
-    let xgap = rfpart(x + 0.5);
-    let v1 = xgap * rfpart(yend);
-    let v2 = xgap *  fpart(yend);
-
-    (xend,yend,xgap,
-     xend as usize,
-     ipart(yend) as usize,
-     v1, v2)
-}
-
-/// Compute fractional part of an f64 number
-fn fpart(x: f64) -> f64 {
-    x - x.floor()
-}
-/// Compute 1.0 - fractional part of an f64 number (remainder)
-fn rfpart(x: f64) -> f64 {
-    1.0 - fpart(x)
-}
-/// Compute integral part of an f64 number
-fn ipart(x: f64) -> f64 {
-    x.floor()
-}
-
 impl Pixel for Pixfmt<Rgba32> {
+    impl_pixel!();
     fn set<C: Color>(&mut self, id: (usize, usize), c: C) {
         let c = Rgba32::from_trait(c);
         assert!(self.rbuf.data.len() > 0);
@@ -508,18 +355,10 @@ impl Pixel for Pixfmt<Rgba32> {
         self.set(id, &pix);
          */
     }
-    /// Height of rendering buffer in pixels
-    fn height(&self) -> usize {
-        self.rbuf.height
-    }
-    /// Width of rendering buffer in pixels
-    fn width(&self) -> usize {
-        self.rbuf.width
-    }
-
 }
 
 impl Pixel for Pixfmt<Gray8> {
+    impl_pixel!();
     fn set<C: Color>(&mut self, id: (usize, usize), c: C) {
         let c = Gray8::from_trait(c);
         self.rbuf[id][0] = c.value;
@@ -532,27 +371,18 @@ impl Pixel for Pixfmt<Gray8> {
         let p0 = self.mix_pix(id, Gray8::from_trait(c), alpha);
         self.set(id, p0);
     }
-    /// Height of rendering buffer in pixels
-    fn height(&self) -> usize {
-        self.rbuf.height
-    }
-    /// Width of rendering buffer in pixels
-    fn width(&self) -> usize {
-        self.rbuf.width
-    }
-
 }
 
 use crate::base::RenderingBase;
 
-pub struct PixfmtAlphaBlend<'a,T,C> where T: PixelDraw {
+pub struct PixfmtAlphaBlend<'a,T,C> where T: DrawPixel {
     ren: &'a mut RenderingBase<T>,
     offset: usize,
     //step: usize,
     phantom: PhantomData<C>,
 }
 
-impl<'a,T,C> PixfmtAlphaBlend<'a,T,C> where T: PixelDraw {
+impl<'a,T,C> PixfmtAlphaBlend<'a,T,C> where T: DrawPixel {
     pub fn new(ren: &'a mut RenderingBase<T>, offset: usize) -> Self {
         //let step = T::bpp();
         Self { ren, offset, phantom: PhantomData }
@@ -574,6 +404,23 @@ impl PixfmtAlphaBlend<'_,Pixfmt<Rgb8>,Gray8> {
 }
 
 impl Pixel for PixfmtAlphaBlend<'_,Pixfmt<Rgb8>,Gray8> {
+    fn width(&self) -> usize {
+        self.ren.pixf.width()
+    }
+    fn height(&self) -> usize {
+        self.ren.pixf.height()
+    }
+    fn as_bytes(&self) -> &[u8] {
+        self.ren.pixf.as_bytes()
+    }
+    fn fill<C: Color>(&mut self, color: C) {
+        let (w,h) = (self.width(), self.height());
+        for i in 0 .. w {
+            for j in 0 .. h {
+                self.set((i,j),color);
+            }
+        }
+    }
     fn set<C: Color>(&mut self, id: (usize, usize), c: C) {
         let c = Rgb8::from_trait(c);
         self.ren.pixf.rbuf[id][self.offset] = self.component(c).value;
@@ -591,20 +438,12 @@ impl Pixel for PixfmtAlphaBlend<'_,Pixfmt<Rgb8>,Gray8> {
         //println!("          color {:?}", c);
         self.set(id, p0);
     }
-    /// Height of rendering buffer in pixels
-    fn height(&self) -> usize {
-        self.ren.pixf.height()
-    }
-    /// Width of rendering buffer in pixels
-    fn width(&self) -> usize {
-        self.ren.pixf.width()
-    }
 
 }
-impl PixelDraw for PixfmtAlphaBlend<'_,Pixfmt<Rgb8>,Gray8> {
-    fn fill<C: Color>(&mut self, color: C) {
-        self.ren.pixf.fill(color);
-    }
+impl DrawPixel for PixfmtAlphaBlend<'_,Pixfmt<Rgb8>,Gray8> {
+    // fn fill<C: Color>(&mut self, color: C) {
+    //     self.ren.pixf.fill(color);
+    // }
     fn blend_color_vspan<C: Color>(&mut self, x: i64, y: i64, len: i64, colors: &[C], covers: &[u64], cover: u64) {
         assert_eq!(len as usize, colors.len());
         let (x,y) = (x as usize, y as usize);
@@ -628,7 +467,7 @@ impl PixelDraw for PixfmtAlphaBlend<'_,Pixfmt<Rgb8>,Gray8> {
 #[cfg(test)]
 mod tests {
     use crate::Pixfmt;
-    use crate::PixelDraw;
+    use crate::DrawPixel;
     use crate::Source;
     use crate::Rgb8;
     use crate::Rgba8;

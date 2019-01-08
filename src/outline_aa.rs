@@ -5,24 +5,21 @@ use crate::path_storage::Vertex;
 use crate::line_interp::LineParameters;
 use crate::line_interp::DrawVars;
 
-use crate::SetColor;
-use crate::Lines;
-use crate::AccurateJoins;
+use crate::DrawOutline;
 use crate::VertexSource;
 use crate::raster::len_i64;
-
 use crate::POLY_SUBPIXEL_SCALE;
 
-pub struct RasterizerOutlineAA<'a,T> where T: SetColor + AccurateJoins + Lines {
-    pub ren: &'a mut T,
-    pub start_x: i64,
-    pub start_y: i64,
-    pub vertices: Vec<Vertex<i64>>,
-    pub round_cap: bool,
-    pub line_join: LineJoin,
+pub struct RasterizerOutlineAA<'a,T> where T: DrawOutline {
+    ren: &'a mut T,
+    start_x: i64,
+    start_y: i64,
+    vertices: Vec<Vertex<i64>>,
+    round_cap: bool,
+    line_join: LineJoin,
 }
 
-impl<'a,T> RasterizerOutlineAA<'a, T> where T: SetColor + AccurateJoins + Lines {
+impl<'a,T> RasterizerOutlineAA<'a, T> where T: DrawOutline {
     pub fn with_renderer(ren: &'a mut T) -> Self {
         let line_join = if ren.accurate_join_only() {
             LineJoin::MiterAccurate
@@ -40,13 +37,13 @@ impl<'a,T> RasterizerOutlineAA<'a, T> where T: SetColor + AccurateJoins + Lines 
             match v.cmd {
                 PathCommand::MoveTo => self.move_to_d(v.x, v.y),
                 PathCommand::LineTo => self.line_to_d(v.x, v.y),
-                PathCommand::Close => self.close(),
+                PathCommand::Close => self.close_path(),
                 PathCommand::Stop => unimplemented!("stop encountered"),
             }
         }
         self.render(false);
     }
-    pub fn conv(&self, v: f64) -> i64 {
+    fn conv(&self, v: f64) -> i64 {
         (v * POLY_SUBPIXEL_SCALE as f64).round() as i64
     }
     pub fn move_to_d(&mut self, x: f64, y: f64) {
@@ -59,12 +56,12 @@ impl<'a,T> RasterizerOutlineAA<'a, T> where T: SetColor + AccurateJoins + Lines 
         let y = self.conv(y);
         self.line_to( x, y );
     }
-    pub fn move_to(&mut self, x: i64, y: i64) {
+    fn move_to(&mut self, x: i64, y: i64) {
         self.start_x = x;
         self.start_y = y;
         self.vertices.push( Vertex::move_to(x, y) );
     }
-    pub fn line_to(&mut self, x: i64, y: i64) {
+    fn line_to(&mut self, x: i64, y: i64) {
         let n = self.vertices.len();
         if n > 1 {
             let v0 = self.vertices[n-1];
@@ -77,11 +74,11 @@ impl<'a,T> RasterizerOutlineAA<'a, T> where T: SetColor + AccurateJoins + Lines 
         }
         self.vertices.push( Vertex::line_to(x, y) );
     }
-    pub fn close(&mut self) {
+    pub fn close_path(&mut self) {
     }
-    pub fn cmp_dist_start(d: i64) -> bool { d > 0 }
-    pub fn cmp_dist_end  (d: i64) -> bool { d <= 0 }
-    pub fn draw_two_points(&mut self) {
+    fn cmp_dist_start(d: i64) -> bool { d > 0 }
+    fn cmp_dist_end  (d: i64) -> bool { d <= 0 }
+    fn draw_two_points(&mut self) {
         debug_assert!(self.vertices.len() == 2);
         let p1 = self.vertices.first().unwrap();
         let p2 = self.vertices.last().unwrap();
@@ -105,7 +102,7 @@ impl<'a,T> RasterizerOutlineAA<'a, T> where T: SetColor + AccurateJoins + Lines 
                              y2 - (x2-x1));
         }
     }
-    pub fn draw_three_points(&mut self) {
+    fn draw_three_points(&mut self) {
         debug_assert!(self.vertices.len() == 3);
         let mut v = self.vertices.iter();
         let p1 = v.next().unwrap();
@@ -146,7 +143,7 @@ impl<'a,T> RasterizerOutlineAA<'a, T> where T: SetColor + AccurateJoins + Lines 
                              y3 - (x3-x2));
         }
     }
-    pub fn draw_many_points(&mut self) {
+    fn draw_many_points(&mut self) {
         debug_assert!(self.vertices.len() > 3);
         let v1 = self.vertices[0];
         let x1 = v1.x;
@@ -254,7 +251,7 @@ impl<'a,T> RasterizerOutlineAA<'a, T> where T: SetColor + AccurateJoins + Lines 
         }
         self.vertices.clear();
     }
-    pub fn draw(&mut self, dv: &mut DrawVars, start: usize, end: usize) {
+    fn draw(&mut self, dv: &mut DrawVars, start: usize, end: usize) {
         for _i in start .. end {
             if self.line_join == LineJoin::Round {
                 dv.xb1 = dv.curr.x1 + (dv.curr.y2 - dv.curr.y1);
@@ -326,7 +323,7 @@ impl<'a,T> RasterizerOutlineAA<'a, T> where T: SetColor + AccurateJoins + Lines 
             }
         }
     }
-    pub fn bisectrix(l1: &LineParameters, l2: &LineParameters) -> (i64, i64) {
+    fn bisectrix(l1: &LineParameters, l2: &LineParameters) -> (i64, i64) {
         let k = l2.len as f64 / l1.len as f64;
         let mut tx = l2.x2 as f64 - (l2.x1 - l1.x1) as f64 * k;
         let mut ty = l2.y2 as f64 - (l2.y1 - l1.y1) as f64 * k;
