@@ -4,16 +4,16 @@
 use crate::cell::RasterizerCell;
 
 /// Rectangle
-#[derive(Debug,Default,Copy,Clone)]
+#[derive(Debug,Copy,Clone)]
 pub struct Rectangle<T: std::cmp::PartialOrd + Copy> {
     /// Minimum x value
-    pub x1: T,
+    x1: T,
     /// Minimum y value
-    pub y1: T,
+    y1: T,
     /// Maximum x value
-    pub x2: T,
+    x2: T,
     /// Maximum y value
-    pub y2: T,
+    y2: T,
 }
 impl<T> Rectangle<T> where T: std::cmp::PartialOrd + Copy {
     /// Create a new Rectangle
@@ -48,6 +48,10 @@ impl<T> Rectangle<T> where T: std::cmp::PartialOrd + Copy {
         self.expand(r.x1, r.y1);
         self.expand(r.x2, r.y2);
     }
+    pub fn x1(&self) -> T { self.x1 }
+    pub fn x2(&self) -> T { self.x2 }
+    pub fn y1(&self) -> T { self.y1 }
+    pub fn y2(&self) -> T { self.y2 }
 }
 
 
@@ -103,7 +107,7 @@ fn clip_flags<T: std::cmp::PartialOrd>(x: &T, y: &T, x1: &T, y1: &T, x2: &T, y2:
 /// Clip Region
 ///
 /// Clipping for Rasterizers
-#[derive(Debug,Default)]
+#[derive(Debug)]
 pub struct Clip {
     /// Current x Point
     x1: i64,
@@ -173,7 +177,7 @@ impl Clip {
     /// Draw a line from (x1,y1) to (x2,y2) into a RasterizerCell
     ///
     /// Final point (x2,y2) is saved internally as (x1,y1))
-    pub fn line_to(&mut self, ras: &mut RasterizerCell, x2: i64, y2: i64) {
+    pub(crate) fn line_to(&mut self, ras: &mut RasterizerCell, x2: i64, y2: i64) {
         //eprintln!("ras.line_to_d({}, {}); // LINE TO: {} {}",
         //          x2 / POLY_SUBPIXEL_SCALE, y2 / POLY_SUBPIXEL_SCALE,
         //          x2, y2);
@@ -254,7 +258,7 @@ impl Clip {
     /// Move to point (x2,y2)
     ///
     /// Point is saved internally as (x1,y1)
-    pub fn move_to(&mut self, x2: i64, y2: i64) {
+    pub(crate) fn move_to(&mut self, x2: i64, y2: i64) {
         //eprintln!("//ras.move_to_d({}, {}); // MOVE TO: {} {}", x2/POLY_SUBPIXEL_SCALE, y2/POLY_SUBPIXEL_SCALE, x2, y2);
         self.x1 = x2;
         self.y1 = y2;

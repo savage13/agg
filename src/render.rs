@@ -973,7 +973,7 @@ fn clip_move_point(x1: i64, y1: i64, x2: i64, y2: i64, clip_box: Rectangle<i64>,
         if x1 == x2 {
             return None;
         } else {
-            let x = if flags & LEFT != 0 { clip_box.x1 } else { clip_box.x2 };
+            let x = if flags & LEFT != 0 { clip_box.x1() } else { clip_box.x2() };
             y = ((x - x1) as f64  * (y2-y1) as f64 / (x2-x1) as f64 + y1 as f64) as i64;
         }
     }
@@ -982,7 +982,7 @@ fn clip_move_point(x1: i64, y1: i64, x2: i64, y2: i64, clip_box: Rectangle<i64>,
         if y1 == y2 {
             return None;
         } else {
-            let y = if flags & BOTTOM != 0 { clip_box.y1 } else { clip_box.y2 };
+            let y = if flags & BOTTOM != 0 { clip_box.y1() } else { clip_box.y2() };
             x = ((y - y1) as f64 * (x2-x1) as f64 / (y2-y1) as f64 + x1 as f64) as i64;
         }
     }

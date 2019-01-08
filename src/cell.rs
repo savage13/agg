@@ -12,7 +12,7 @@ use std::cmp::max;
 ///
 /// Effectively Represents a Pixel
 #[derive(Debug,Copy,Clone,PartialEq, Default)]
-pub struct Cell { // cell_aa
+pub(crate) struct Cell { // cell_aa
     /// Cell x position
     pub x: i64,
     /// Cell y position
@@ -41,16 +41,16 @@ impl Cell {
     pub fn equal(&self, x: i64, y: i64) -> bool {
         self.x - x == 0 && self.y - y == 0
     }
-    /// Test if cover and area are equal to 0
-    pub fn is_empty(&self) -> bool {
-        self.cover == 0 && self.area == 0
-    }
+    // / Test if cover and area are equal to 0
+    //pub fn is_empty(&self) -> bool {
+    //    self.cover == 0 && self.area == 0
+    //}
 }
 
 
 /// Collection of Cells
 #[derive(Debug,Default)]
-pub struct RasterizerCell {
+pub(crate) struct RasterizerCell {
     /// Cells
     cells: Vec<Cell>,
     /// Minimum x value of current cells

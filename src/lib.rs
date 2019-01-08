@@ -133,10 +133,8 @@ pub mod conv_stroke;
 pub mod affine_transform;
 pub mod color;
 pub mod pixfmt;
-pub mod buffer;
 pub mod base;
 pub mod clip;
-pub mod cell;
 pub mod raster;
 pub mod scan;
 pub mod ppm;
@@ -147,6 +145,9 @@ pub mod text;
 pub mod outline;
 pub mod outline_aa;
 pub mod line_interp;
+
+pub(crate) mod buffer;
+pub(crate) mod cell;
 
 #[doc(hidden)]
 pub use crate::path_storage::*;
@@ -162,8 +163,6 @@ pub use crate::pixfmt::*;
 pub use crate::base::*;
 #[doc(hidden)]
 pub use crate::clip::*;
-#[doc(hidden)]
-pub use crate::cell::*;
 #[doc(hidden)]
 pub use crate::raster::*;
 #[doc(hidden)]

@@ -29,12 +29,6 @@ impl RenderingBuffer {
     pub fn len(&self) -> usize {
         self.data.len()
     }
-    /// Return slice starting a beginning of a row
-    // fn row_ptr(&mut self, i: usize) -> &mut [u8] {
-    //     debug_assert!(i < self.height);
-    //     let row = i * self.width * self.bpp;
-    //     &mut self.data[row .. ]
-    // }
     /// Clear an image
     pub fn clear(&mut self) {
         self.data.iter_mut().for_each(|v| *v = 255);

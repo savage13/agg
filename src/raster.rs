@@ -57,12 +57,12 @@ impl Default for PathStatus {
 }
 
 /// Rasterizer Anti-Alias using Scanline
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct RasterizerScanline {
     /// Clipping Region
     pub clipper: Clip,
     /// Collection of Rasterizing Cells
-    pub outline: RasterizerCell,
+    outline: RasterizerCell,
     /// Status of Path
     pub status: PathStatus,
     /// Current x position

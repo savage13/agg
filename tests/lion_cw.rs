@@ -85,8 +85,8 @@ fn lion_cw() {
         }
     }
     //eprintln!("dx,dy: {:?}", r);
-    let g_base_dx = (r.x2 - r.x1)/2.0;
-    let g_base_dy = (r.y2 - r.y1)/2.0;
+    let g_base_dx = (r.x2() - r.x1())/2.0;
+    let g_base_dy = (r.y2() - r.y1())/2.0;
     let mut mtx = agg::AffineTransform::new();
     //eprintln!("dx,dy: {} {}", -g_base_dx, -g_base_dy);
     //eprintln!("dx,dy: {} {}", (w/2) as f64, (h/2) as f64);
