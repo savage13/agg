@@ -1,6 +1,6 @@
 
 use crate::path_storage::PathCommand;
-use crate::DrawPixel;
+use crate::Pixel;
 use crate::VertexSource;
 use crate::render::RendererPrimatives;
 use crate::POLY_SUBPIXEL_SHIFT;
@@ -47,13 +47,13 @@ impl From<Subpixel> for i64 {
 ///     ras.add_path(&path);
 ///     agg::ppm::write_ppm(&ren_base.as_bytes(), 100,100,
 ///                         "primative.ppm").unwrap();
-pub struct RasterizerOutline<'a,T> where T: DrawPixel {
+pub struct RasterizerOutline<'a,T> where T: Pixel {
     ren: &'a mut RendererPrimatives<'a,T>,
     start_x: Subpixel,
     start_y: Subpixel,
     vertices: usize,
 }
-impl<'a,T> RasterizerOutline<'a,T> where T: DrawPixel {
+impl<'a,T> RasterizerOutline<'a,T> where T: Pixel {
     /// Create a new RasterizerOutline with a Renderer
     pub fn with_primative(ren: &'a mut RendererPrimatives<'a,T>) -> Self {
         Self { start_x: Subpixel::from(0),

@@ -240,7 +240,7 @@ fn rasterizers2_pre() {
 fn text<T>(ras: &mut agg::RasterizerScanline,
            ren: &mut agg::RenderingScanlineAASolid<T>,
            x: f64, y: f64, txt: &str)
-    where T: agg::DrawPixel
+    where T: agg::Pixel
 {
     let mut t = agg::GsvText::new();
     t.size(8.0, 0.0);

@@ -253,7 +253,7 @@ pub trait Source {
     fn get(&self, id: (usize, usize)) -> Rgba8;
 }
 
-/// Basic drawing and pixel related routines, requires actual pixel format
+/// Drawing and pixel related routines
 pub trait Pixel {
     fn cover_mask() -> u64;
     fn bpp() -> usize;
@@ -262,21 +262,8 @@ pub trait Pixel {
     fn height(&self) -> usize;
     fn set<C: Color>(&mut self, id: (usize, usize), c: C);
     fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: C, cover: u64);
+    /// Fill the data with the specified `color`
     fn fill<C: Color>(&mut self, color: C);
-}
-/// Primary Drawing routines, setting and blending colors / pixels
-pub trait DrawPixel: Pixel  {
-    // Fill the data with the specified `color`
-    //fn fill<C: Color>(&mut self, color: C) {
-    //    self.fill(color);
-        // let w = self.width();
-        // let h = self.height();
-        // for i in 0 .. w {
-        //     for j in 0 .. h {
-        //         self.set((i,j), color);
-        //     }
-        // }
-    //}
     /// Copy or blend a pixel at `id` with `color`
     ///
     /// If `color` [`is_opaque`], the color is copied directly to the pixel,
@@ -303,7 +290,7 @@ pub trait DrawPixel: Pixel  {
     ///
     /// If `color` [`is_transparent`] nothing is done
     ///
-    ///     use agg::{Source,Pixfmt,Rgb8,Rgba8,DrawPixel};
+    ///     use agg::{Source,Pixfmt,Rgb8,Rgba8,Pixel};
     ///
     ///     let mut pix = Pixfmt::<Rgb8>::new(1,1);
     ///     let black  = Rgba8::black();

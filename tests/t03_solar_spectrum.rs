@@ -1,6 +1,5 @@
 
 extern crate agg;
-use agg::DrawPixel;
 use agg::Pixel;
 
 fn draw_black_frame(pix: &mut agg::Pixfmt<agg::Rgb8>) {

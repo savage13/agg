@@ -1,7 +1,7 @@
 //! Rendering Base
 
 use crate::color::*;
-use crate::DrawPixel;
+use crate::Pixel;
 use crate::Color;
 use std::cmp::min;
 use std::cmp::max;
@@ -15,7 +15,7 @@ pub struct RenderingBase<T> {
     pub pixf: T,
 }
 
-impl<T> RenderingBase<T> where T: DrawPixel {
+impl<T> RenderingBase<T> where T: Pixel {
     /// Create new Rendering Base from Pixel Format
     pub fn new(pixf: T) -> RenderingBase<T> {
         RenderingBase { pixf }

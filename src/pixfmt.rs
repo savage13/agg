@@ -7,7 +7,6 @@ use crate::math::*;
 use crate::Color;
 use crate::Source;
 use crate::Pixel;
-use crate::DrawPixel;
 
 use std::marker::PhantomData;
 
@@ -19,7 +18,7 @@ pub struct Pixfmt<T> {
     phantom: PhantomData<T>,
 }
 
-impl<T> Pixfmt<T> where Pixfmt<T>: DrawPixel {
+impl<T> Pixfmt<T> where Pixfmt<T>: Pixel {
     /// Create new Pixel Format of width * height * bpp
     ///
     /// Allocates memory of width * height * bpp
@@ -150,9 +149,6 @@ impl<T> Pixfmt<T> where Pixfmt<T>: DrawPixel {
         }
     }
 }
-
-
-impl<T> DrawPixel for Pixfmt<T> where Pixfmt<T> : Pixel { }
 
 impl Source for Pixfmt<Rgba8> {
     fn get(&self, id: (usize, usize)) -> Rgba8 {
@@ -375,14 +371,14 @@ impl Pixel for Pixfmt<Gray8> {
 
 use crate::base::RenderingBase;
 
-pub struct PixfmtAlphaBlend<'a,T,C> where T: DrawPixel {
+pub struct PixfmtAlphaBlend<'a,T,C> where T: Pixel {
     ren: &'a mut RenderingBase<T>,
     offset: usize,
     //step: usize,
     phantom: PhantomData<C>,
 }
 
-impl<'a,T,C> PixfmtAlphaBlend<'a,T,C> where T: DrawPixel {
+impl<'a,T,C> PixfmtAlphaBlend<'a,T,C> where T: Pixel {
     pub fn new(ren: &'a mut RenderingBase<T>, offset: usize) -> Self {
         //let step = T::bpp();
         Self { ren, offset, phantom: PhantomData }
@@ -439,11 +435,6 @@ impl Pixel for PixfmtAlphaBlend<'_,Pixfmt<Rgb8>,Gray8> {
         self.set(id, p0);
     }
 
-}
-impl DrawPixel for PixfmtAlphaBlend<'_,Pixfmt<Rgb8>,Gray8> {
-    // fn fill<C: Color>(&mut self, color: C) {
-    //     self.ren.pixf.fill(color);
-    // }
     fn blend_color_vspan<C: Color>(&mut self, x: i64, y: i64, len: i64, colors: &[C], covers: &[u64], cover: u64) {
         assert_eq!(len as usize, colors.len());
         let (x,y) = (x as usize, y as usize);
@@ -467,7 +458,7 @@ impl DrawPixel for PixfmtAlphaBlend<'_,Pixfmt<Rgb8>,Gray8> {
 #[cfg(test)]
 mod tests {
     use crate::Pixfmt;
-    use crate::DrawPixel;
+    use crate::Pixel;
     use crate::Source;
     use crate::Rgb8;
     use crate::Rgba8;

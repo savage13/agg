@@ -3,7 +3,7 @@ use crate::VertexSource;
 use crate::path_storage::Vertex;
 use crate::base::RenderingBase;
 use crate::color::Rgba8;
-use crate::DrawPixel;
+use crate::Pixel;
 use crate::ft;
 
 #[derive(Debug,PartialEq)]
@@ -188,7 +188,7 @@ pub fn line_height(font: &ft::Face) -> f64 {
 }
 
 pub fn draw_text<T>(txt: &str, x: i64, y: i64, font: &ft::Face, ren_base: &mut RenderingBase<T>)
-    where T: DrawPixel
+    where T: Pixel
 {
     let color = Rgba8::new(0,0,0,255);
     let (mut x, mut y) = (x,y);
@@ -262,7 +262,7 @@ impl<'a> Label<'a> {
         self
     }
     pub fn draw<T>(&mut self, ren: &mut RenderingBase<T>)
-        where T: DrawPixel
+        where T: Pixel
     {
         draw_text_subpixel(&self.txt, self.x, self.y,
                            self.xa, self.ya, self.color,
@@ -278,7 +278,7 @@ fn draw_text_subpixel<T>(txt: &str, x: f64, y: f64,
                          color: Rgba8,
                          font: &ft::Face,
                          ren_base: &mut RenderingBase<T>)
-    where T: DrawPixel
+    where T: Pixel
 {
     let (mut x, mut y) = (x,y);
     let width  = string_width(txt, font);
