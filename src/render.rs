@@ -25,9 +25,6 @@ use crate::Render;
 use crate::Color;
 use crate::DrawOutline;
 use crate::Pixel;
-use crate::SetColor;
-use crate::AccurateJoins;
-use crate::Lines;
 
 use crate::outline::Subpixel;
 
@@ -528,8 +525,6 @@ pub struct RendererOutlineAA<'a,T>  {
     pub profile: LineProfileAA,
 }
 
-impl<'a,T> DrawOutline for RendererOutlineAA<'a,T> where T: Pixel {}
-
 impl<'a,T> RendererOutlineAA<'a,T> where T: Pixel {
     pub fn with_base(ren: &'a mut RenderingBase<T>) -> Self {
         let profile = LineProfileAA::new();
@@ -733,7 +728,7 @@ impl<T> RenderOutline for RendererOutlineAA<'_, T> where T: Pixel {
     }
 }
 
-impl<T> Lines for RendererOutlineAA<'_, T> where T: Pixel {
+impl<T> DrawOutline for RendererOutlineAA<'_, T> where T: Pixel {
     fn line3(&mut self, lp: &LineParameters, sx: i64, sy: i64, ex: i64, ey: i64) {
         //eprintln!("DRAW: line3() {:?}", lp);
         if let Some(clip_box) = self.clip_box {
@@ -909,15 +904,10 @@ impl<T> Lines for RendererOutlineAA<'_, T> where T: Pixel {
             self.line2_no_clip(&lp, ex, ey);
         }
     }
-
-}
-
-impl<T> SetColor for RendererOutlineAA<'_, T> where T: Pixel {
     fn color<C: Color>(&mut self, color: C) {
         self.color = Rgba8::from_trait(color);
     }
-}
-impl<T> AccurateJoins for RendererOutlineAA<'_, T> where T: Pixel {
+
     fn accurate_join_only(&self) -> bool{
         false
     }
@@ -1078,13 +1068,70 @@ pub struct RendererOutlineImg<'a,T> {
     scale_x: f64,
     clip_box: Option<Rectangle<i64>>,
 }
-impl<T> AccurateJoins for RendererOutlineImg<'_, T>  {
+impl<T> DrawOutline for RendererOutlineImg<'_, T> where T: Pixel {
     fn accurate_join_only(&self) -> bool{
         true
     }
+
+    fn color<C: Color>(&mut self, _color: C) {
+        unimplemented!("no color for outline img");
+    }
+
+    fn line0(&mut self, _lp: &LineParameters) {
+    }
+    fn line1(&mut self, _lp: &LineParameters, _sx: i64, _sy: i64) {
+    }
+    fn line2(&mut self, _lp: &LineParameters, _ex: i64, _ey: i64) {
+    }
+    fn line3(&mut self, lp: &LineParameters, sx: i64, sy: i64, ex: i64, ey: i64) {
+        if let Some(clip_box) = self.clip_box {
+            let x1 = lp.x1;
+            let y1 = lp.y1;
+            let x2 = lp.x2;
+            let y2 = lp.y2;
+            let (x1,y1,x2,y2,flags) = clip_line_segment(x1, y1, x2, y2, clip_box);
+            let start = self.start;
+            let (mut sx, mut sy, mut ex, mut ey) = (sx,sy,ex,ey);
+            if (flags & 4) == 0 {
+                if flags != 0 {
+                    let lp2 = LineParameters::new(x1, y1, x2, y2,
+                                                  len_i64_xy(x1, y1, x2, y2));
+                    if flags & 1 != 0 {
+                        self.start += (len_i64_xy(lp.x1, lp.y1, x1, y1) as f64 / self.scale_x as f64).round() as i64;
+                        sx = x1 + (y2 - y1);
+                        sy = y1 - (x2 - x1);
+                    } else {
+                        while (sx - lp.x1).abs() + (sy - lp.y1).abs() > lp2.len {
+                            sx = (lp.x1 + sx) >> 1;
+                            sy = (lp.y1 + sy) >> 1;
+                        }
+                    }
+                    if flags & 2 != 0{
+                        ex = x2 + (y2 - y1);
+                        ey = y2 - (x2 - x1);
+                    } else {
+                        while (ex - lp.x2).abs() + (ey - lp.y2).abs() > lp2.len {
+                            ex = (lp.x2 + ex) >> 1;
+                            ey = (lp.y2 + ey) >> 1;
+                        }
+                    }
+                    self.line3_no_clip(&lp2, sx, sy, ex, ey);
+                } else {
+                    self.line3_no_clip(lp, sx, sy, ex, ey);
+                }
+            }
+            self.start = start + (lp.len as f64 / self.scale_x as f64).round() as i64;
+        } else {
+            //eprintln!("LINE3: {} {} {} {}", sx, sy, ex, ey);
+            self.line3_no_clip(lp, sx, sy, ex, ey);
+        }
+    }
+    fn semidot<F>(&mut self, _cmp: F, _xc1: i64, _yc1: i64, _xc2: i64, _yc2: i64) where F: Fn(i64) -> bool {
+    }
+    fn pie(&mut self, _xc: i64, _y: i64, _x1: i64, _y1: i64, _x2: i64, _y2: i64) {
+    }
 }
 
-impl<'a,T> DrawOutline for RendererOutlineImg<'a, T> where T: Pixel {}
 
 impl<'a,T> RendererOutlineImg<'a,T> where T: Pixel {
     pub fn with_base_and_pattern(ren: &'a mut RenderingBase<T>, pattern: LineImagePatternPow2) -> Self {
@@ -1150,66 +1197,6 @@ impl<'a,T> RendererOutlineImg<'a,T> where T: Pixel {
         self.start += (lp.len as f64/ self.scale_x).round() as i64;
     }
 }
-impl<T> SetColor for RendererOutlineImg<'_, T> where T: Pixel {
-    fn color<C: Color>(&mut self, _color: C) {
-        unimplemented!("no color for outline img");
-    }
-}
-impl<T> Lines for RendererOutlineImg<'_, T> where T: Pixel {
-    fn line0(&mut self, _lp: &LineParameters) {
-    }
-    fn line1(&mut self, _lp: &LineParameters, _sx: i64, _sy: i64) {
-    }
-    fn line2(&mut self, _lp: &LineParameters, _ex: i64, _ey: i64) {
-    }
-    fn line3(&mut self, lp: &LineParameters, sx: i64, sy: i64, ex: i64, ey: i64) {
-        if let Some(clip_box) = self.clip_box {
-            let x1 = lp.x1;
-            let y1 = lp.y1;
-            let x2 = lp.x2;
-            let y2 = lp.y2;
-            let (x1,y1,x2,y2,flags) = clip_line_segment(x1, y1, x2, y2, clip_box);
-            let start = self.start;
-            let (mut sx, mut sy, mut ex, mut ey) = (sx,sy,ex,ey);
-            if (flags & 4) == 0 {
-                if flags != 0 {
-                    let lp2 = LineParameters::new(x1, y1, x2, y2,
-                                                  len_i64_xy(x1, y1, x2, y2));
-                    if flags & 1 != 0 {
-                        self.start += (len_i64_xy(lp.x1, lp.y1, x1, y1) as f64 / self.scale_x as f64).round() as i64;
-                        sx = x1 + (y2 - y1);
-                        sy = y1 - (x2 - x1);
-                    } else {
-                        while (sx - lp.x1).abs() + (sy - lp.y1).abs() > lp2.len {
-                            sx = (lp.x1 + sx) >> 1;
-                            sy = (lp.y1 + sy) >> 1;
-                        }
-                    }
-                    if flags & 2 != 0{
-                        ex = x2 + (y2 - y1);
-                        ey = y2 - (x2 - x1);
-                    } else {
-                        while (ex - lp.x2).abs() + (ey - lp.y2).abs() > lp2.len {
-                            ex = (lp.x2 + ex) >> 1;
-                            ey = (lp.y2 + ey) >> 1;
-                        }
-                    }
-                    self.line3_no_clip(&lp2, sx, sy, ex, ey);
-                } else {
-                    self.line3_no_clip(lp, sx, sy, ex, ey);
-                }
-            }
-            self.start = start + (lp.len as f64 / self.scale_x as f64).round() as i64;
-        } else {
-            //eprintln!("LINE3: {} {} {} {}", sx, sy, ex, ey);
-            self.line3_no_clip(lp, sx, sy, ex, ey);
-        }
-    }
-    fn semidot<F>(&mut self, _cmp: F, _xc1: i64, _yc1: i64, _xc2: i64, _yc2: i64) where F: Fn(i64) -> bool {
-    }
-    fn pie(&mut self, _xc: i64, _y: i64, _x1: i64, _y1: i64, _x2: i64, _y2: i64) {
-    }
-}
 
 #[derive(Debug)]
 pub struct LineImagePattern {
@@ -1245,30 +1232,11 @@ impl LineImagePattern {
 
         self.pix = Pixfmt::<Rgba8>::new((self.width  + self.dilation * 2) as usize,
                                         (self.height + self.dilation * 2) as usize);
-        // Resize and attach input data, hmmmm
-        /*
-        self.data.resize((self.width + self.dilation * 2) *
-                         (self.height + self.dilation * 2));
-
-        self.buf.attach(&self.data[0], self.width  + self.dilation * 2,
-                        self.height + self.dilation * 2,
-                        self.width  + self.dilation * 2);
-         */
-        //eprintln!("src {} {} {}", src.rbuf.width, src.rbuf.height, src.rbuf.data.len());
-        //eprintln!("dst {} {} {}", self.pix.rbuf.width, self.pix.rbuf.height, self.pix.rbuf.data.len());
         for y in 0 .. self.height as usize {
-            //d1 = self.buf.row_ptr(y + self.dilation) + self.dilation;
             let x1 = self.dilation as usize;
             let y1 = y + self.dilation as usize;
             for x in 0 .. self.width as usize {
-                /*eprintln!("copy {} {} ({},{}) => {} {} ({},{})",
-                          x,y,
-                          src.rbuf.width, src.rbuf.height,
-                          x1+x,y1,
-                          self.pix.rbuf.width, self.pix.rbuf.height);
-                 */
                 self.pix.set((x1+x,y1), src.get((x,y)));
-                //*d1++ = src.pixel(x, y);
             }
         }
         //const color_type* s1;

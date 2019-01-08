@@ -2,8 +2,8 @@ extern crate agg;
 
 use agg::Pixel;
 use agg::Render;
+use agg::DrawOutline;
 use agg::VertexSource;
-use agg::SetColor;
 
 use std::path::PathBuf;
 use std::path::Path;

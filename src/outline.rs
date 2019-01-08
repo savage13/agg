@@ -29,7 +29,7 @@ impl From<Subpixel> for i64 {
 ///
 /// The rendering is directly attached and drawing is done immediately.
 ///
-///     use agg::{Pixfmt,Rgb8,Rgba8,RenderingBase,SetColor};
+///     use agg::{Pixfmt,Rgb8,Rgba8,RenderingBase,DrawOutline};
 ///     use agg::{RendererPrimatives,RasterizerOutline};
 ///     let pix = Pixfmt::<Rgb8>::new(100,100);
 ///     let mut ren_base = agg::RenderingBase::new(pix);

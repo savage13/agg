@@ -51,7 +51,7 @@
 //!
 //! # Outline AntiAlias Renderer
 //!
-//!        use agg::{Pixfmt,Rgb8,Rgba8,RenderingBase,SetColor};
+//!        use agg::{Pixfmt,Rgb8,Rgba8,RenderingBase,DrawOutline};
 //!        use agg::{RendererOutlineAA,RasterizerOutlineAA};
 //!        let pix = Pixfmt::<Rgb8>::new(100,100);
 //!        let mut ren_base = agg::RenderingBase::new(pix);
@@ -76,7 +76,7 @@
 //! Render for primative shapes: lines, rectangles, and ellipses; filled or
 //!    outlined. 
 //!
-//!        use agg::{Pixfmt,Rgb8,Rgba8,RenderingBase,SetColor};
+//!        use agg::{Pixfmt,Rgb8,Rgba8,RenderingBase,DrawOutline};
 //!        use agg::{RendererPrimatives,RasterizerOutline};
 //!
 //!        let pix = Pixfmt::<Rgb8>::new(100,100);
@@ -426,25 +426,7 @@ pub trait Pixel {
     }
 }
 
-pub trait Lines {
-    fn line0(&mut self, lp: &LineParameters);
-    fn line1(&mut self, lp: &LineParameters, sx: i64, sy: i64);
-    fn line2(&mut self, lp: &LineParameters, ex: i64, ey: i64);
-    fn line3(&mut self, lp: &LineParameters, sx: i64, sy: i64, ex: i64, ey: i64);
-    fn semidot<F>(&mut self, cmp: F, xc1: i64, yc1: i64, xc2: i64, yc2: i64) where F: Fn(i64) -> bool;
-    fn pie(&mut self, xc: i64, y: i64, x1: i64, y1: i64, x2: i64, y2: i64);
-}
-/// Set the current Color
-pub trait SetColor {
-    fn color<C: Color>(&mut self, color: C);
-}
-/// If Line Joins are Accurate
-pub trait AccurateJoins {
-    fn accurate_join_only(&self) -> bool;
-}
 
-/// Functions for Drawing Outlines
-pub trait DrawOutline: Lines + AccurateJoins + SetColor {}
 
 pub(crate) trait LineInterp {
     fn init(&mut self);
@@ -457,6 +439,26 @@ pub trait RenderOutline {
     fn blend_solid_hspan(&mut self, x: i64, y: i64, len: i64, covers: &[u64]);
     fn blend_solid_vspan(&mut self, x: i64, y: i64, len: i64, covers: &[u64]);
 }
+/// Functions for Drawing Outlines
+//pub trait DrawOutline: Lines + AccurateJoins + SetColor {}
+pub trait DrawOutline {
+/// Set the current Color
+//pub trait SetColor {
+    fn color<C: Color>(&mut self, color: C);
+//}
+/// If Line Joins are Accurate
+//pub trait AccurateJoins {
+    fn accurate_join_only(&self) -> bool;
+//}
+//pub trait Lines {
+    fn line0(&mut self, lp: &LineParameters);
+    fn line1(&mut self, lp: &LineParameters, sx: i64, sy: i64);
+    fn line2(&mut self, lp: &LineParameters, ex: i64, ey: i64);
+    fn line3(&mut self, lp: &LineParameters, sx: i64, sy: i64, ex: i64, ey: i64);
+    fn semidot<F>(&mut self, cmp: F, xc1: i64, yc1: i64, xc2: i64, yc2: i64) where F: Fn(i64) -> bool;
+    fn pie(&mut self, xc: i64, y: i64, x1: i64, y1: i64, x2: i64, y2: i64);
+}
+
 
 pub(crate) trait DistanceInterpolator {
     fn dist(&self) -> i64;
