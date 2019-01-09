@@ -136,16 +136,16 @@ pub mod pixfmt;
 pub mod base;
 pub mod clip;
 pub mod raster;
-pub mod scan;
 pub mod ppm;
 pub mod alphamask;
 pub mod render;
-pub mod math;
 pub mod text;
 pub mod outline;
 pub mod outline_aa;
 pub mod line_interp;
 
+pub(crate) mod math;
+pub(crate) mod scan;
 pub(crate) mod buffer;
 pub(crate) mod cell;
 

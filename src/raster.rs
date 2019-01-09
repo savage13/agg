@@ -60,15 +60,15 @@ impl Default for PathStatus {
 #[derive(Debug)]
 pub struct RasterizerScanline {
     /// Clipping Region
-    pub clipper: Clip,
+    pub(crate) clipper: Clip,
     /// Collection of Rasterizing Cells
     outline: RasterizerCell,
     /// Status of Path
-    pub status: PathStatus,
+    pub(crate) status: PathStatus,
     /// Current x position
-    pub x0: i64,
+    pub(crate) x0: i64,
     /// Current y position
-    pub y0: i64,
+    pub(crate) y0: i64,
     /// Current y row being worked on, for output
     scan_y: i64,
     /// Filling Rule for Polygons
@@ -109,7 +109,7 @@ impl RasterizerScanline {
     /// Close active polygon, sort the Rasterizer Cells, set the
     /// scan_y value to the minimum y value and return if any cells
     /// are present
-    pub fn rewind_scanlines(&mut self) -> bool {
+    pub(crate) fn rewind_scanlines(&mut self) -> bool {
         self.close_polygon();
         self.outline.sort_cells();
         if self.outline.total_cells() == 0 {
@@ -197,9 +197,7 @@ impl RasterizerScanline {
     pub fn max_x(&self) -> i64 {
         self.outline.max_x
     }
-}
 
-impl RasterizerScanline {
     /// Create a new RasterizerScanline
     pub fn new() -> Self {
         Self { clipper: Clip::new(), status: PathStatus::Initial,
@@ -274,7 +272,7 @@ impl RasterizerScanline {
     /// Calculate alpha term based on area
     ///
     ///
-    pub fn calculate_alpha(&self, area: i64) -> u64 {
+    fn calculate_alpha(&self, area: i64) -> u64 {
         let aa_shift  = 8;
         let aa_scale  = 1 << aa_shift;
         let aa_scale2 = aa_scale * 2;
