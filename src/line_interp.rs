@@ -12,7 +12,7 @@ use crate::DistanceInterpolator;
 use crate::RenderOutline;
 
 #[derive(Debug)]
-pub struct LineInterpolatorAA {
+pub(crate) struct LineInterpolatorAA {
     lp: LineParameters,
     li: LineInterpolator,
     len: i64,
@@ -1042,7 +1042,7 @@ impl DistanceInterpolator for DistanceInterpolator3 {
 
 
 #[derive(Debug,Default)]
-pub struct DrawVars {
+pub(crate) struct DrawVars {
     pub idx: usize,
     pub x1: i64,
     pub y1: i64,

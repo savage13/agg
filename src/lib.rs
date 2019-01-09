@@ -59,7 +59,7 @@
 //!
 //!        let mut ren = RendererOutlineAA::with_base(&mut ren_base);
 //!        ren.color(agg::Rgba8::new(102,77,26,255));
-//!        ren.profile.width(3.0);
+//!        ren.width(3.0);
 //!
 //!        let mut path = agg::PathStorage::new();
 //!        path.move_to(10.0, 10.0);
@@ -434,7 +434,7 @@ pub(crate) trait LineInterp {
     fn step_ver(&mut self);
 }
 
-pub trait RenderOutline {
+pub(crate) trait RenderOutline {
     fn cover(&self, d: i64) -> u64;
     fn blend_solid_hspan(&mut self, x: i64, y: i64, len: i64, covers: &[u64]);
     fn blend_solid_vspan(&mut self, x: i64, y: i64, len: i64, covers: &[u64]);

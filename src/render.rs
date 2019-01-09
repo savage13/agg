@@ -403,19 +403,29 @@ impl LineInterpolator {
 }
 
 #[derive(Debug,Default)]
-pub struct LineProfileAA {
-    pub min_width: f64,
-    pub smoother_width: f64,
-    pub subpixel_width: i64,
-    pub gamma: Vec<u8>,
-    pub profile: Vec<u8>,
+struct LineProfileAA {
+    min_width: f64,
+    smoother_width: f64,
+    subpixel_width: i64,
+    gamma: Vec<u8>,
+    profile: Vec<u8>,
 }
 
 impl LineProfileAA {
     pub fn new() -> Self {
         let gamma : Vec<_> = (0..POLY_SUBPIXEL_SCALE).map(|x| x as u8).collect();
-        Self { min_width: 1.0, smoother_width: 1.0, subpixel_width: 0,
-               profile: vec![], gamma }
+        let mut s = Self { min_width: 1.0,
+                           smoother_width: 1.0,
+                           subpixel_width: 0,
+                           profile: vec![], gamma };
+        s.width(0.0);
+        s
+    }
+    pub fn min_width(&mut self, width: f64) {
+        self.min_width = width;
+    }
+    pub fn smoother_width(&mut self, width: f64) {
+        self.smoother_width = width;
     }
     pub fn width(&mut self, w: f64) {
         let mut w = w;
@@ -436,7 +446,7 @@ impl LineProfileAA {
         }
         self.set(w, s);
     }
-    pub fn profile(&mut self, w: f64) {
+    fn profile(&mut self, w: f64) {
         let subpixel_shift = POLY_SUBPIXEL_SHIFT;
         let subpixel_scale = 1 << subpixel_shift;
         self.subpixel_width = (w * subpixel_scale as f64).round() as i64;
@@ -445,7 +455,7 @@ impl LineProfileAA {
             self.profile.resize(size, 0);
         }
     }
-    pub fn set(&mut self, center_width: f64, smoother_width: f64) {
+    fn set(&mut self, center_width: f64, smoother_width: f64) {
         let subpixel_shift = POLY_SUBPIXEL_SHIFT;
         let subpixel_scale = 1 << subpixel_shift;
         let aa_shift = POLY_SUBPIXEL_SHIFT;
@@ -522,13 +532,22 @@ pub struct RendererOutlineAA<'a,T>  {
     ren: &'a mut RenderingBase<T>,
     color: Rgba8,
     clip_box: Option<Rectangle<i64>>,
-    pub profile: LineProfileAA,
+    profile: LineProfileAA,
 }
 
 impl<'a,T> RendererOutlineAA<'a,T> where T: Pixel {
     pub fn with_base(ren: &'a mut RenderingBase<T>) -> Self {
         let profile = LineProfileAA::new();
         Self { ren, color: Rgba8::black(), clip_box: None, profile }
+    }
+    pub fn width(&mut self, width: f64) {
+        self.profile.width(width);
+    }
+    pub fn min_width(&mut self, width: f64) {
+        self.profile.min_width(width);
+    }
+    pub fn smoother_width(&mut self, width: f64) {
+        self.profile.smoother_width(width);
     }
     fn subpixel_width(&self) -> i64 {
         self.profile.subpixel_width
@@ -713,17 +732,12 @@ impl<T> RenderOutline for RendererOutlineAA<'_, T> where T: Pixel {
         let subpixel_scale = 1 << subpixel_shift;
         let index = d + i64::from(subpixel_scale) * 2;
         assert!(index >= 0);
-        println!("index {} profile {}", index, self.profile.profile.len());
-        //eprintln!("COVER: {}", self.profile.profile[index as usize] as u64);
-
         u64::from( self.profile.profile[index as usize] )
     }
     fn blend_solid_hspan(&mut self, x: i64, y: i64, len: i64, covers: &[u64]) {
-        //eprintln!("DRAW: RO::blend_solid_hspan() x,y {} {} len {} covers.len {}", x, y, len, covers.len() );
         self.ren.blend_solid_hspan(x, y, len,  self.color, covers);
     }
     fn blend_solid_vspan(&mut self, x: i64, y: i64, len: i64, covers: &[u64]) {
-        //eprintln!("DRAW: RO::blend_solid_vspan() x,y {} {} len {} covers.len {}", x, y, len, covers.len() );
         self.ren.blend_solid_vspan(x, y, len,  self.color, covers);
     }
 }
@@ -1578,10 +1592,10 @@ impl LineInterpolatorImage {
             li: m_li,
         }
     }
-    pub fn vertical(&self) -> bool {
+    fn vertical(&self) -> bool {
         self.lp.vertical
     }
-    pub fn step_ver<T>(&mut self, ren: &mut RendererOutlineImg<T>) -> bool
+    fn step_ver<T>(&mut self, ren: &mut RendererOutlineImg<T>) -> bool
     where T: Pixel
     {
         //eprintln!("STEP_VER: di.dist_start {}", self.di.dist_start);
@@ -1688,7 +1702,7 @@ impl LineInterpolatorImage {
         npix != 0 && self.step < self.count
 
     }
-    pub fn step_hor<T>(&mut self, ren: &mut RendererOutlineImg<T>) -> bool
+    fn step_hor<T>(&mut self, ren: &mut RendererOutlineImg<T>) -> bool
     where T: Pixel
     {
         self.li.inc();

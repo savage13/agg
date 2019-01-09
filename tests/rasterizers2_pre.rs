@@ -182,7 +182,7 @@ fn rasterizers2_pre() {
 
         let mut ren_oaa = agg::RendererOutlineAA::with_base(&mut ren_base);
         ren_oaa.color(agg::Rgba8::new(102,77,26,255));
-        ren_oaa.profile.width(3.0);
+        ren_oaa.width(3.0);
         let mut ras_oaa = agg::RasterizerOutlineAA::with_renderer(&mut ren_oaa);
         ras_oaa.round_cap(true);
         ras_oaa.add_path(&spiral);

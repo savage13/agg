@@ -7,7 +7,7 @@ fn t20_outline_render() {
     ren_base.clear( Rgba8::new(255, 255, 255, 255) );
     let mut ren = RendererOutlineAA::with_base(&mut ren_base);
     ren.color(agg::Rgba8::new(0,0,0,255));
-    ren.profile.width(20.0);
+    ren.width(20.0);
 
     let mut path = agg::PathStorage::new();
     path.move_to(10.0, 10.0);
