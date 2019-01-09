@@ -149,6 +149,9 @@ pub(crate) mod scan;
 pub(crate) mod buffer;
 pub(crate) mod cell;
 
+
+pub mod gallery;
+
 #[doc(hidden)]
 pub use crate::path_storage::*;
 #[doc(hidden)]
