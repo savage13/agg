@@ -23,6 +23,9 @@ impl<T> RenderingBase<T> where T: Pixel {
     pub fn as_bytes(&self) -> &[u8] {
         self.pixf.as_bytes()
     }
+    pub fn to_file<P: AsRef<std::path::Path>>(&self, filename: P) -> Result<(),std::io::Error> {
+        self.pixf.to_file(filename)
+    }
     /// Set Image to a single color
     pub fn clear(&mut self, color: Rgba8) {
         self.pixf.fill(color);

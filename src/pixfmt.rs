@@ -10,6 +10,8 @@ use crate::Pixel;
 
 use std::marker::PhantomData;
 
+use std::path::Path;
+
 /// Pixel Format Wrapper around raw pixel component data
 ///
 #[derive(Debug)]
@@ -148,6 +150,11 @@ impl<T> Pixfmt<T> where Pixfmt<T>: Pixel {
             self.set((x,y+i), c);
         }
     }
+
+    pub fn from_file<P: AsRef<Path>>(filename: P) -> Result<Self,image::ImageError> {
+        let (buf,w,h) = crate::ppm::read_file(filename)?;
+        Ok(Self{ rbuf: RenderingBuffer::from_buf(buf, w, h, 3), phantom: PhantomData })
+    }
 }
 
 impl Source for Pixfmt<Rgba8> {
@@ -198,6 +205,9 @@ macro_rules! impl_pixel {
         /// Return a underlying raw pixel/component data
         fn as_bytes(&self) -> &[u8] {
             &self.rbuf.data
+        }
+        fn to_file<P: AsRef<std::path::Path>>(&self, filename: P) -> Result<(),std::io::Error> {
+            crate::ppm::write_file(self.as_bytes(), self.width(), self.height(), filename)
         }
         fn fill<C: Color>(&mut self, color: C) {
             let (w,h) = (self.width(), self.height());
@@ -408,6 +418,9 @@ impl Pixel for PixfmtAlphaBlend<'_,Pixfmt<Rgb8>,Gray8> {
     }
     fn as_bytes(&self) -> &[u8] {
         self.ren.pixf.as_bytes()
+    }
+    fn to_file<P: AsRef<std::path::Path>>(&self, filename: P) -> Result<(),std::io::Error> {
+        crate::ppm::write_file(self.as_bytes(), self.width(), self.height(), filename)
     }
     fn fill<C: Color>(&mut self, color: C) {
         let (w,h) = (self.width(), self.height());

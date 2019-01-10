@@ -33,6 +33,10 @@ impl RenderingBuffer {
     pub fn clear(&mut self) {
         self.data.iter_mut().for_each(|v| *v = 255);
     }
+    pub fn from_buf(data: Vec<u8>, width: usize, height: usize, bpp: usize) -> Self {
+        assert_eq!(data.len(), width * height * bpp);
+        RenderingBuffer { width, height, bpp, data }
+    }
 }
 
 use std::ops::Index;

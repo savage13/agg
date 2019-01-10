@@ -260,6 +260,7 @@ pub trait Pixel {
     fn cover_mask() -> u64;
     fn bpp() -> usize;
     fn as_bytes(&self) -> &[u8];
+    fn to_file<P: AsRef<std::path::Path>>(&self, filename: P) -> Result<(),std::io::Error>;
     fn width(&self) -> usize;
     fn height(&self) -> usize;
     fn set<C: Color>(&mut self, id: (usize, usize), c: C);
