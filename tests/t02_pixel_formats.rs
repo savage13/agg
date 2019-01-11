@@ -31,6 +31,6 @@ fn t02_pixel_formats() {
         pix.copy_pixel(i, i, c);
     }
 
-    agg::ppm::write_ppm(&pix.as_bytes(), pix.width(), pix.height(), "agg_test_02.ppm").unwrap();
-    agg::ppm::compare_ppm("agg_test_02.ppm", "tests/agg_test_02.ppm");
+    pix.to_file("tests/tmp/agg_test_02.png").unwrap();
+    assert_eq!(agg::ppm::img_diff("tests/tmp/agg_test_02.png", "images/agg_test_02.png").unwrap(), true);
 }

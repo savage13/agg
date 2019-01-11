@@ -1,21 +1,6 @@
 
 extern crate agg;
-use std::env;
-use std::path::Path;
-use std::path::PathBuf;
-
 use agg::Render;
-
-fn ppm_names() -> (PathBuf,PathBuf) {
-    let progname = env::args().next().unwrap();
-    let progname = Path::new(&progname);
-    let mut base = progname.file_stem().unwrap().to_string_lossy().into_owned();
-    let n = base.rfind("-").unwrap();
-    base.truncate(n);
-    let ppm = Path::new(&base).with_extension("ppm");
-    let test = Path::new("tests").join(ppm.clone());
-    (ppm, test)
-}
 
 #[test]
 fn rounded_rect() {
@@ -55,9 +40,7 @@ fn rounded_rect() {
     ren.color(&agg::Rgba8::new(0,0,0,255));
     agg::render_scanlines(&mut ras, &mut ren);
 
-    // Write out Data
-    let (ppm, test) = ppm_names();
-    agg::ppm::write_ppm(&ren.as_bytes(), w, h, ppm.clone()).unwrap();
-    agg::ppm::compare_ppm(ppm, test);
+    ren.to_file("tests/tmp/rounded_rect.png").unwrap();
+    assert_eq!(agg::ppm::img_diff("tests/tmp/rounded_rect.png", "images/rounded_rect.png").unwrap(), true);
 }
 

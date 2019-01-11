@@ -54,6 +54,6 @@ fn rasterizers() {
         //ras.
         agg::render_scanlines(&mut ras, &mut ren_bin);
     }
-    agg::ppm::write_ppm(&ren_base.as_bytes(), w, h, "rasterizers.ppm").unwrap();
-    agg::ppm::compare_ppm("rasterizers.ppm", "tests/rasterizers.ppm");
+    ren_base.to_file("tests/tmp/rasterizers.png").unwrap();
+    assert!(agg::ppm::img_diff("tests/tmp/rasterizers.png", "images/rasterizers.png").unwrap());
 }

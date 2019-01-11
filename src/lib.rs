@@ -45,8 +45,7 @@
 //!       agg::render_scanlines(&mut ras, &mut ren);
 
 //!       // Save the image to a file
-//!       agg::ppm::write_ppm(&ren_base.as_bytes(), 100,100,
-//!                           "little_black_triangle.ppm").unwrap();
+//!       ren_base.to_file("little_black_triangle.png").unwrap();
 //!
 //!
 //! # Outline AntiAlias Renderer
@@ -68,8 +67,7 @@
 //!
 //!        let mut ras = RasterizerOutlineAA::with_renderer(&mut ren);
 //!        ras.add_path(&path);
-//!        agg::ppm::write_ppm(&ren_base.as_bytes(), 100,100,
-//!              "outline_aa.ppm").unwrap();
+//!        ren_base.to_file("outline_aa.png").unwrap();
 //!
 //! # Primative Renderer
 //!
@@ -93,8 +91,7 @@
 //!
 //!        let mut ras = RasterizerOutline::with_primative(&mut ren);
 //!        ras.add_path(&path);
-//!        agg::ppm::write_ppm(&ren_base.as_bytes(), 100,100,
-//!              "primative.ppm").unwrap();
+//!        ren_base.to_file("primative.png").unwrap();
 //!
 //!
 //! # Raw Pixel Manipulation

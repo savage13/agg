@@ -38,8 +38,8 @@ fn t21_line_join() {
     text(&mut ras, &mut ren, 125.0, 90.0, "Round");
     text(&mut ras, &mut ren, 225.0, 90.0, "Bevel");
 
-    agg::ppm::write_ppm(&ren_base.as_bytes(), 300,100,
-                        "line_join.ppm").unwrap();
+    ren_base.to_file("tests/tmp/line_join.png").unwrap();
+    assert!(agg::ppm::img_diff("tests/tmp/line_join.png", "images/line_join.png").unwrap());
 
 }
 

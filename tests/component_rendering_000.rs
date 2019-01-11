@@ -1,23 +1,7 @@
 
-use std::path::PathBuf;
-use std::path::Path;
-use std::env;
-
-
 type PixRgb8 = agg::Pixfmt<agg::Rgb8>;
 use agg::Gray8;
 use agg::PixfmtAlphaBlend;
-
-fn ppm_names() -> (PathBuf,PathBuf) {
-    let progname = env::args().next().unwrap();
-    let progname = Path::new(&progname);
-    let mut base = progname.file_stem().unwrap().to_string_lossy().into_owned();
-    let n = base.rfind("-").unwrap();
-    base.truncate(n);
-    let ppm = Path::new(&base).with_extension("ppm");
-    let test = Path::new("tests").join(ppm.clone());
-    (ppm, test)
-}
 
 
 #[test]
@@ -60,8 +44,7 @@ fn component_rendering_000() {
         agg::render_scanlines_aa_solid(&mut ras, &mut rbb, g8);
     }
 
-    let (ppm, test) = ppm_names();
 
-    agg::ppm::write_ppm(&ren_base.as_bytes(), w, h, ppm.clone()).unwrap();
-    agg::ppm::compare_ppm(ppm, test);
+    ren_base.to_file("tests/tmp/component_rendering_000.png").unwrap();
+    assert_eq!(agg::ppm::img_diff("tests/tmp/component_rendering_000.png", "images/component_rendering_000.png").unwrap(), true)
 }

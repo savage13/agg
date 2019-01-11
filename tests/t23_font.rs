@@ -1,7 +1,6 @@
 
 #[test]
 fn t23_font() {
-    //let ft = agg::FreeType::init();
     let lib = agg::ft::Library::init().unwrap();
     let font = lib.new_face("/System/Library/Fonts/Helvetica.ttc", 0).unwrap();
     font.set_char_size(13 * 64, 0, 72, 0).unwrap();
@@ -19,7 +18,7 @@ fn t23_font() {
 
     ren_base.blend_hline(50,57,50,agg::Rgba8::new(255,0,0,255),255);
 
-    agg::ppm::write_ppm(&ren_base.as_bytes(), 100,100,
-                        "font.ppm").unwrap();
+    ren_base.to_file("tests/tmp/font.png").unwrap();
+    assert!(agg::ppm::img_diff("tests/tmp/font.png", "images/font.png").unwrap());
 
 }

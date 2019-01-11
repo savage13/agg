@@ -99,9 +99,9 @@ fn lion_cw() {
     println!("polygons: {}", t.len());
     agg::render_all_paths(&mut ras, &mut ren, &t, &colors);
 
-    agg::ppm::write_ppm(&ren.as_bytes(), w, h, "lion_cw.ppm").unwrap();
+    ren.to_file("tests/tmp/lion_cw.png").unwrap();
 
-    agg::ppm::compare_ppm("lion_cw.ppm", "tests/lion_cw.ppm");
+    assert_eq!(agg::ppm::img_diff("tests/tmp/lion_cw.png", "images/lion_cw.png").unwrap(), true);
 
 }
 // compare -verbose -metric AE lion.ppm ./tests/lion.ppm blarg.ppm

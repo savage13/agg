@@ -17,7 +17,8 @@ fn t20_outline_render() {
     let mut ras = RasterizerOutlineAA::with_renderer(&mut ren);
     ras.round_cap(true);
     ras.add_path(&path);
-    agg::ppm::write_ppm(&ren_base.as_bytes(), 100,100, "outline_aa.ppm").unwrap();
-    agg::ppm::compare_ppm("outline_aa.ppm", "tests/outline_aa.ppm");
+    ren_base.to_file("tests/tmp/outline_aa.png").unwrap();
+
+    assert!(agg::ppm::img_diff("tests/tmp/outline_aa.png", "images/outline_aa.png").unwrap());
 
 }

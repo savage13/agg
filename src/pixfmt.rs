@@ -328,6 +328,10 @@ impl Pixfmt<Rgba8pre> {
         let alpha = prelerp_u8(p.a, alpha,  alpha);
         Rgba8pre::new(red, green, blue, alpha)
     }
+    pub fn drop_alpha(&self) -> Pixfmt<Rgb8> {
+        let buf : Vec<_> = self.as_bytes().iter().enumerate().filter(|(i,_)| i%4 < 3).map(|(_,x)| *x).collect();
+        Pixfmt::<Rgb8> { rbuf: RenderingBuffer::from_buf(buf, self.width(), self.height(), 3), phantom: PhantomData }
+    }
 }
 
 impl Pixel for Pixfmt<Rgba32> {

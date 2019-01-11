@@ -3,21 +3,6 @@ extern crate agg;
 
 use agg::Render;
 use agg::VertexSource;
-//use std::fs;
-use std::path::PathBuf;
-use std::path::Path;
-use std::env;
-
-fn ppm_names() -> (PathBuf,PathBuf) {
-    let progname = env::args().next().unwrap();
-    let progname = Path::new(&progname);
-    let mut base = progname.file_stem().unwrap().to_string_lossy().into_owned();
-    let n = base.rfind("-").unwrap();
-    base.truncate(n);
-    let ppm = Path::new(&base).with_extension("ppm");
-    let test = Path::new("tests").join(ppm.clone());
-    (ppm, test)
-}
 
 pub struct Roundoff<T: VertexSource> {
     pub src: T,
@@ -141,9 +126,7 @@ fn rasterizers2() {
         ras_al.add_path(&spiral);
     }
 
-    let (ppm, test) = ppm_names();
-
-    agg::ppm::write_ppm(&ren_base.as_bytes(), w, h, ppm.clone()).unwrap();
-    agg::ppm::compare_ppm(ppm, test);
+    ren_base.to_file("tests/tmp/rasterizers2.png").unwrap();
+    assert_eq!(agg::ppm::img_diff("tests/tmp/rasterizers2.png", "images/rasterizers2.png").unwrap(), true);;
 
 }

@@ -27,8 +27,8 @@ fn t13_aliased() {
 
     agg::render_scanlines(&mut ras, &mut ren);
 
-    agg::ppm::write_ppm(&ren.as_bytes(), w, h, "agg_test_13.ppm").unwrap();
+    ren.to_file("tests/tmp/agg_test_13.png").unwrap();
 
-    agg::ppm::compare_ppm("agg_test_13.ppm", "tests/agg_test_13.ppm");
+    assert_eq!(agg::ppm::img_diff("tests/tmp/agg_test_13.png", "images/agg_test_13.png").unwrap(), true);
 }
 

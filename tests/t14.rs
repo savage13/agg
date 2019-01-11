@@ -27,8 +27,8 @@ fn t14_with_gamma() {
 
     agg::render_scanlines(&mut ras, &mut ren);
 
-    agg::ppm::write_ppm(&ren.as_bytes(), w, h, "agg_test_14.ppm").unwrap();
+    ren.to_file("tests/tmp/agg_test_14.png").unwrap();
 
-    agg::ppm::compare_ppm("agg_test_14.ppm", "tests/agg_test_14.ppm");
+    assert_eq!(agg::ppm::img_diff("tests/tmp/agg_test_14.png", "images/agg_test_14.png").unwrap(), true);
 }
 

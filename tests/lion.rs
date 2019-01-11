@@ -100,8 +100,8 @@ fn lion() {
     println!("polygons: {}", t.len());
     agg::render_all_paths(&mut ras, &mut ren, &t, &colors);
 
-    agg::ppm::write_ppm(&ren.as_bytes(), w, h, "lion.ppm").unwrap();
+    ren.to_file("tests/tmp/lion.png").unwrap();
 
-    agg::ppm::compare_ppm("lion.ppm", "tests/lion.ppm");
+    assert_eq!(agg::ppm::img_diff("tests/tmp/lion.png", "images/lion.png").unwrap(), true);
 
 }

@@ -59,8 +59,8 @@ fn t15_path_stroke() {
 
     agg::render_scanlines_aa_solid(&mut ras, &mut ren.base, agg::Rgba8::new(0,0,0,255));
 
-    agg::ppm::write_ppm(&ren.as_bytes(), w, h, "agg_test_15.ppm").unwrap();
+    ren.to_file("tests/tmp/agg_test_15.png").unwrap();
 
-    agg::ppm::compare_ppm("agg_test_15.ppm", "tests/agg_test_15.ppm");
+    assert_eq!(agg::ppm::img_diff("tests/tmp/agg_test_15.png", "images/agg_test_15.png").unwrap(), true);
 }
 

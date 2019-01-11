@@ -27,8 +27,8 @@ fn t12_clip_box() {
 
     agg::render_scanlines(&mut ras, &mut ren);
 
-    agg::ppm::write_ppm(&ren.as_bytes(), w, h, "agg_test_12.ppm").unwrap();
+    ren.to_file("tests/tmp/agg_test_12.png").unwrap();
 
-    agg::ppm::compare_ppm("agg_test_12.ppm", "tests/agg_test_12.ppm");
+    assert_eq!(agg::ppm::img_diff("tests/tmp/agg_test_12.png", "images/agg_test_12.png").unwrap(), true);
 }
 

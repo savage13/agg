@@ -38,8 +38,8 @@ fn t22_inner_join() {
     text(&mut ras, &mut ren, 225.0, 90.0, "Bevel");
     text(&mut ras, &mut ren, 332.0, 90.0, "Jag");
 
-    agg::ppm::write_ppm(&ren_base.as_bytes(), 400,100,
-                        "inner_join.ppm").unwrap();
+    ren_base.to_file("tests/tmp/inner_join.png").unwrap();
+    assert!(agg::ppm::img_diff("tests/tmp/inner_join.png", "images/inner_join.png").unwrap());
 
 }
 

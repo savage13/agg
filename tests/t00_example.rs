@@ -20,6 +20,6 @@ fn t00_example() {
     agg::render_scanlines(&mut ras, &mut ren);
 
     // Save the image to a file
-    agg::ppm::write_ppm(&ren_base.as_bytes(), 100,100,
-                        "little_black_triangle.ppm").unwrap();
+    ren_base.to_file("tests/tmp/little_black_triangle.png").unwrap();
+    assert!(agg::ppm::img_diff("tests/tmp/little_black_triangle.png", "images/little_black_triangle.png").unwrap());
 }

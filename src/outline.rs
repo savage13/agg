@@ -45,8 +45,8 @@ impl From<Subpixel> for i64 {
 ///
 ///     let mut ras = RasterizerOutline::with_primative(&mut ren);
 ///     ras.add_path(&path);
-///     agg::ppm::write_ppm(&ren_base.as_bytes(), 100,100,
-///                         "primative.ppm").unwrap();
+///     ren_base.to_file("primative.png").unwrap();
+///
 pub struct RasterizerOutline<'a,T> where T: Pixel {
     ren: &'a mut RendererPrimatives<'a,T>,
     start_x: Subpixel,

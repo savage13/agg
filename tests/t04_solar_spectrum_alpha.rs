@@ -28,10 +28,9 @@ fn t04_solar_spectrum_alpha() {
     for i in 0 .. h {
         mix.blend_color_hspan(0, i, w, &span, 0);
     }
-    agg::ppm::write_ppm(&mix.rgb.as_bytes(), w, h,
-              "agg_test_04.ppm").unwrap();
+    mix.rgb.to_file("tests/tmp/agg_test_04.png").unwrap();
 
-    agg::ppm::compare_ppm("agg_test_04.ppm", "tests/agg_test_04.ppm");
+    assert_eq!(agg::ppm::img_diff("tests/tmp/agg_test_04.png", "images/agg_test_04.png").unwrap(), true);
 
 }
 

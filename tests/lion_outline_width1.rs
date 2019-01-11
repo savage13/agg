@@ -3,9 +3,6 @@ extern crate agg;
 use agg::Render;
 
 use std::fs;
-use std::env;
-use std::path::Path;
-use std::path::PathBuf;
 
 fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Srgba8>){
     let txt = fs::read_to_string("tests/lion.txt").unwrap();
@@ -67,18 +64,6 @@ fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Srgba8>){
     (paths, colors)
 }
 
-fn ppm_names() -> (PathBuf,PathBuf) {
-    let progname = env::args().next().unwrap();
-    let progname = Path::new(&progname);
-    let mut base = progname.file_stem().unwrap().to_string_lossy().into_owned();
-    let n = base.rfind("-").unwrap();
-    base.truncate(n);
-    let ppm = Path::new(&base).with_extension("ppm");
-    let test = Path::new("tests").join(ppm.clone());
-    (ppm, test)
-}
-
-
 #[test]
 fn lion_outline_width1() {
     let (w,h) = (400,400);
@@ -125,10 +110,8 @@ fn lion_outline_width1() {
     stroke.iter_mut().for_each(|p| p.width(1.0));
     agg::render_all_paths(&mut ras, &mut ren, &stroke, &colors);
 
-    let (ppm, test) = ppm_names();
-
-    agg::ppm::write_ppm(&ren.as_bytes(), w, h, ppm.clone()).unwrap();
-    agg::ppm::compare_ppm(ppm, test);
+    ren.to_file("tests/tmp/lion_outline_width1.png").unwrap();
+    assert!(agg::ppm::img_diff("tests/tmp/lion_outline_width1.png", "images/lion_outline_width1.png").unwrap());
 
 }
 // compare -verbose -metric AE lion.ppm ./tests/lion.ppm diff.ppm

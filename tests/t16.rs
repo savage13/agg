@@ -41,8 +41,8 @@ fn t16_path_stroke_no_clip() {
 
     agg::render_scanlines_aa_solid(&mut ras, &mut ren.base, agg::Rgba8::new(0,0,0,255));
 
-    agg::ppm::write_ppm(&ren.as_bytes(), w, h, "agg_test_16.ppm").unwrap();
+    ren.to_file("tests/tmp/agg_test_16.png").unwrap();
 
-    agg::ppm::compare_ppm("agg_test_16.ppm", "tests/agg_test_16.ppm");
+    assert!(agg::ppm::img_diff("tests/tmp/agg_test_16.png", "images/agg_test_16.png").unwrap());
 }
 

@@ -5,21 +5,6 @@ use agg::Render;
 use agg::DrawOutline;
 use agg::VertexSource;
 
-use std::path::PathBuf;
-use std::path::Path;
-use std::env;
-
-fn ppm_names() -> (PathBuf,PathBuf) {
-    let progname = env::args().next().unwrap();
-    let progname = Path::new(&progname);
-    let mut base = progname.file_stem().unwrap().to_string_lossy().into_owned();
-    let n = base.rfind("-").unwrap();
-    base.truncate(n);
-    let ppm = Path::new(&base).with_extension("ppm");
-    let test = Path::new("tests").join(ppm.clone());
-    (ppm, test)
-}
-
 pub struct Roundoff<T: VertexSource> {
     pub src: T,
 }
@@ -222,8 +207,6 @@ fn rasterizers2_pre() {
 
     }
 
-    let (ppm, test) = ppm_names();
-
     // Revove alpha channel from data
     let data = ren_base.as_bytes();
     let mut out = vec![];
@@ -232,8 +215,8 @@ fn rasterizers2_pre() {
             out.push(data[i]);
         }
     }
-    agg::ppm::write_ppm(&out, w, h, ppm.clone()).unwrap();
-    agg::ppm::compare_ppm(ppm, test);
+    ren_base.pixf.drop_alpha().to_file("tests/tmp/rasterizers2_pre.png").unwrap();
+    assert!(agg::ppm::img_diff("tests/tmp/rasterizers2_pre.png", "images/rasterizers2_pre.png",).unwrap());
 
 }
 
