@@ -1,7 +1,7 @@
 agg
 ===
 
-![Documentation](https://docs.rs/agg/badge.svg)
+[![Documentation](https://docs.rs/agg/badge.svg)](https://docs.rs/agg)
 
 A Rust port of [Anti-Grain Geometry](http://www.antigrain.com/)
 
