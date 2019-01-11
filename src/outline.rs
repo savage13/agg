@@ -1,5 +1,5 @@
 
-use crate::path_storage::PathCommand;
+use crate::paths::PathCommand;
 use crate::Pixel;
 use crate::VertexSource;
 use crate::render::RendererPrimatives;

@@ -7,8 +7,8 @@ use crate::POLY_SUBPIXEL_SCALE;
 use crate::clip::Clip;
 use crate::scan::ScanlineU8;
 use crate::cell::RasterizerCell;
-use crate::path_storage::PathCommand;
-use crate::path_storage::Vertex;
+use crate::paths::PathCommand;
+use crate::paths::Vertex;
 
 //use crate::Rasterize;
 use crate::VertexSource;

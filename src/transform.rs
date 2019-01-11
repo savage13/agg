@@ -1,7 +1,7 @@
 //! Affine Transforms
 
-use crate::path_storage::Vertex;
-use crate::path_storage::PathStorage;
+use crate::paths::Vertex;
+use crate::paths::PathStorage;
 
 use crate::VertexSource;
 

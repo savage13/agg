@@ -8,10 +8,10 @@ fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Srgba8>){
     let txt = fs::read_to_string("tests/lion.txt").unwrap();
     let mut paths = vec![];
     let mut colors = vec![];
-    let mut path = agg::path_storage::PathStorage::new();
+    let mut path = agg::paths::PathStorage::new();
     //let mut color = agg::Srgba8::black();
     let mut color = agg::color::Srgba8::new(0,0,0,255);
-    let mut cmd = agg::path_storage::PathCommand::Stop;
+    let mut cmd = agg::paths::PathCommand::Stop;
 
     for line in txt.lines() {
         let v : Vec<_> = line.split_whitespace().collect();
@@ -26,7 +26,7 @@ fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Srgba8>){
                 paths.push(path);
                 colors.push(color);
             }
-            path = agg::path_storage::PathStorage::new();
+            path = agg::paths::PathStorage::new();
             let rgb = agg::color::Rgba8::new(r,g,b,255);
             color = agg::Srgba8::from_rgb(rgb);
             //color =  agg::Rgba8::new(r,g,b,255);

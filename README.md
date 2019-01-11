@@ -1,11 +1,11 @@
 agg
 ===
 
+![Documentation](https://docs.rs/agg/badge.svg)
+
 A Rust port of [Anti-Grain Geometry](http://www.antigrain.com/)
 
 > A High Fidelity and Quality 2D Graphics Rendering Engine
-
-![Documentation](https://docs.rs/agg/badge.svg)
 
 ## Usage
 

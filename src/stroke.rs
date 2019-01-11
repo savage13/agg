@@ -1,11 +1,11 @@
 
 
-//use path_storage::PathStorage;
-use crate::path_storage::PathCommand;
-use crate::path_storage::Vertex;
-use crate::path_storage::len;
-use crate::path_storage::cross;
-use crate::path_storage::split;
+//use paths::PathStorage;
+use crate::paths::PathCommand;
+use crate::paths::Vertex;
+use crate::paths::len;
+use crate::paths::cross;
+use crate::paths::split;
 
 use crate::VertexSource;
 use std::f64::consts::PI;

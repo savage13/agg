@@ -120,14 +120,18 @@
 //! [`blend_solid_vspan`]: pixfmt/trait.PixelDraw.html#method.blend_solid_vspan
 //! [`blend_color_hspan`]: pixfmt/trait.PixelDraw.html#method.blend_color_hspan
 //! [`blend_color_vspan`]: pixfmt/trait.PixelDraw.html#method.blend_color_vspan
+//! [`render_scanlines`]: render/fn.render_scanlines.html
+//! [`render_all_paths`]: render/fn.render_all_paths.html
+//! [`render_scanlines_aa_solid`]: render/fn.render_scanlines_aa_solid.html
+//! [`render_scanlines_bin_solid`]: render/fn.render_scanlines_bin_solid.html
 use std::fmt::Debug;
 
 #[doc(hidden)]
 pub use freetype as ft;
 
-pub mod path_storage;
-pub mod conv_stroke;
-pub mod affine_transform;
+pub mod paths;
+pub mod stroke;
+pub mod transform;
 pub mod color;
 pub mod pixfmt;
 pub mod base;
@@ -150,11 +154,11 @@ pub(crate) mod cell;
 pub mod gallery;
 
 #[doc(hidden)]
-pub use crate::path_storage::*;
+pub use crate::paths::*;
 #[doc(hidden)]
-pub use crate::conv_stroke::*;
+pub use crate::stroke::*;
 #[doc(hidden)]
-pub use crate::affine_transform::*;
+pub use crate::transform::*;
 #[doc(hidden)]
 pub use crate::color::*;
 #[doc(hidden)]

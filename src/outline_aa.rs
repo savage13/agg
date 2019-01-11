@@ -1,7 +1,7 @@
 
-use crate::conv_stroke::LineJoin;
-use crate::path_storage::PathCommand;
-use crate::path_storage::Vertex;
+use crate::stroke::LineJoin;
+use crate::paths::PathCommand;
+use crate::paths::Vertex;
 use crate::line_interp::LineParameters;
 use crate::line_interp::DrawVars;
 

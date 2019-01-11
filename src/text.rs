@@ -1,6 +1,6 @@
 
 use crate::VertexSource;
-use crate::path_storage::Vertex;
+use crate::paths::Vertex;
 use crate::base::RenderingBase;
 use crate::color::Rgba8;
 use crate::Pixel;
