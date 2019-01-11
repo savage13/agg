@@ -13,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-agg = "0.1.0"
+agg = "0.1.1"
 ```
 
 ## Example

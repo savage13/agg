@@ -38,12 +38,12 @@
 //!       ras.move_to_d(10.0, 10.0);
 //!       ras.line_to_d(50.0, 90.0);
 //!       ras.line_to_d(90.0, 10.0);
-
+//!
 //!       // Render the line to the image
 //!       let mut ren = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
 //!       ren.color(&agg::Rgba8::black());
 //!       agg::render_scanlines(&mut ras, &mut ren);
-
+//!
 //!       // Save the image to a file
 //!       ren_base.to_file("little_black_triangle.png").unwrap();
 //!
