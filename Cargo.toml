@@ -7,7 +7,6 @@ repository = "https://github.com/savge13/agg"
 documentation = "https://docs.rs/agg"
 homepage = "https://github.com/savage13/agg"
 license = "BSD-2-Clause"
-exclude = [ "/images/*" ]
 description = "High-quality 2D graphics engine based on Anti-grain Geometry"
 
 [dependencies]
