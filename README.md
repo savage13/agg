@@ -5,6 +5,8 @@ A Rust port of [Anti-Grain Geometry](http://www.antigrain.com/)
 
 > A High Fidelity and Quality 2D Graphics Rendering Engine
 
+![Documentation](https://docs.rs/agg/badge.svg)
+
 ## Usage
 
 Add this to your `Cargo.toml`:
@@ -19,7 +21,8 @@ agg = "0.1.0"
 ![Little Black Triangle](https://github.com/savage13/agg/blob/master/tests/little_black_triangle.png)
 
 ```rust
-use agg::PixelData;
+
+#[test]
 use agg::Render;
 
 // Create a blank image 10x10 pixels
@@ -39,8 +42,7 @@ ren.color(&agg::Rgba8::black());
 agg::render_scanlines(&mut ras, &mut ren);
 
 // Save the image to a file
-agg::ppm::write_ppm(&ren_base.pixeldata(), 100,100,
-                    "little_black_triangle.ppm").unwrap();
+ren_base.to_file("tests/tmp/little_black_triangle.png").unwrap();
 ```
 
 ## Features

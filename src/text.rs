@@ -217,6 +217,34 @@ pub fn draw_text<T>(txt: &str, x: i64, y: i64, font: &ft::Face, ren_base: &mut R
     }
 }
 
+
+#[derive(Debug)]
+pub enum AggFontError {
+    /// Freetype Error
+    Ft(ft::error::Error),
+    Io(String)
+}
+
+impl From<ft::error::Error> for AggFontError {
+    fn from(err: ft::error::Error) -> Self {
+        AggFontError::Ft(err)
+    }
+}
+impl From<String> for AggFontError {
+    fn from(err: String) -> Self {
+        AggFontError::Io(err)
+    }
+}
+
+pub fn font(name: &str) -> Result<ft::Face, AggFontError> {
+    let prop = font_loader::system_fonts::FontPropertyBuilder::new().family(name).build();
+    let (font, _) = font_loader::system_fonts::get(&prop).ok_or("error loading font".to_string())?;
+    let lib = ft::Library::init()?;
+    let face = lib.new_memory_face(font, 0)?;
+    Ok(face)
+}
+
+
 #[derive(Debug,Copy,Clone,PartialEq)]
 pub enum XAlign {
     Left, Center, Right
