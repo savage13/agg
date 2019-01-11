@@ -105,9 +105,7 @@ pub enum PathOrientation {
 pub fn split(path: &[Vertex<f64>]) -> Vec<(usize, usize)> {
     let (mut start, mut end) = (None, None);
     let mut pairs = vec![];
-    //println!("SPLIT PATH");
     for (i,v) in path.iter().enumerate() {
-        //println!("SPLIT: item[{}] {:?}  {:?} {:?}", i, v, start, end);
         match (start, end) {
             (None, None) => {
                 match v.cmd {
@@ -145,7 +143,6 @@ pub fn split(path: &[Vertex<f64>]) -> Vec<(usize, usize)> {
     if let (Some(s), Some(e)) = (start, end) {
         pairs.push((s,e));
     }
-    //println!("SPLIT PATH segments: {} {:?} {:?}", pairs.len(), start, end);
     pairs
 }
 
@@ -184,9 +181,7 @@ pub fn preceive_polygon_orientation(vertices: &[Vertex<f64>]) -> PathOrientation
             (p2.x, p2.y)
         };
         area += x1 * y2 - y1 * x2;
-        //eprintln!("FIND AREA: {} <- {} {} {} {} ", area, x1,y1,x2,y2);
     }
-    //eprintln!("FIND AREA: {}", area);
     if area < 0.0 {
         PathOrientation::Clockwise
     } else {
@@ -319,10 +314,6 @@ impl RoundedRect {
         }
         let first = self.vertices[0];
         self.vertices.push(Vertex::close_polygon(first.x, first.y));
-
-        //for v in &self.vertices {
-            //println!("RECT: {:?}", v);
-        //}
     }
     pub fn normalize_radius(&mut self) {
         let dx = (self.y[1] - self.y[0]).abs();
@@ -390,7 +381,6 @@ impl Arc {
             .collect();
         angle.push(self.end);
         for a in &angle {
-            //eprintln!("ARC: {}", a);
             let x = self.x + a.cos() * self.rx;
             let y = self.y + a.sin() * self.ry;
             self.vertices.push( Vertex::line_to(x,y) );

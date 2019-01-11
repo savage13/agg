@@ -51,8 +51,6 @@ fn render_scanline_bin_solid<T,C: Color>(sl: &ScanlineU8,
 {
     let cover_full = 255;
     for span in &sl.spans {
-        //eprintln!("RENDER SCANLINE BIN SOLID: Span x,y,len {} {} {} {}",
-        //          span.x, sl.y, span.len, span.covers.len());
         ren.blend_hline(span.x, sl.y, span.x - 1 + span.len.abs(),
                         color, cover_full);
     }
@@ -235,10 +233,8 @@ impl<'a,T> RendererPrimatives<'a,T> where T: Pixel {
     pub(crate) fn move_to(&mut self, x: Subpixel, y: Subpixel) {
         self.x = x;
         self.y = y;
-        //eprintln!("DDA MOVE: {} {}", x>>8, y>>8);
     }
     pub(crate) fn line_to(&mut self, x: Subpixel, y: Subpixel) {
-        //eprintln!("DDA LINE: {} {}", x>>8, y>>8);
         let (x0,y0) = (self.x, self.y);
         self.line(x0, y0, x, y);
         self.x = x;
@@ -263,8 +259,6 @@ impl<'a,T> RendererPrimatives<'a,T> where T: Pixel {
             }
         } else {
             for _ in 0 .. li.len {
-                //eprintln!("DDA PIX HOR {} {} {} {}", li.x1, li.y2, li.func.y, li.func.y >>8);
-                //self.base.pixf.set((li.x1 as usize, li.y2 as usize), color);
                 self.base.blend_hline(li.x1, li.y2, li.x1, color, mask);
                 li.hstep();
             }
@@ -306,24 +300,19 @@ impl BresehamInterpolator {
         let (z1,z2) = if ver { (x1_hr,x2_hr) } else { (y1_hr,y2_hr) };
         // XXX  - value() should not be used
         let func = LineInterpolator::new(z1.value(), z2.value(), len);
-        //eprintln!("DDA: {} {} {} {} LINE", x1_hr, y1_hr, x2_hr, y2_hr);
         let y2 = func.y >> POLY_SUBPIXEL_SHIFT;
         let x2 = func.y >> POLY_SUBPIXEL_SHIFT;
         Self { x1, y1, x2, y2, ver, len, inc, func }
     }
     fn vstep(&mut self) {
-        //eprintln!("DDA VSTEP {} ({}) {}", self.y1, self.inc, self.func.y);
         self.func.inc();
         self.y1 += self.inc as i64;
         self.x2 = self.func.y >> POLY_SUBPIXEL_SHIFT;
-        //eprintln!("DDA VSTEP {} ({}) {}<==", self.y1, self.inc, self.func.y);
     }
     fn hstep(&mut self) {
-        //eprintln!("DDA HSTEP {} ({}) {}", self.x1, self.inc, self.func.y);
         self.func.inc();
         self.x1 += self.inc as i64;
         self.y2 = self.func.y >> POLY_SUBPIXEL_SHIFT;
-        //eprintln!("DDA HSTEP {} ({}) {}<==", self.x1, self.inc, self.func.y);
     }
 }
 
@@ -347,7 +336,6 @@ impl LineInterpolator {
         let mut rem  = (y2 - y1) % cnt;
         let mut xmod = rem;
         let y = y1;
-        //eprintln!("DRAW: DDA: {} {} {} {} {} :: {} {} ", y, left, rem, xmod, cnt, y1, y2);
         if xmod <= 0 {
             xmod += count;
             rem  += count;
@@ -367,7 +355,6 @@ impl LineInterpolator {
         Self::new(y1, y2, count)
     }
     pub fn new_back_adjusted_2(y: i64, count: i64) -> Self {
-        //eprintln!("DRAW: LI::ba2() y,count {} {}", y, count);
         let cnt = std::cmp::max(1,count);
         let mut left = y / cnt;
         let mut rem = y % cnt;
@@ -389,7 +376,6 @@ impl LineInterpolator {
     //     back
     // }
     pub fn inc(&mut self) {
-        //eprintln!("DRAW: LI++ y,mod,rem,lft,cnt {} {} {} {} {}", self.y, self.xmod, self.rem, self.left, self.count);
         self.xmod += self.rem;
         self.y += self.left;
         if self.xmod > 0 {
@@ -398,7 +384,6 @@ impl LineInterpolator {
         }
     }
     pub fn dec(&mut self) {
-        //eprintln!("DRAW: LI--");
         if self.xmod <= self.rem {
             self.xmod += self.count;
             self.y -= 1;
@@ -501,7 +486,6 @@ impl LineProfileAA {
         let ch_smoother = ch_center + subpixel_center_width;
 
         let val = self.gamma[(base_val * f64::from(aa_mask)) as usize];
-        //eprintln!("-- PROFILE {:4} {:4}", (base_val * aa_mask as f64) as usize, val);
         //ch = ch_center;
         // Fill center portion (on one side)
         for i in 0 .. subpixel_center_width {
@@ -510,7 +494,6 @@ impl LineProfileAA {
 
         for i  in 0 .. subpixel_smoother_width {
             let k = ((base_val - base_val * (i as f64 / subpixel_smoother_width as f64)) * f64::from(aa_mask)) as usize;
-            //eprintln!("-- PROFILE {:4}", self.gamma[k]);
             self.profile[ch_smoother + i] = self.gamma[k];
         }
 
@@ -523,13 +506,6 @@ impl LineProfileAA {
         for i in 0 .. subpixel_scale*2 {
             self.profile[ch_center - 1 - i] = self.profile[ch_center + i]
         }
-        // for i in 0 .. self.profile.len() {
-        //     if i > 0 && i % 10 == 0 {
-        //         eprintln!("");
-        //     }
-        //     eprint!("{:3} ", self.profile[i]);
-        // }
-        // eprintln!("");
     }
 }
 
@@ -566,40 +542,31 @@ impl<'a,T> RendererOutlineAA<'a,T> where T: Pixel {
             self.line0_no_clip(&lp2);
             return;
         }
-        //eprintln!("DRAW: AA0::new line0_no_clip\n");
         let mut li = lp.interp0(self.subpixel_width());
-        //eprintln!("DRAW: line0_no_clip count {} vertical {}", li.count(), li.vertical());
         if li.count() > 0 {
             if li.vertical() {
                 while li.step_ver(self) {
-                    //eprintln!("DRAW: AA0::new interp vertical\n");
                 }
             } else {
                 while li.step_hor(self) {
-                    //eprintln!("DRAW: AA0::new interp horizontal\n");
                 }
             }
         }
     }
     fn line1_no_clip(&mut self, lp: &LineParameters, sx: i64, sy: i64) {
-        //eprintln!("DRAW: line1_no_clip() {} {} {} {}", lp.x1, lp.y1, lp.x2, lp.y2);
         if lp.len > LINE_MAX_LENGTH {
             let (lp1, lp2) = lp.divide();
             self.line1_no_clip(&lp1, (lp.x1 + sx)>>1, (lp.y1+sy)>>1);
             self.line1_no_clip(&lp2, lp.x2 + (lp.y1 + lp1.y1), lp1.y2 - (lp1.x2-lp1.x1));
             return;
         }
-        //eprintln!("DRAW: AA1::new line1_no_clip\n");
         let (sx, sy) = lp.fix_degenerate_bisectrix_start(sx, sy);
         let mut li = lp.interp1(sx, sy, self.subpixel_width());
-        //eprintln!("DRAW: line1_no_clip count {} vertical {}", li.count(), li.vertical());
         if li.vertical() {
             while li.step_ver(self) {
-                //eprintln!("DRAW: AA1::new interp vertical\n");
             }
         } else {
             while li.step_hor(self) {
-                //eprintln!("DRAW: AA1::new interp horizontal\n");
             }
         }
     }
@@ -610,16 +577,13 @@ impl<'a,T> RendererOutlineAA<'a,T> where T: Pixel {
             self.line2_no_clip(&lp2, (lp.x2 + ex) >> 1, (lp.y2 + ey) >> 1);
             return;
         }
-        //eprintln!("DRAW: AA2::new line2_no_clip\n");
         let (ex, ey) = lp.fix_degenerate_bisectrix_end(ex, ey);
         let mut li = lp.interp2(ex, ey, self.subpixel_width());
         if li.vertical() {
             while li.step_ver(self) {
-                //eprintln!("DRAW: AA2::new interp vertical\n");
             }
         } else {
             while li.step_hor(self) {
-                //eprintln!("DRAW: AA2::new interp horizontal\n");
             }
         }
     }
@@ -632,17 +596,14 @@ impl<'a,T> RendererOutlineAA<'a,T> where T: Pixel {
             self.line3_no_clip(&lp2, mx, my, (lp.x2 + ex) >> 1, (lp.y2 + ey) >> 1);
             return;
         }
-        //eprintln!("DRAW: AA3::new line3_no_clip\n");
         let (sx, sy) = lp.fix_degenerate_bisectrix_start(sx, sy);
         let (ex, ey) = lp.fix_degenerate_bisectrix_end(ex, ey);
         let mut li = lp.interp3(sx, sy, ex, ey, self.subpixel_width());
         if li.vertical() {
             while li.step_ver(self) {
-                //eprintln!("DRAW: AA3::new interp vertical\n");
             }
         } else {
             while li.step_hor(self) {
-                //eprintln!("DRAW: AA3::new interp horizontal\n");
             }
         }
     }
@@ -710,7 +671,6 @@ impl<'a,T> RendererOutlineAA<'a,T> where T: Pixel {
         let dy = y - yc;
         loop {
             let d = ((dx*dx + dy*dy) as f64).sqrt() as i64;
-            //eprintln!("PIE HLINE: {:6},{:6}({:4} {:4}) => {:4}", xc,yc, dx, dy, d);
             covers[p1] = 0;
             if di.dist1 <= 0 && di.dist2 > 0 && d <= w {
                 covers[p1] = self.cover(d);
@@ -750,7 +710,6 @@ impl<T> RenderOutline for RendererOutlineAA<'_, T> where T: Pixel {
 
 impl<T> DrawOutline for RendererOutlineAA<'_, T> where T: Pixel {
     fn line3(&mut self, lp: &LineParameters, sx: i64, sy: i64, ex: i64, ey: i64) {
-        //eprintln!("DRAW: line3() {:?}", lp);
         if let Some(clip_box) = self.clip_box {
             let (x1,y1,x2,y2,flags) = clip_line_segment(lp.x1, lp.y1, lp.x2, lp.y2, clip_box);
             if (flags & 4) == 0 {
@@ -856,7 +815,6 @@ impl<T> DrawOutline for RendererOutlineAA<'_, T> where T: Pixel {
 
     }
     fn line0(&mut self, lp: &LineParameters) {
-        //eprintln!("DRAW: line0() {:?}", lp);
         if let Some(clip_box) = self.clip_box {
             let (x1,y1,x2,y2,flags) = clip_line_segment(lp.x1,lp.y1,lp.x2,lp.y2,clip_box);
             if flags & 4 == 0 { // Visible
@@ -873,7 +831,6 @@ impl<T> DrawOutline for RendererOutlineAA<'_, T> where T: Pixel {
         }
     }
     fn line1(&mut self, lp: &LineParameters, sx: i64, sy: i64) {
-        //eprintln!("DRAW: line1() {} {} {} {}", lp.x1, lp.y1, lp.x2, lp.y2);
         if let Some(clip_box) = self.clip_box {
             let (x1,y1,x2,y2,flags) = clip_line_segment(lp.x1,lp.y1,lp.x2,lp.y2, clip_box);
             if flags & 4 == 0 {
@@ -899,7 +856,6 @@ impl<T> DrawOutline for RendererOutlineAA<'_, T> where T: Pixel {
         }
     }
     fn line2(&mut self, lp: &LineParameters, ex: i64, ey: i64) {
-        //eprintln!("DRAW: line2() {:?}", lp);
         if let Some(clip_box) = self.clip_box {
             let (x1,y1,x2,y2,flags) = clip_line_segment(lp.x1,lp.y1,lp.x2,lp.y2, clip_box);
             if flags & 4 == 0 {
@@ -1142,7 +1098,6 @@ impl<T> DrawOutline for RendererOutlineImg<'_, T> where T: Pixel {
             }
             self.start = start + (lp.len as f64 / self.scale_x as f64).round() as i64;
         } else {
-            //eprintln!("LINE3: {} {} {} {}", sx, sy, ex, ey);
             self.line3_no_clip(lp, sx, sy, ex, ey);
         }
     }
@@ -1173,23 +1128,13 @@ impl<'a,T> RendererOutlineImg<'a,T> where T: Pixel {
     //     self.subpixel_width() as f64 / POLY_SUBPIXEL_SCALE as f64
     // }
     fn pixel(&mut self, x: i64, y: i64) -> Rgba8 {
-        //eprintln!("PIXEL {} {}", x, y);
         self.pattern.pixel(x, y)
     }
     fn blend_color_hspan(&mut self, x: i64, y: i64, len: i64, colors: &[Rgba8]) {
-        //eprintln!("LENGTH COLORS {}", colors.len());
-        //assert_eq!(len as usize, colors.len());
-        //for (i,color) in colors.iter().enumerate() {
         self.ren.blend_color_hspan(x, y, len, colors, &[], 255);
-        //}
     }
     fn blend_color_vspan(&mut self, x: i64, y: i64, len: i64, colors: &[Rgba8]) {
-        //eprintln!("LENGTH COLORS {}", colors.len());
-        assert_eq!(len as usize, colors.len());
         self.ren.blend_color_vspan(x, y, len, colors, &[], 255);
-        //for (i,color) in colors.iter().enumerate() {
-        //    self.ren.blend_solid_hspan(x, y+i as i64, 1, color, &[255]);
-        //}
     }
     fn line3_no_clip(&mut self, lp: &LineParameters, sx: i64, sy: i64, ex: i64, ey: i64) {
         if lp.len > LINE_MAX_LENGTH {
@@ -1200,10 +1145,8 @@ impl<'a,T> RendererOutlineImg<'a,T> where T: Pixel {
             self.line3_no_clip(&lp2, mx, my, (lp.x2 + ex) >> 1, (lp.y2 + ey) >> 1);
             return;
         }
-        //eprintln!("LINE3: {} {} {} {}", sx, sy, ex, ey);
         let (sx, sy) = lp.fix_degenerate_bisectrix_start(sx, sy);
         let (ex, ey) = lp.fix_degenerate_bisectrix_end(ex, ey);
-        //eprintln!("LINE3: {} {} {} {}", sx, sy, ex, ey);
         let mut li = lp.interp_image(sx, sy, ex, ey,
                                  self.subpixel_width(),
                                  self.start,
@@ -1341,7 +1284,6 @@ impl LineImagePatternPow2 {
         self.base.height
     }
     pub fn pixel(&self, x: i64, y: i64) -> Rgba8 {
-        //eprintln!("PIXEL {} {}", x, y);
         self.base.filter.pixel_high_res(&self.base.pix,
                                         (x & self.mask as i64) + self.base.dilation_hr,
                                         y + self.base.offset_y_hr)
@@ -1366,7 +1308,6 @@ impl PatternFilterBilinear {
     }
     pub fn pixel_high_res(&self, pix: &Pixfmt<Rgba8>, x: i64, y: i64) -> Rgba8 {
 
-        //eprintln!("PIXEL HIGH RES: {:6} {:6}", x, y);
         let (mut red, mut green, mut blue, mut alpha) = (0i64, 0i64, 0i64, 0i64);
 
         let x_lr = (x as usize) >> POLY_SUBPIXEL_SHIFT;
@@ -1382,33 +1323,28 @@ impl PatternFilterBilinear {
         green += weight * i64::from(ptr.g);
         blue  += weight * i64::from(ptr.b);
         alpha += weight * i64::from(ptr.a);
-        //eprintln!("PIXEL HIGH RES: {:7} {:7} {:7} {:7} w {:7} p {:7} {:7} {:7} {:7} xy {:4} {:4}", r,g,b,a, weight, ptr.r, ptr.g, ptr.b, ptr.a, x_lr,y_lr);
         let ptr = pix.get((x_lr + 1,y_lr));
         let weight = x * (POLY_SUBPIXEL_SCALE - y);
         red   += weight * i64::from(ptr.r);
         green += weight * i64::from(ptr.g);
         blue  += weight * i64::from(ptr.b);
         alpha += weight * i64::from(ptr.a);
-        //eprintln!("PIXEL HIGH RES: {:7} {:7} {:7} {:7} w {:7} p {:7} {:7} {:7} {:7} xy {:4} {:4}", r,g,b,a,weight, ptr.r, ptr.g, ptr.b, ptr.a,x_lr+1,y_lr);
         let ptr = pix.get((x_lr,y_lr+1));
         let weight = (POLY_SUBPIXEL_SCALE - x) * y;
         red   += weight * i64::from(ptr.r);
         green += weight * i64::from(ptr.g);
         blue  += weight * i64::from(ptr.b);
         alpha += weight * i64::from(ptr.a);
-        //eprintln!("PIXEL HIGH RES: {:7} {:7} {:7} {:7} w {:7} p {:7} {:7} {:7} {:7} xy {:4} {:4}", r,g,b,a, weight, ptr.r, ptr.g, ptr.b, ptr.a, x_lr, y_lr+1);
         let ptr = pix.get((x_lr+1,y_lr+1));
         let weight = x * y;
         red   += weight * i64::from(ptr.r);
         green += weight * i64::from(ptr.g);
         blue  += weight * i64::from(ptr.b);
         alpha += weight * i64::from(ptr.a);
-        //eprintln!("PIXEL HIGH RES: {:7} {:7} {:7} {:7} w {:7} p {:7} {:7} {:7} {:7} xy {:4} {:4}", r,g,b,a, weight, ptr.r, ptr.g, ptr.b, ptr.a, x_lr+1,y_lr+1);
         let red   = (red   >> (POLY_SUBPIXEL_SHIFT * 2)) as u8;
         let green = (green >> (POLY_SUBPIXEL_SHIFT * 2)) as u8;
         let blue  = (blue  >> (POLY_SUBPIXEL_SHIFT * 2)) as u8;
         let alpha = (alpha >> (POLY_SUBPIXEL_SHIFT * 2)) as u8;
-        //eprintln!("PIXEL HIGH RES: {:7} {:7} {:7} {:7}", r,g,b,a);
         Rgba8::new(red,green,blue,alpha)
     }
 }
@@ -1470,11 +1406,6 @@ impl LineInterpolatorImage {
                                                 sx, sy, ex, ey, lp.len, scale_x,
                                                 lp.x1 & ! POLY_SUBPIXEL_MASK,
                                                 lp.y1 & ! POLY_SUBPIXEL_MASK);
-        //eprintln!("LII: sx,sy,ex,ey {} {} {} {}", sx,sy,ex,ey);
-        //eprintln!("LII: WIDTH: {}", width);
-        //eprintln!("LII: MAX EXTENT: {}", max_extent);
-        //eprintln!("LII: START: {}", start);
-        //eprintln!("LII: dist_start {}", di.dist_start);
         let dd = if lp.vertical {
             lp.dy << POLY_SUBPIXEL_SHIFT
         } else {
@@ -1505,7 +1436,6 @@ impl LineInterpolatorImage {
                 } else {
                     di.inc_y_by(x - old_x);
                 }
-                //eprintln!("LII: dist_start {}", di.dist_start);
 
                 old_x = x;
 
@@ -1552,7 +1482,6 @@ impl LineInterpolatorImage {
                 } else {
                     di.inc_x_by(y - old_y);
                 }
-                //eprintln!("LII: dist_start {}", di.dist_start);
 
                 old_y = y;
 
@@ -1590,7 +1519,6 @@ impl LineInterpolatorImage {
         }
         m_li.adjust_forward();
         step -= max_extent;
-        //eprintln!("LII: dist_start {}", di.dist_start);
 
         Self {
             lp, x, y, old_x, old_y, count, width, max_extent, step,
@@ -1604,7 +1532,6 @@ impl LineInterpolatorImage {
     fn step_ver<T>(&mut self, ren: &mut RendererOutlineImg<T>) -> bool
     where T: Pixel
     {
-        //eprintln!("STEP_VER: di.dist_start {}", self.di.dist_start);
         self.li.inc();
         self.y += self.lp.inc;
         self.x = (self.lp.x1 + self.li.y) >> POLY_SUBPIXEL_SHIFT;
@@ -1614,7 +1541,6 @@ impl LineInterpolatorImage {
         } else {
             self.di.dec_y_by(self.x - self.old_x);
         }
-        //eprintln!("STEP_VER: di.dist_start {}", self.di.dist_start);
         self.old_x = self.x;
 
         let mut s1 = self.di.dist / self.lp.len;
@@ -1629,18 +1555,11 @@ impl LineInterpolatorImage {
         let mut dist_end   = self.di.dist_end;
         let mut p0 = MAX_HALF_WIDTH + 2;
         let mut p1 = p0;
-        //eprintln!("STEP_VER: dist_pict {} start {} dist_end {} dist_start {}", self.di.dist_pict, self.start, dist_end, dist_start);
         let mut npix = 0;
         self.colors[p1].clear();
         if dist_end > 0 {
             if dist_start <= 0 {
                 self.colors[p1] = ren.pixel(dist_pict, s2);
-                /*
-                eprintln!("STEP_VER: {:4},{:4} c {:4} {:4} {:4} {:4} dist {} s2 {}",
-                          self.x, self.y, self.colors[p1].r, self.colors[p1].g,
-                          self.colors[p1].b,
-                          self.colors[p1].a, dist_pict, s2);
-                 */
             }
             npix += 1;
         }
@@ -1658,12 +1577,6 @@ impl LineInterpolatorImage {
                     dist = -dist;
                 }
                 self.colors[p1] = ren.pixel(dist_pict, s2 + dist);
-                /*
-                eprintln!("STEP_VER: {:4},{:4} c {:4} {:4} {:4} {:4} dist {} s2 {}",
-                          self.x, self.y, self.colors[p1].r, self.colors[p1].g,
-                          self.colors[p1].b,
-                          self.colors[p1].a, dist_pict, s2+dist);
-                 */
                 npix += 1;
             }
             p1 += 1;
@@ -1687,12 +1600,6 @@ impl LineInterpolatorImage {
                     dist = -dist;
                 }
                 self.colors[p0] = ren.pixel(dist_pict, s2 - dist);
-                /*
-                eprintln!("STEP_VER: {:4},{:4} c {:4} {:4} {:4} {:4} dist {} s2 {}",
-                          self.x, self.y, self.colors[p0].r, self.colors[p0].g,
-                          self.colors[p0].b,
-                          self.colors[p0].a, dist_pict, s2-dist);
-                 */
                 npix += 1;
             }
             dx += 1;
@@ -1741,12 +1648,6 @@ impl LineInterpolatorImage {
         if dist_end > 0 {
             if dist_start <= 0 {
                 self.colors[p1] = ren.pixel(dist_pict, s2);
-                /*
-                eprintln!("STEP_HOR: {:4},{:4} c {:4} {:4} {:4} {:4}",
-                          self.x, self.y, self.colors[p1].r, self.colors[p1].g,
-                          self.colors[p1].b,
-                          self.colors[p1].a);
-                 */
             }
             npix += 1;
         }
@@ -1832,10 +1733,6 @@ impl DistanceInterpolator4 {
         let dist_start =
             (line_mr(x + POLY_SUBPIXEL_SCALE/2) - line_mr(sx)) * dy_start -
             (line_mr(y + POLY_SUBPIXEL_SCALE/2) - line_mr(sy)) * dx_start;
-        //eprintln!("TOR4: dist_start {}", dist_start);
-        //eprintln!("TOR4: x,y {} {}", x,y);
-        //eprintln!("TOR4: sx,sy {} {}", sx,sy);
-        //eprintln!("TOR4: dx,dy {} {}", dx_start, dy_start);
         let dist_end = (line_mr(x + POLY_SUBPIXEL_SCALE/2) - line_mr(ex)) * dy_end -
             (line_mr(y + POLY_SUBPIXEL_SCALE/2) - line_mr(ey)) * dx_end;
         let len = (len as f64 / scale).round() as i64;

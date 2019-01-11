@@ -166,7 +166,6 @@ impl Source for Pixfmt<Rgba8> {
 impl Source for Pixfmt<Rgba8pre> {
     fn get(&self, id: (usize, usize)) -> Rgba8 {
         let p = &self.rbuf[id];
-        //eprintln!("COLOR ({},{}) : {} {} {})", id.0,id.1,p[0],p[1],p[2]);
         Rgba8::new(p[0],p[1],p[2],p[3])
     }
 }
@@ -180,13 +179,11 @@ impl Source for Pixfmt<Rgba32> {
     fn get(&self, id: (usize, usize)) -> Rgba8 {
         //let n = (id.0 + id.1 * self.rbuf.width) * Pixfmt::<Rgba32>::bpp();
         let p = &self.rbuf[id];
-        //eprintln!("GET {:?}", &p[..16]);
         let red   : f32 = unsafe { std::mem::transmute::<[u8;4],f32>([p[0],p[1],p[2],p[3]]) };
         let green : f32 = unsafe { std::mem::transmute::<[u8;4],f32>([p[4],p[5],p[6],p[7]]) };
         let blue  : f32 = unsafe { std::mem::transmute::<[u8;4],f32>([p[8],p[9],p[10],p[11]]) };
         let alpha : f32 = unsafe { std::mem::transmute::<[u8;4],f32>([p[12],p[13],p[14],p[15]]) };
-        //eprintln!("GET: {} {} {} {}", r,g,b,a);
-        //eprintln!("GET {:?}", Rgba32::new(r,g,b,a));
+
         let c = Rgba32::new(red,green,blue,alpha);
         Rgba8::from_trait(c)
     }
@@ -231,7 +228,6 @@ impl Pixel for Pixfmt<Rgba8> {
         self.rbuf[id][3] = c.alpha8();
     }
     fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: C, cover: u64) {
-        println!("blend_pix: {:?} {:?} {}", self.get(id), c, cover);
         let alpha = multiply_u8(c.alpha8(), cover as u8);
         let pix0 = self.get(id); // Rgba8
         let pix  = self.mix_pix(pix0, Rgba8::from_trait(c), alpha);
@@ -250,9 +246,7 @@ impl Pixel for Pixfmt<Rgb8> {
     fn bpp() -> usize { 3 }
     fn cover_mask() -> u64 { 255 }
     fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: C, cover: u64) {
-        //eprintln!("BLEND PIX rgb8 in  {:?} cover {}", c, cover);
         let pix0 = self.raw(id);
-        //eprintln!("BLEND PIX rgb8 cur {:?}", c);
         let pix  = self.mix_pix(pix0, Rgb8::from_trait(c), c.alpha8(), cover);
         self.set(id, pix);
     }
@@ -343,7 +337,7 @@ impl Pixel for Pixfmt<Rgba32> {
         let green : [u8;4] = unsafe { std::mem::transmute(c.g) };
         let blue  : [u8;4] = unsafe { std::mem::transmute(c.b) };
         let alpha : [u8;4] = unsafe { std::mem::transmute(c.a) };
-        //eprintln!("SET: {:?} {:?} {:?} {:?}", r,g,b,a);
+
         for i in 0 .. 4 {
             self.rbuf[id][i]    = red[i];
             self.rbuf[id][i+4]  = green[i];
@@ -442,13 +436,10 @@ impl Pixel for PixfmtAlphaBlend<'_,Pixfmt<Rgb8>,Gray8> {
     fn bpp() -> usize { Pixfmt::<Rgb8>::bpp() }
     fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: C, cover: u64) {
         let alpha = multiply_u8(c.alpha8(), cover as u8);
-        //println!("blend_pix color {:?} cover {} alpha {} {}", c, cover, alpha, c.alpha8());
+
         let c = Rgb8::from_trait(c);
-        //println!("          color {:?}", c);
         let c0 = self.component(c);
-        //println!("          color {:?}", c);
         let p0 = self.mix_pix(id, c0, alpha);
-        //println!("          color {:?}", c);
         self.set(id, p0);
     }
 
@@ -550,7 +541,6 @@ mod tests {
             assert_eq!(p.get((0,i)), Rgba8::black());
         }
 
-        println!("copy_vline: y inside but too long");
         p.clear();
         p.copy_vline(1,5,20,Rgb8::black());
         for i in 0 .. 5 {
@@ -559,7 +549,6 @@ mod tests {
         for i in 5 .. 10 {
             assert_eq!(p.get((1,i)), Rgba8::black(),"pix({},{}): {:?}",1,i,p.get((1,i)));
         }
-        println!("copy_vline: y inside and short");
         p.copy_vline(2,3,5,Rgb8::black());
         for i in 0 .. 3 {
             assert_eq!(p.get((2,i)), Rgba8::white(),"pix({},{}): {:?}",2,i,p.get((2,i)));

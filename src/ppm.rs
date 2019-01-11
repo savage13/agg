@@ -28,8 +28,6 @@ pub fn img_diff<P: AsRef<Path>>(f1: P, f2: P) -> Result<bool,image::ImageError> 
     for (i,(v1,v2)) in d1.iter().zip(d2.iter()).enumerate() {
         if v1 != v2 {
             println!("{} [{},{},{}]: {} {}", i, (i/3)%w1,(i/3)/w1,i%3, v1,v2);
-            //eprintln!("{}: {} {}", i, v1, v2);
-            //return Ok(false);
             flag = false;
         }
     }

@@ -94,7 +94,6 @@ impl RasterizerScanline {
             self.reset();
         }
         for seg in path.xconvert() {
-            println!("ADD_PATH: {:?}", seg);
             match seg.cmd {
                 PathCommand::LineTo => self.line_to_d(seg.x, seg.y),
                 PathCommand::MoveTo => self.move_to_d(seg.x, seg.y),
@@ -126,7 +125,6 @@ impl RasterizerScanline {
     ///
     /// Returns true if data exists in the input Scanline
     pub(crate) fn sweep_scanline(&mut self, sl: &mut ScanlineU8) -> bool {
-        println!("ADD_PATH: SWEEP SCANLINE: Y: {}", self.scan_y);
         loop {
             if self.scan_y < 0 {
                 self.scan_y += 1;
@@ -149,7 +147,6 @@ impl RasterizerScanline {
                     let mut area = cur_cell.area;
 
                     cover  += cur_cell.cover;
-                    println!("ADD_PATH: SWEEP SCANLINES: x,y {} {} {} {} :: {} {} n: {}", cur_cell.x, self.scan_y, cur_cell.area, cur_cell.cover, area, cover, num_cells);
                     num_cells -= 1;
                     //accumulate all cells with the same X
                     while num_cells > 0 {
@@ -160,11 +157,8 @@ impl RasterizerScanline {
                         area += cur_cell.area;
                         cover += cur_cell.cover;
                         num_cells -= 1;
-                        println!("ADD_PATH: SWEEP SCANLINES: x,y {} {} {} {} :: {} {}", cur_cell.x, self.scan_y, cur_cell.area, cur_cell.cover, area, cover);
                     }
-                    println!("ADD_PATH: SWEEP SCANLINES: x,y {} {} {} {} :: {} {}", cur_cell.x, self.scan_y, cur_cell.area, cur_cell.cover, area, cover);
                     if area != 0 {
-                        println!("ADD_PATH: SWEEP SCANLINES: ADDING CELL: x {} y {} area {} cover {}", x, self.scan_y, area, cover);
                         let alpha = self.calculate_alpha((cover << (POLY_SUBPIXEL_SHIFT + 1)) - area);
                         if alpha > 0 {
                             sl.add_cell(x, alpha);
@@ -173,7 +167,6 @@ impl RasterizerScanline {
                     }
                     if num_cells > 0 && cur_cell.x > x {
                         let alpha = self.calculate_alpha(cover << (POLY_SUBPIXEL_SHIFT + 1));
-                        println!("ADD_PATH: SWEEP SCANLINES: ADDING SPAN: {} -> {} Y: {} area {} cover {}", x, cur_cell.x, self.scan_y, area, cover);
                         if alpha > 0 {
                             sl.add_span(x, cur_cell.x - x, alpha);
                         }

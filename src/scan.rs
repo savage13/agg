@@ -76,12 +76,9 @@ impl ScanlineU8 {
         //self.covers.insert( x, cover );
         if x == self.last_x + 1 {
             let cur = self.spans.last_mut().unwrap();
-            //eprintln!("ADD_SPAN: Increasing length of span: {} {} x: {} {}", cur.len, cur.covers.len(), x+self.min_x, len);
             cur.len += len;
             cur.covers.extend(vec![cover; len as usize]);
-            //eprintln!("ADD_SPAN: Increasing length of span: {} {} x: {}", cur.len, cur.covers.len(), x+self.min_x);
         } else {
-            //eprintln!("ADD_SPAN: Adding span of length: {} at {}", len, x+self.min_x);
             let span = Span { x: x + self.min_x, len,
                               covers: vec![cover; len as usize] };
             self.spans.push(span);

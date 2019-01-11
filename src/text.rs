@@ -147,9 +147,6 @@ impl VertexSource for GsvText {
                 }
             }
         }
-        //for v in &out {
-        //    println!("TEXT: {:?}", v);
-        //}
         out
     }
 }

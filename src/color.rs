@@ -67,25 +67,17 @@ impl Rgba8 {
         self.a = 0;
     }
     pub fn premultiply(self) -> Rgba8pre {
-        //if self.a == 158 {
-        //    eprint!("COLOR {} {} {} {} => ", self.r, self.g, self.b, self.a);
-        //}
         match self.a {
             255 => {
-                //eprintln!("{} {} {} {} PREMULTIPLY", self.r, self.g, self.b, self.a);
                 Rgba8pre::new(self.r, self.g, self.b, self.a)
             },
             0   => {
-                //eprintln!("{} {} {} {} PREMULTIPLY", 0,0,0, self.a);
                 Rgba8pre::new(0, 0, 0, self.a)
             },
             _   => {
                 let r = multiply_u8(self.r, self.a);
                 let g = multiply_u8(self.g, self.a);
                 let b = multiply_u8(self.b, self.a);
-                //if self.a == 158 {
-                //    eprintln!("{} {} {} PREMULTIPLY ", r, g, b);
-                //}
                 Rgba8pre::new(r, g, b, self.a)
             }
         }
