@@ -265,6 +265,7 @@ pub trait Pixel {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
     fn set<C: Color>(&mut self, id: (usize, usize), c: C);
+    fn setn<C: Color>(&mut self, id: (usize, usize), n: usize, c: C);
     fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: C, cover: u64);
     /// Fill the data with the specified `color`
     fn fill<C: Color>(&mut self, color: C);
@@ -341,9 +342,7 @@ pub trait Pixel {
         }
         let (x,y,len) = (x as usize, y as usize, len as usize);
         if color.is_opaque() && cover == Self::cover_mask() {
-            for i in 0 .. len {
-                self.set((x+i,y),color);
-            }
+            self.setn((x,y), len, color);
         } else {
             for i in 0 .. len {
                 self.blend_pix((x+i,y),color,cover);

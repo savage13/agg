@@ -55,6 +55,9 @@ impl Rgba8 {
     pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Rgba8 { r, g, b, a }
     }
+    pub fn into_slice(&self) -> [u8;4] {
+        [self.r, self.g, self.b, self.a]
+    }
     /// Crate new color from a wavelength and gamma 
     pub fn from_wavelength_gamma(w: f64, gamma: f64) -> Self {
         let c = Rgb8::from_wavelength_gamma(w, gamma);
@@ -106,6 +109,9 @@ impl Gray8 {
     pub fn from_slice(v: &[u8]) -> Self {
         Self::new_with_alpha(v[0],v[1])
     }
+    pub fn into_slice(&self) -> [u8;2] {
+        [self.value, self.alpha]
+    }
 }
 
 fn luminance_u8(red: u8, green: u8, blue: u8) -> u8 {
@@ -152,6 +158,9 @@ impl Rgb8 {
     }
     pub fn from_slice(v: &[u8]) -> Self {
         Rgb8 { r: v[0], g: v[1], b: v[2] }
+    }
+    pub fn into_slice(&self) -> [u8;3] {
+        [self.r, self.g, self.b]
     }
     pub fn from_wavelength_gamma(w: f64, gamma: f64) -> Self {
         let (r,g,b) =
@@ -208,6 +217,12 @@ pub struct Rgba8pre {
 impl Rgba8pre {
     pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self {r, g, b, a}
+    }
+    pub fn from_trait<C: Color>(color: C) -> Self {
+        Self {r: color.red8(), g: color.green8(), b: color.blue8(), a: color.alpha8() }
+    }
+    pub fn into_slice(&self) -> [u8;4] {
+        [self.r, self.g, self.b, self.a]
     }
 }
 

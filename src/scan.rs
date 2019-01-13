@@ -43,7 +43,7 @@ impl ScanlineU8 {
     /// Create a new empty scanline
     pub fn new() -> Self {
         Self { last_x: LAST_X, min_x: 0, y: 0,
-               spans: vec![], } //covers: HashMap::new() }
+               spans: Vec::with_capacity(256), } //covers: HashMap::new() }
     }
     /// Reset values and clear spans
     pub fn reset_spans(&mut self) {
@@ -55,7 +55,7 @@ impl ScanlineU8 {
     pub fn reset(&mut self, min_x: i64, _max_x: i64) {
         self.last_x = LAST_X;
         self.min_x = min_x;
-        self.spans = vec![];
+        self.spans.clear();
         //self.covers = HashMap::new()
     }
     /// Set the current row (y) that is to be worked on

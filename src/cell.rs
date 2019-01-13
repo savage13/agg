@@ -69,7 +69,7 @@ pub(crate) struct RasterizerCell {
 impl RasterizerCell {
     /// Create new Cell collection
     pub fn new() -> Self {
-        Self { cells: vec![],
+        Self { cells: Vec::with_capacity(256),
                min_x: std::i64::MAX,
                min_y: std::i64::MAX,
                max_x: std::i64::MIN,
@@ -99,7 +99,7 @@ impl RasterizerCell {
             return;
         }
         // Distribute into 
-        self.sorted_y = vec![vec![]; (self.max_y+1) as usize];
+        self.sorted_y = vec![Vec::with_capacity(8); (self.max_y+1) as usize];
         for c in self.cells.iter() {
             if c.y >= 0 {
                 let y = c.y as usize;
