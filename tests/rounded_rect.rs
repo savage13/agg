@@ -34,7 +34,7 @@ fn rounded_rect() {
     let mut r = agg::RoundedRect::new(m_x[0]+d, m_y[0]+d, m_x[1]+d, m_y[1]+d, 36.0);
     r.normalize_radius();
     r.calc();
-    let mut stroke = agg::ConvStroke::new( r );
+    let mut stroke = agg::Stroke::new( r );
     stroke.width( 7.0 );
     ras.add_path(&stroke);
     ren.color(&agg::Rgba8::new(0,0,0,255));

@@ -1,7 +1,7 @@
 //! Affine Transforms
 
 use crate::paths::Vertex;
-use crate::paths::PathStorage;
+use crate::paths::Path;
 
 use crate::VertexSource;
 
@@ -66,7 +66,7 @@ impl AffineTransform {
 #[derive(Debug,Default)]
 pub struct ConvTransform {
     /// Source Path to Transform
-    pub source: PathStorage,
+    pub source: Path,
     /// Transform to apply
     pub trans: AffineTransform,
 }
@@ -81,7 +81,7 @@ impl VertexSource for ConvTransform {
 
 impl ConvTransform {
     /// Create a new Path Transform
-    pub fn new(source: PathStorage, trans: AffineTransform) -> Self {
+    pub fn new(source: Path, trans: AffineTransform) -> Self {
         Self { source, trans }
     }
     /// Transform the Path

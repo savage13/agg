@@ -28,31 +28,14 @@ fn t15_path_stroke() {
 
     agg::render_scanlines(&mut ras, &mut ren);
 
-    // ras.reset();
-    // ren.color( agg::Rgba8::new([0,0,0,255]) );
-    // ras.line_to_d(40. , 10.);
-    // ras.line_to_d(40. , 9.);
-    // ras.line_to_d(40. , 67.);
-    // ras.line_to_d(50. , 87.);
-    // ras.line_to_d(60. , 67.);
-    // ras.line_to_d(60. , 11.);
-    // ras.line_to_d(40. , 11.);
-    // ras.line_to_d(40. , 9.);
-    // ras.line_to_d(60. , 9.);
-    // ras.line_to_d(60. , 72.);
-    // ras.line_to_d(50. , 92.);
-    // ras.line_to_d(40. , 72.);
-    // ras.line_to_d(50. , 10.);
-    // agg::render_scanlines(&mut ras, &mut sl, &mut ren);
-
-    let mut ps = agg::PathStorage::new();
+    let mut ps = agg::Path::new();
     ps.remove_all();
     ps.move_to(10.0, 10.0);
     ps.line_to(50.0, 90.0);
     ps.line_to(90.0, 10.0);
     ps.line_to(10.0, 10.0);
 
-    let mut pg = agg::ConvStroke::new(ps);
+    let mut pg = agg::Stroke::new(ps);
 
     pg.width(2.0);
     ras.add_path(&mut pg);

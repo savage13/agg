@@ -29,7 +29,7 @@ fn rasterizers() {
     // Anti-Aliased
     {
         let mut ren_aa = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
-        let mut path = agg::PathStorage::new();
+        let mut path = agg::Path::new();
 
         path.move_to(m_x[0], m_y[0]);
         path.line_to(m_x[1], m_y[1]);
@@ -43,7 +43,7 @@ fn rasterizers() {
     // Aliased
     {
         let mut ren_bin = agg::RenderingScanlineBinSolid::with_base(&mut ren_base);
-        let mut path = agg::PathStorage::new();
+        let mut path = agg::Path::new();
 
         path.move_to(m_x[0] - 200., m_y[0]);
         path.line_to(m_x[1] - 200., m_y[1]);

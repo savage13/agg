@@ -9,7 +9,7 @@ fn t24_outline_basic_render() {
     let mut ren = RendererPrimatives::with_base(&mut ren_base);
     ren.line_color(agg::Rgba8::new(0,0,0,255));
 
-    let mut path = agg::PathStorage::new();
+    let mut path = agg::Path::new();
     path.move_to(10.0, 10.0);
     path.line_to(50.0, 90.0);
     path.line_to(90.0, 10.0);

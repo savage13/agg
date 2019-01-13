@@ -93,7 +93,7 @@ fn rasterizers2() {
 
         let mut ras_aa = agg::RasterizerScanline::new();
         let mut ren_aa = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
-        let mut stroke = agg::ConvStroke::new(spiral);
+        let mut stroke = agg::Stroke::new(spiral);
         stroke.width(line_width);
         //stroke.cap(round_cap);
         ren_aa.color( &agg::Rgba8::new(102, 77, 26, 255));

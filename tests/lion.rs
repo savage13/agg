@@ -5,11 +5,11 @@ use std::fs;
 
 use agg::Render;
 
-fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Rgba8>){
+fn parse_lion() -> (Vec<agg::Path>, Vec<agg::Rgba8>){
     let txt = fs::read_to_string("tests/lion.txt").unwrap();
     let mut paths = vec![];
     let mut colors = vec![];
-    let mut path = agg::PathStorage::new();
+    let mut path = agg::Path::new();
     let mut color = agg::Rgba8::black();
     let mut cmd = agg::PathCommand::Stop;
 
@@ -26,7 +26,7 @@ fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Rgba8>){
                 paths.push(path);
                 colors.push(color);
             }
-            path = agg::PathStorage::new();
+            path = agg::Path::new();
             color =  agg::Rgba8::new(r,g,b,255);
         } else {
             for val in v {
@@ -89,15 +89,12 @@ fn lion() {
     let g_base_dx = (r.x2() - r.x1())/2.0;
     let g_base_dy = (r.y2() - r.y1())/2.0;
     let mut mtx = agg::AffineTransform::new();
-    eprintln!("dx,dy: {} {}", -g_base_dx, -g_base_dy);
-    eprintln!("dx,dy: {} {}", (w/2) as f64, (h/2) as f64);
     mtx.translate(-g_base_dx, -g_base_dy);
     mtx.translate((w/2) as f64, (h/2) as f64);
     //mtx.translate(0.0, 0.0);
     let t : Vec<_> = paths.into_iter()
         .map(|p| agg::ConvTransform::new(p, mtx.clone()))
         .collect();
-    println!("polygons: {}", t.len());
     agg::render_all_paths(&mut ras, &mut ren, &t, &colors);
 
     ren.to_file("tests/tmp/lion.png").unwrap();

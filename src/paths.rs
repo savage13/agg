@@ -46,26 +46,36 @@ impl<T> Vertex<T> {
     }
 }
 
+/// Compute length between two points
 pub fn len(a: &Vertex<f64>, b: &Vertex<f64>) -> f64 {
     ((a.x-b.x).powi(2) + (a.y-b.y).powi(2)).sqrt()
 }
+
+/// Compute cross product of three points
+///
+/// Returns the z-value of the 2D points, positive is counter-clockwise
+///   negative is clockwise (or the ordering of the basis)
+///
+/// Because the input are 2D, this assumes the z-value is 0
+/// the value is the length and direction of the cross product in the
+/// z direction, or k-hat
 pub fn cross(p1: &Vertex<f64>, p2: &Vertex<f64>, p: &Vertex<f64>) -> f64 {
     (p.x - p2.x) * (p2.y - p1.y) - (p.y - p2.y) * (p2.x - p1.x)
 }
 
 //  typedef path_base<vertex_block_storage<double> > path_storage;
 #[derive(Debug,Default)]
-pub struct PathStorage {
+pub struct Path {
     pub vertices: Vec<Vertex<f64>>,
 }
 
-impl VertexSource for PathStorage {
+impl VertexSource for Path {
     fn xconvert(&self) -> Vec<Vertex<f64>> {
         self.vertices.clone()
     }
 }
 
-impl PathStorage {
+impl Path {
     pub fn new() -> Self {
         Self { vertices: vec![] }
     }
@@ -146,7 +156,7 @@ pub fn split(path: &[Vertex<f64>]) -> Vec<(usize, usize)> {
     pairs
 }
 
-fn arrange_orientations(path: &mut PathStorage, dir: PathOrientation) {
+fn arrange_orientations(path: &mut Path, dir: PathOrientation) {
     let pairs = split(&path.vertices);
     for (s,e) in pairs {
         let pdir = preceive_polygon_orientation(&path.vertices[s..=e]);

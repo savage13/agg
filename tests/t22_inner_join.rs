@@ -16,12 +16,12 @@ fn t22_inner_join() {
     ];
     for (i,join) in joins.iter().enumerate() {
         let dx = 100.0 * i as f64;
-        let mut path = agg::PathStorage::new();
+        let mut path = agg::Path::new();
         path.move_to(10.0 + dx, 70.0);
         path.line_to(50.0 + dx, 30.0);
         path.line_to(90.0 + dx, 70.0);
 
-        let mut stroke = agg::ConvStroke::new(path);
+        let mut stroke = agg::Stroke::new(path);
         stroke.width(25.0);
         stroke.inner_join( *join );
 
@@ -54,7 +54,7 @@ fn text<T>(ras: &mut agg::RasterizerScanline,
     t.text(txt);
     t.start_point(x,y);
     t.flip(true);
-    let mut stroke = agg::ConvStroke::new(t);
+    let mut stroke = agg::Stroke::new(t);
     stroke.width(1.0);
     ras.add_path(&stroke);
     ren.color(&agg::Rgba8::new(0,0,0,255));

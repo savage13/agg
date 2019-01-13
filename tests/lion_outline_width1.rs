@@ -4,11 +4,11 @@ use agg::Render;
 
 use std::fs;
 
-fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Srgba8>){
+fn parse_lion() -> (Vec<agg::Path>, Vec<agg::Srgba8>){
     let txt = fs::read_to_string("tests/lion.txt").unwrap();
     let mut paths = vec![];
     let mut colors = vec![];
-    let mut path = agg::paths::PathStorage::new();
+    let mut path = agg::paths::Path::new();
     //let mut color = agg::Srgba8::black();
     let mut color = agg::color::Srgba8::new(0,0,0,255);
     let mut cmd = agg::paths::PathCommand::Stop;
@@ -26,7 +26,7 @@ fn parse_lion() -> (Vec<agg::PathStorage>, Vec<agg::Srgba8>){
                 paths.push(path);
                 colors.push(color);
             }
-            path = agg::paths::PathStorage::new();
+            path = agg::paths::Path::new();
             let rgb = agg::color::Rgba8::new(r,g,b,255);
             color = agg::Srgba8::from_rgb(rgb);
             //color =  agg::Rgba8::new(r,g,b,255);
@@ -105,7 +105,7 @@ fn lion_outline_width1() {
     println!("polygons: {}", t.len());
 
     let mut stroke : Vec<_> = t.into_iter()
-        .map(|p| agg::ConvStroke::new( p ))
+        .map(|p| agg::Stroke::new( p ))
         .collect();
     stroke.iter_mut().for_each(|p| p.width(1.0));
     agg::render_all_paths(&mut ras, &mut ren, &stroke, &colors);
