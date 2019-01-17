@@ -229,6 +229,16 @@ impl Pixel for Pixfmt<Rgba8> {
         self.rbuf[id][2] = c.blue8();
         self.rbuf[id][3] = c.alpha8();
     }
+    /// Compute **over** operator with coverage
+    ///
+    /// # Arguments
+    ///   - id   - pixel at (`x`,`y`) - Premultiplied
+    ///   - c    - Color of Overlaying pixel, not premultiplied
+    ///   - cover - Coverage of overlaying pixel, percent in 0p8 format
+    ///
+    /// # Output
+    ///   - lerp(pixel(x,y), color, cover * alpha(color))
+    ///
     fn blend_pix<C: Color>(&mut self, id: (usize, usize), c: C, cover: u64) {
         let alpha = multiply_u8(c.alpha8(), cover as u8);
         let pix0 = self.get(id); // Rgba8
@@ -302,6 +312,17 @@ impl Pixfmt<Gray8> {
 }
 
 impl Pixfmt<Rgba8> {
+    /// Computer **over** operator
+    ///
+    /// # Arguments
+    ///   - p     - Current pixel, premultipled
+    ///   - c     - Overlaying pixel, not premultipled
+    ///   - alpha - Alpha Channel
+    ///
+    /// # Output
+    ///   - lerp(p, c, alpha)
+    ///
+    /// **Change function name to over**
     fn mix_pix(&mut self, p: Rgba8, c: Rgba8, alpha: u8) -> Rgba8 {
         let red   =    lerp_u8(p.r, c.r, alpha);
         let green =    lerp_u8(p.g, c.g, alpha);
@@ -362,6 +383,17 @@ impl Pixfmt<Rgb8> {
          let p = &self.rbuf[id];
         Rgb8::new(p[0],p[1],p[2])
     }
+    /// Compute **over** operator
+    ///
+    /// # Arguments
+    ///   - p     - Current pixel, premultipled (wow that is confusing)
+    ///   - c     - Overlaying pixel, not premultiplied
+    ///   - alpha - Alpha channel
+    ///   - cover - Coverage
+    ///
+    /// # Output
+    ///   - lerp( p, c, alpha * cover)
+    ///
     fn mix_pix(&mut self, p: Rgb8, c: Rgb8, alpha: u8, cover: u64) -> Rgb8 {
         let alpha = multiply_u8(alpha, cover as u8);
         let red   = lerp_u8(p.r, c.r, alpha);
@@ -371,6 +403,17 @@ impl Pixfmt<Rgb8> {
     }
 }
 impl Pixfmt<Rgba8pre> {
+    /// Compute **over** operator
+    ///
+    /// # Arguments
+    ///   - p     - Current pixel, premultipled
+    ///   - c     - Overlaying pixel, premultiplied
+    ///   - alpha - Alpha channel
+    ///   - cover - Coverage
+    ///
+    /// # Output
+    ///   - prelerp(p, c * cover, alpha * cover)
+    ///
     fn mix_pix(&mut self, p: Rgba8pre, c: Rgba8pre, alpha: u8, cover: u64) -> Rgba8pre {
         let alpha = multiply_u8(alpha, cover as u8);
         let red   = multiply_u8(c.r, cover as u8);
@@ -380,12 +423,22 @@ impl Pixfmt<Rgba8pre> {
         let red   = prelerp_u8(p.r, red,   alpha);
         let green = prelerp_u8(p.g, green, alpha);
         let blue  = prelerp_u8(p.b, blue,  alpha);
-        let alpha = prelerp_u8(p.a, alpha,  alpha);
+        let alpha = prelerp_u8(p.a, alpha, alpha);
         Rgba8pre::new(red, green, blue, alpha)
     }
     pub fn drop_alpha(&self) -> Pixfmt<Rgb8> {
-        let buf : Vec<_> = self.as_bytes().iter().enumerate().filter(|(i,_)| i%4 < 3).map(|(_,x)| *x).collect();
-        Pixfmt::<Rgb8> { rbuf: RenderingBuffer::from_buf(buf, self.width(), self.height(), 3), phantom: PhantomData }
+        let buf : Vec<_> = self.as_bytes().iter()
+            .enumerate()
+            .filter(|(i,_)| i%4 < 3)
+            .map(|(_,x)| *x)
+            .collect();
+        Pixfmt::<Rgb8> {
+            rbuf: RenderingBuffer::from_buf(buf,
+                                            self.width(),
+                                            self.height(),
+                                            3),
+            phantom: PhantomData
+        }
     }
 }
 
