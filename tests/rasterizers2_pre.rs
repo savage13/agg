@@ -130,7 +130,7 @@ fn rasterizers2_pre() {
         let mut stroke = agg::Stroke::new(spiral);
         stroke.width(line_width);
         //stroke.cap(round_cap);
-        ren_aa.color( &agg::Rgba8::new(102, 77, 26, 255));
+        ren_aa.color( agg::Rgba8::new(102, 77, 26, 255));
         ras_aa.add_path(&stroke);
         agg::render_scanlines(&mut ras_aa, &mut ren_aa);
 
@@ -233,7 +233,7 @@ fn text<T>(ras: &mut agg::RasterizerScanline,
     let mut stroke = agg::Stroke::new(t);
     stroke.width(0.7);
     ras.add_path(&stroke);
-    ren.color(&agg::Rgba8::new(0,0,0,255));
+    ren.color(agg::Rgba8::new(0,0,0,255));
     agg::render_scanlines(ras, ren);
 
 }

@@ -76,7 +76,7 @@ fn lion_outline() {
     ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
     let mut ren = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
     //ren.color( &agg::Srgba8::new([255,0,0,255]) );
-    ren.color( &agg::Rgba8::new(255,0,0,255) );
+    ren.color( agg::Rgba8::new(255,0,0,255) );
 
     let mut ras = agg::RasterizerScanline::new();
 
@@ -94,7 +94,7 @@ fn lion_outline() {
     //eprintln!("dx,dy: {:?}", r);
     let g_base_dx = (r.x2() - r.x1())/2.0;
     let g_base_dy = (r.y2() - r.y1())/2.0;
-    let mut mtx = agg::AffineTransform::new();
+    let mut mtx = agg::Transform::new();
     eprintln!("dx,dy: {} {}", -g_base_dx, -g_base_dy);
     eprintln!("dx,dy: {} {}", (w/2) as f64, (h/2) as f64);
     mtx.translate(-g_base_dx, -g_base_dy);

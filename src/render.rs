@@ -16,6 +16,8 @@ use crate::raster::len_i64_xy;
 use crate::clip::{INSIDE, TOP,BOTTOM,LEFT,RIGHT};
 use crate::pixfmt::Pixfmt;
 use crate::raster::RasterizerScanline;
+use crate::Rgb8;
+use crate::Transform;
 
 use crate::Source;
 use crate::VertexSource;
@@ -37,8 +39,136 @@ pub struct RenderingScanlineBinSolid<'a,T> where T: 'a {
 /// Anti-Aliased Renderer
 #[derive(Debug)]
 pub struct RenderingScanlineAASolid<'a,T> where T: 'a {
-    pub base: &'a mut RenderingBase<T>,
-    pub color: Rgba8,
+    base: &'a mut RenderingBase<T>,
+    color: Rgba8,
+}
+
+#[derive(Debug)]
+pub struct RenderingScanlineAA<'a,T> {
+    base: &'a mut RenderingBase<T>,
+    span: SpanGradient,
+}
+
+#[derive(Debug)]
+pub struct SpanGradient {
+    d1: i64,
+    d2: i64,
+    gradient: GradientX,
+    color: Vec<Rgb8>,
+    trans: Transform,
+}
+#[derive(Debug)]
+pub struct GradientX {}
+impl GradientX {
+    pub fn calculate(&self, x: i64, _: i64, _: i64) -> i64 {
+        x
+    }
+}
+
+#[derive(Debug)]
+struct Interpolator {
+    li_x: Option<LineInterpolator>,
+    li_y: Option<LineInterpolator>,
+    trans: Transform,
+}
+impl Interpolator {
+    #[inline]
+    pub fn subpixel_shift(&self) -> i64 {
+        8
+    }
+    #[inline]
+    pub fn subpixel_scale(&self) -> i64 {
+        1 << self.subpixel_shift()
+    }
+    pub fn new(trans: Transform) -> Self {
+        Self { trans, li_x: None, li_y: None }
+    }
+    pub fn begin(&mut self, x: f64, y: f64, len: usize) {
+        let tx = x;
+        let ty = y;
+        let (tx,ty) = self.trans.transform(tx,ty);
+        let x1 = (tx * self.subpixel_scale() as f64).round() as i64;
+        let y1 = (ty * self.subpixel_scale() as f64).round() as i64;
+
+        let tx = x + len as f64;
+        let ty = y;
+        let (tx,ty) = self.trans.transform(tx,ty);
+        let x2 = (tx * self.subpixel_scale() as f64).round() as i64;
+        let y2 = (ty * self.subpixel_scale() as f64).round() as i64;
+        self.li_x = Some(LineInterpolator::new(x1, x2, len as i64));
+        self.li_y = Some(LineInterpolator::new(y1, y2, len as i64));
+    }
+    pub fn inc(&mut self) {
+        if let Some(ref mut li) = self.li_x {
+            (li).inc();
+        }
+        if let Some(ref mut li) = self.li_y {
+            (li).inc();
+        }
+    }
+    pub fn coordinates(&self) -> (i64, i64) {
+        if let (Some(x),Some(y)) = (self.li_x.as_ref(), self.li_y.as_ref()) {
+            (x.y, y.y)
+        } else {
+            panic!("Interpolator not Initialized"); 
+        }
+    }
+}
+
+impl SpanGradient {
+    #[inline]
+    pub fn subpixel_shift(&self) -> i64 {
+        4
+    }
+    #[inline]
+    pub fn subpixel_scale(&self) -> i64 {
+        1 << self.subpixel_shift()
+    }
+    pub fn new(trans: Transform, gradient: GradientX, color: &[Rgb8], d1: f64, d2: f64) -> Self {
+        let mut s = Self { d1: 0, d2: 1, color: color.to_vec(), gradient, trans };
+        s.d1(d1);
+        s.d2(d2);
+        s
+    }
+    pub fn d1(&mut self, d1: f64) {
+        self.d1 = (d1 * self.subpixel_scale() as f64).round() as i64;
+    }
+    pub fn d2(&mut self, d2: f64) {
+        self.d2 = (d2 * self.subpixel_scale() as f64).round() as i64;
+    }
+    pub fn prepare(&mut self) {
+    }
+    pub fn generate(&self, x: i64, y: i64, len: usize) -> Vec<Rgb8> {
+        let mut interp = Interpolator::new(self.trans);
+
+        let downscale_shift = interp.subpixel_shift() - self.subpixel_shift();
+
+        let mut dd = self.d2 - self.d1;
+        if dd < 1 {
+            dd = 1;
+        }
+        let ncolors = self.color.len() as i64;
+        let mut span = vec![Rgb8::white() ; len];
+
+        interp.begin(x as f64 + 0.5, y as f64 + 0.5, len);
+
+        for i in 0 .. len {
+            let (x,y) = interp.coordinates();
+            let d = self.gradient.calculate(x >> downscale_shift,
+                                            y >> downscale_shift,
+                                            self.d2);
+            let mut d = ((d-self.d1) * ncolors) / dd;
+            if d < 0 {
+                d = 0;
+            }
+            if d >= ncolors {
+                d = ncolors - 1;
+            }
+            span[i] = self.color[d as usize];
+            interp.inc();
+        }
+        span
+    }
 }
 
 /// Render a single Scanline (y-row) without Anti-Aliasing (Binary?)
@@ -57,9 +187,7 @@ fn render_scanline_bin_solid<T,C: Color>(sl: &ScanlineU8,
 /// Render a single Scanline (y-row) with Anti Aliasing
 fn render_scanline_aa_solid<T,C: Color>(sl: &ScanlineU8,
                                         ren: &mut RenderingBase<T>,
-                                        color: C)
-    where T: Pixel
-{
+                                        color: C) where T: Pixel {
     let y = sl.y;
     for span in & sl.spans {
         let x = span.x;
@@ -70,6 +198,31 @@ fn render_scanline_aa_solid<T,C: Color>(sl: &ScanlineU8,
         }
     }
 }
+
+/// Render a single Scanline (y-row) with Anti-Aliasing
+fn render_scanline_aa<T>(sl: &ScanlineU8,
+                         ren: &mut RenderingBase<T>,
+                         span_gen: &SpanGradient) where T: Pixel {
+    let y = sl.y;
+    for span in &sl.spans {
+        let x = span.x;
+        let mut len = span.len;
+        let covers = &span.covers;
+        if len < 0 {
+            len = -len;
+        }
+        //dbg!(x);
+        //dbg!(y);
+        //dbg!(len);
+        let colors = span_gen.generate(x, y, len as usize);
+        //dbg!(&colors);
+        ren.blend_color_hspan(x, y, len, &colors,
+                              if span.len < 0 { &[] } else { &covers },
+                              covers[0]);
+    }
+}
+
+
 #[derive(Debug)]
 pub struct RenderData {
     sl: ScanlineU8
@@ -86,7 +239,7 @@ impl<T> Render for RenderingScanlineAASolid<'_,T> where T: Pixel {
         render_scanline_aa_solid(&data.sl, &mut self.base, self.color);
     }
     /// Set the current color
-    fn color<C: Color>(&mut self, color: &C) {
+    fn color<C: Color>(&mut self, color: C) {
         self.color = Rgba8::new(color.red8(), color.green8(),
                                 color.blue8(), color.alpha8());
     }
@@ -98,11 +251,24 @@ impl<T> Render for RenderingScanlineBinSolid<'_,T> where T: Pixel {
         render_scanline_bin_solid(&data.sl, &mut self.base, self.color);
     }
     /// Set the current Color
-    fn color<C: Color>(&mut self, color: &C) {
+    fn color<C: Color>(&mut self, color: C) {
         self.color = Rgba8::new(color.red8(),color.green8(),
                                 color.blue8(), color.alpha8());
     }
 }
+impl<T> Render for RenderingScanlineAA<'_,T> where T: Pixel {
+    /// Render a single Scanline Row
+    fn render(&mut self, data: &RenderData) {
+        render_scanline_aa(&data.sl, &mut self.base, &self.span);
+    }
+    /// Set the current Color
+    fn color<C: Color>(&mut self, _color: C) {
+        unimplemented!("oops");
+    }
+}
+
+
+
 impl<'a,T> RenderingScanlineBinSolid<'a,T> where T: Pixel {
     /// Create a new Renderer from a Rendering Base
     pub fn with_base(base: &'a mut RenderingBase<T>) -> Self {
@@ -116,6 +282,11 @@ impl<'a,T> RenderingScanlineBinSolid<'a,T> where T: Pixel {
         self.base.to_file(filename)
     }
 
+}
+impl<'a,T> RenderingScanlineAA<'a,T> where T: Pixel {
+    pub fn new(base: &'a mut RenderingBase<T>, span: SpanGradient) -> Self {
+        Self { base, span }
+    }
 }
 impl<'a,T> RenderingScanlineAASolid<'a,T> where T: Pixel {
     /// Create a new Renderer from a Rendering Base
@@ -196,7 +367,7 @@ pub fn render_all_paths<REN,VS,C>(ras: &mut RasterizerScanline,
     for (path, color) in paths.iter().zip(colors.iter()) {
         ras.reset();
         ras.add_path(path);
-        ren.color(color);
+        ren.color(*color);
         render_scanlines(ras, ren);
     }
 
@@ -253,8 +424,10 @@ impl BresehamInterpolator {
 }
 
 /// Line Interpolator using a Digital differential analyzer (DDA)
-
+/// 
 /// See [https://en.wikipedia.org/wiki/Digital_differential_analyzer_(graphics_algorithm)]()
+///
+/// This is equivalent to dda2
 #[derive(Debug)]
 pub(crate) struct LineInterpolator {
     count: i64,

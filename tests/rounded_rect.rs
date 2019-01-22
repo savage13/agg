@@ -17,15 +17,14 @@ fn rounded_rect() {
 
     let mut ren = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
 
-    ren.color( &agg::Rgba8::new(255,0,0,255) );
+    ren.color( agg::Rgba8::new(255,0,0,255) );
 
     let mut ras = agg::RasterizerScanline::new();
 
-    let mut e = agg::Ellipse::new();
 
-    ren.color( &agg::Rgba8::new(54,54,54,255) );
+    ren.color( agg::Rgba8::new(54,54,54,255) );
     for i in 0 .. 2 {
-        e.init(m_x[i], m_y[i], 3., 3., 16);
+        let e = agg::Ellipse::new(m_x[i], m_y[i], 3., 3., 16);
         ras.add_path(&e);
         agg::render_scanlines(&mut ras, &mut ren);
     }
@@ -37,7 +36,7 @@ fn rounded_rect() {
     let mut stroke = agg::Stroke::new( r );
     stroke.width( 7.0 );
     ras.add_path(&stroke);
-    ren.color(&agg::Rgba8::new(0,0,0,255));
+    ren.color(agg::Rgba8::new(0,0,0,255));
     agg::render_scanlines(&mut ras, &mut ren);
 
     ren.to_file("tests/tmp/rounded_rect.png").unwrap();

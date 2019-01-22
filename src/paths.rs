@@ -232,23 +232,21 @@ impl VertexSource for Ellipse {
 
 use std::f64::consts::PI;
 impl Ellipse {
-    /// Crate new Ellipse 
-    pub fn new() -> Self {
-        Self { x: 0.0, y: 0.0, rx: 1.0, ry: 1.0, scale: 1.0,
-               num: 4, cw: false, vertices: vec![] }
-    }
-    /// Initialize new Ellipse
-    pub fn init(&mut self, x: f64, y: f64, rx: f64, ry: f64, num: usize) {
-        self.x   = x;
-        self.y   = y;
-        self.rx  = rx;
-        self.ry  = ry;
-        self.num = num;
-        self.cw  = false;
+    /// Create a new Ellipse
+    pub fn new(x: f64, y: f64, rx: f64, ry: f64, num: usize) -> Self {
+        let mut s = Self { x: 0.0, y: 0.0, rx: 1.0, ry: 1.0, scale: 1.0,
+                           num: 4, cw: false, vertices: vec![] };
+        s.x   = x;
+        s.y   = y;
+        s.rx  = rx;
+        s.ry  = ry;
+        s.num = num;
+        s.cw  = false;
         if num == 0 {
-            self.calc_num_steps();
+            s.calc_num_steps();
         }
-        self.calc();
+        s.calc();
+        s
     }
     pub fn calc_num_steps(&mut self) {
         let ra = (self.rx.abs() + self.ry.abs()) / 2.0;

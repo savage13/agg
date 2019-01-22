@@ -96,7 +96,7 @@ fn rasterizers2() {
         let mut stroke = agg::Stroke::new(spiral);
         stroke.width(line_width);
         //stroke.cap(round_cap);
-        ren_aa.color( &agg::Rgba8::new(102, 77, 26, 255));
+        ren_aa.color( agg::Rgba8::new(102, 77, 26, 255));
         ras_aa.add_path(&stroke);
         agg::render_scanlines(&mut ras_aa, &mut ren_aa);
 

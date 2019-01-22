@@ -95,8 +95,8 @@ impl RasterizerScanline {
         }
         for seg in path.xconvert() {
             match seg.cmd {
-                PathCommand::LineTo => self.line_to_d(seg.x, seg.y),
-                PathCommand::MoveTo => self.move_to_d(seg.x, seg.y),
+                PathCommand::LineTo => self.line_to(seg.x, seg.y),
+                PathCommand::MoveTo => self.move_to(seg.x, seg.y),
                 PathCommand::Close  => self.close_polygon(),
                 PathCommand::Stop => unimplemented!("stop encountered"),
             }
@@ -240,14 +240,14 @@ impl RasterizerScanline {
     /// Move to point (x,y)
     ///
     /// Sets point as the initial point
-    pub fn move_to_d(&mut self, x: f64, y: f64) {
+    pub fn move_to(&mut self, x: f64, y: f64) {
         self.x0 = RasConvInt::upscale( x );
         self.y0 = RasConvInt::upscale( y );
         self.clipper.move_to(self.x0,self.y0);
         self.status = PathStatus::MoveTo;
     }
     /// Draw line from previous point to point (x,y)
-    pub fn line_to_d(&mut self, x: f64, y: f64) {
+    pub fn line_to(&mut self, x: f64, y: f64) {
         let x = RasConvInt::upscale( x );
         let y = RasConvInt::upscale( y );
         self.clipper.line_to(&mut self.outline, x,y);

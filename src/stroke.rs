@@ -95,7 +95,7 @@ macro_rules! next {
 impl<T> Stroke<T> where T: VertexSource {
     /// Create a new Stroke from a Vertex Source
     pub fn new(source: T) -> Self {
-        Self {
+        Stroke {
             source,
             width: 0.5,
             width_abs: 0.5,
@@ -194,14 +194,14 @@ impl<T> Stroke<T> where T: VertexSource {
             },
             LineCap::Round => {
                 let da = 2.0 * (self.width_abs / (self.width_abs + 0.125 / self.approx_scale)).acos();
-                let n = (PI / da).round() as usize;
-
+                let n = (PI / da) as usize;
                 let da = PI / (n + 1) as f64;
+
                 out.push(Vertex::line_to(v0.x - dx1, v0.y + dy1));
                 if self.width_sign > 0.0 {
                     let mut a1 = dy1.atan2(-dx1);
                     a1 += da;
-                    for _ in 0 .. n {
+                    for _i in 0 .. n {
                         out.push(Vertex::line_to(v0.x + a1.cos() * self.width,
                                                  v0.y + a1.sin() * self.width));
                         a1 += da;
@@ -209,7 +209,7 @@ impl<T> Stroke<T> where T: VertexSource {
                 } else {
                     let mut a1 = (-dy1).atan2(dx1);
                     a1 -= da;
-                    for _ in 0 .. n {
+                    for _i in 0 .. n {
                         out.push(Vertex::line_to(v0.x + a1.cos() * self.width,
                                                  v0.y + a1.sin() * self.width));
                         a1 -= da;
@@ -552,6 +552,9 @@ impl<T> Stroke<T> where T: VertexSource {
             let mut outf = vec![];
             // Clean the current path, return new path
             let v = clean_path(&v0[m1..=m2]);
+            if v.len() <= 1 {
+                continue;
+            }
             // Check for Closed Path Element
             let closed = is_path_closed(&v);
             // Ignore Closed Tag Element
@@ -607,6 +610,141 @@ impl<T> Stroke<T> where T: VertexSource {
             all_out.extend(outf);
         }
         all_out
+    }
+}
+
+pub struct Dash<S: VertexSource> {
+    source: S,
+    dashes: Vec<f64>,
+    total_dash_len: f64,
+    dash_start: f64,
+    shorten: f64,
+    closed: bool,
+}
+
+impl<S> VertexSource for Dash<S> where S: VertexSource {
+    fn xconvert(&self) -> Vec<Vertex<f64>> {
+        self.draw()
+    }
+}
+
+impl<S> Dash<S> where S: VertexSource {
+    pub fn new(source: S) -> Self {
+        Self {
+            dashes: vec![], source,
+            total_dash_len: 0.0, dash_start: 0.0,
+            shorten: 0.0,
+            closed: false,
+        }
+    }
+    pub fn remove_all_dashed(&mut self) {
+        self.dashes.clear();
+        self.total_dash_len = 0.0;
+    }
+    pub fn add_dash(&mut self, length: f64, gap: f64) {
+        if length <= 0.0 || gap <= 0.0 {
+            return;
+        }
+        self.total_dash_len += length + gap;
+        self.dashes.push( length );
+        self.dashes.push( gap );
+    }
+    pub fn shorten(&mut self, shorten: f64) {
+        self.shorten = shorten;
+    }
+    pub fn dash_start(&mut self, start: f64) {
+        self.dash_start = start;
+        self.calc_dash_start( start.abs() );
+    }
+    fn calc_dash_start(&self, ds: f64) -> (f64,usize) {
+        let mut curr_dash = 0;
+        let mut curr_dash_start = 0.0;
+        let mut ds = ds;
+        while ds > 0.0 {
+            if ds > self.dashes[curr_dash] {
+                ds -= self.dashes[curr_dash];
+                curr_dash += 1;
+                curr_dash_start = 0.0;
+                if curr_dash >= self.dashes.len() {
+                    curr_dash = 0;
+                }
+            } else {
+                curr_dash_start = ds;
+                ds = 0.0;
+            }
+        }
+        (curr_dash_start, curr_dash)
+    }
+    pub fn remove_all(&mut self) {
+        self.dashes.clear();
+        self.closed = false;
+    }
+    fn draw(&self) -> Vec<Vertex<f64>> {
+        let mut out = vec![];
+        let src = self.source.xconvert();
+
+        if src.len() < 2 || self.dashes.len() < 2 {
+            return out;
+        }
+        let mut i = 0;
+        let mut v1 = src[i];
+        i += 1;
+        let mut v2 = src[i];
+        let (mut x, mut y) = (v1.x, v1.y);
+        out.push( Vertex::move_to(x, y) );
+        // Length of the Current Segment
+        let mut curr_rest = len(&v1,&v2);
+        let (mut curr_dash_start, mut curr_dash) =
+            if self.dash_start >= 0.0 {
+                self.calc_dash_start(self.dash_start)
+            } else {
+                (self.dash_start, 0)
+            };
+        loop {
+            let dash_rest = self.dashes[curr_dash] - curr_dash_start;
+            let cmd = if curr_dash % 2 == 1 {
+                Vertex::move_to
+            } else {
+                Vertex::line_to
+            };
+            if curr_rest > dash_rest {
+                // Dash fits within the line segment
+                curr_rest -= dash_rest;
+                curr_dash += 1;
+                if curr_dash >= self.dashes.len() {
+                    curr_dash = 0;
+                }
+                curr_dash_start = 0.0;
+                x = v2.x - (v2.x - v1.x) * curr_rest / len(&v1,&v2);
+                y = v2.y - (v2.y - v1.y) * curr_rest / len(&v1,&v2);
+            } else {
+                // Dash is longer than line segment
+                curr_dash_start += curr_rest;
+                x = v2.x;
+                y = v2.y;
+                i += 1;
+                v1 = v2;
+                if self.closed {
+                    if i > src.len() {
+                        out.push(cmd(x,y));
+                        break;
+                    } else {
+                        let n = if i >= src.len() { 0 } else { i };
+                        v2 = src[n];
+                    }
+                } else {
+                    if i >= src.len() {
+                        out.push(cmd(x,y));
+                        break;
+                    } else {
+                        v2 = src[i];
+                    }
+                }
+                curr_rest = len(&v1,&v2);
+            }
+            out.push( cmd(x,y) );
+        }
+        out
     }
 }
 

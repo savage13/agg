@@ -14,16 +14,16 @@ fn t16_path_stroke_no_clip() {
 
     let mut ren = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
 
-    ren.color( &agg::Rgba8::new(255,0,0,255) );
+    ren.color( agg::Rgba8::new(255,0,0,255) );
 
     let mut ras = agg::RasterizerScanline::new();
 
     //ras.clip_box(40.0, 0.0, w as f64-40.0, h as f64);
 
     ras.reset();
-    ras.move_to_d(10.0, 10.0);
-    ras.line_to_d(50.0, 90.0);
-    ras.line_to_d(90.0, 10.0);
+    ras.move_to(10.0, 10.0);
+    ras.line_to(50.0, 90.0);
+    ras.line_to(90.0, 10.0);
 
     agg::render_scanlines(&mut ras, &mut ren);
 
@@ -39,9 +39,9 @@ fn t16_path_stroke_no_clip() {
     pg.width(2.0);
     ras.add_path(&mut pg);
 
-    agg::render_scanlines_aa_solid(&mut ras, &mut ren.base, agg::Rgba8::new(0,0,0,255));
+    agg::render_scanlines_aa_solid(&mut ras, &mut ren_base, agg::Rgba8::new(0,0,0,255));
 
-    ren.to_file("tests/tmp/agg_test_16.png").unwrap();
+    ren_base.to_file("tests/tmp/agg_test_16.png").unwrap();
 
     assert!(agg::ppm::img_diff("tests/tmp/agg_test_16.png", "images/agg_test_16.png").unwrap());
 }

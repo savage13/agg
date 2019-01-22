@@ -35,13 +35,13 @@
 //!
 //!       // Draw a polygon from (10,10) - (50,90) - (90,10)
 //!       let mut ras = agg::RasterizerScanline::new();
-//!       ras.move_to_d(10.0, 10.0);
-//!       ras.line_to_d(50.0, 90.0);
-//!       ras.line_to_d(90.0, 10.0);
+//!       ras.move_to(10.0, 10.0);
+//!       ras.line_to(50.0, 90.0);
+//!       ras.line_to(90.0, 10.0);
 //!
 //!       // Render the line to the image
 //!       let mut ren = agg::RenderingScanlineAASolid::with_base(&mut ren_base);
-//!       ren.color(&agg::Rgba8::black());
+//!       ren.color(agg::Rgba8::black());
 //!       agg::render_scanlines(&mut ras, &mut ren);
 //!
 //!       // Save the image to a file
@@ -145,7 +145,7 @@ pub mod outline;
 pub mod outline_aa;
 pub mod line_interp;
 
-pub(crate) mod math;
+pub mod math;
 pub(crate) mod scan;
 pub(crate) mod buffer;
 pub(crate) mod cell;
@@ -229,7 +229,7 @@ pub trait Render {
     /// Render a single scanlines to the image
     fn render(&mut self, data: &RenderData);
     /// Set the Color of the Renderer
-    fn color<C: Color>(&mut self, color: &C);
+    fn color<C: Color>(&mut self, color: C);
     /// Prepare the Renderer
     fn prepare(&self) { }
 }

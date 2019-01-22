@@ -68,7 +68,7 @@ fn lion_png() {
     let mut ren_base = agg::RenderingBase::new(pixf);
     ren_base.clear( agg::Rgba8::new(255, 255, 255, 255) );
     let mut ren = agg::RenderingScanlineBinSolid::with_base(&mut ren_base);
-    ren.color( &agg::Rgba8::new(255,0,0,255) );
+    ren.color( agg::Rgba8::new(255,0,0,255) );
 
     let mut ras = agg::RasterizerScanline::new();
 
@@ -84,7 +84,7 @@ fn lion_png() {
     }
     let g_base_dx = (r.x2() - r.x1())/2.0;
     let g_base_dy = (r.y2() - r.y1())/2.0;
-    let mut mtx = agg::AffineTransform::new();
+    let mut mtx = agg::Transform::new();
 
     mtx.translate(-g_base_dx, -g_base_dy);
     mtx.translate((w/2) as f64, (h/2) as f64);

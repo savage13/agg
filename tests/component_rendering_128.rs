@@ -14,14 +14,11 @@ fn component_rendering_128() {
     ren_base.clear(agg::Rgba8::new(255,255,255,255));
     let g8 = Gray8::new_with_alpha(0,alpha);
 
-    let mut er = agg::Ellipse::new();
-    let mut eb = agg::Ellipse::new();
-    let mut eg = agg::Ellipse::new();
     let w2 = (w/2) as f64;
     let h2 = (h/2) as f64;
-    er.init(w2 - 0.87*50.0, h2 - 0.5*50., 100., 100., 100);
-    eg.init(w2 + 0.87*50.0, h2 - 0.5*50., 100., 100., 100);
-    eb.init(w2,             h2 + 50., 100., 100., 100);
+    let er = agg::Ellipse::new(w2 - 0.87*50.0, h2 - 0.5*50., 100., 100., 100);
+    let eg = agg::Ellipse::new(w2 + 0.87*50.0, h2 - 0.5*50., 100., 100., 100);
+    let eb = agg::Ellipse::new(w2,             h2 + 50., 100., 100., 100);
 
     let mut ras = agg::RasterizerScanline::new();
 

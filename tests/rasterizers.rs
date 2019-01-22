@@ -35,7 +35,7 @@ fn rasterizers() {
         path.line_to(m_x[1], m_y[1]);
         path.line_to(m_x[2], m_y[2]);
         path.close_polygon();
-        ren_aa.color( &rgb64(0.7, 0.5, 0.1, alpha));
+        ren_aa.color( rgb64(0.7, 0.5, 0.1, alpha));
         ras.add_path(&path);
         agg::render_scanlines(&mut ras, &mut ren_aa);
     }
@@ -49,7 +49,7 @@ fn rasterizers() {
         path.line_to(m_x[1] - 200., m_y[1]);
         path.line_to(m_x[2] - 200., m_y[2]);
         path.close_polygon();
-        ren_bin.color( &rgb64(0.1, 0.5, 0.7, alpha) );
+        ren_bin.color( rgb64(0.1, 0.5, 0.7, alpha) );
         ras.add_path(&path);
         //ras.
         agg::render_scanlines(&mut ras, &mut ren_bin);

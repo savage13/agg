@@ -55,7 +55,7 @@ fn text<T>(ras: &mut agg::RasterizerScanline,
     let mut stroke = agg::Stroke::new(t);
     stroke.width(1.0);
     ras.add_path(&stroke);
-    ren.color(&agg::Rgba8::new(0,0,0,255));
+    ren.color(agg::Rgba8::new(0,0,0,255));
     agg::render_scanlines(ras, ren);
 
 }
