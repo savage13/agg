@@ -262,17 +262,23 @@ pub struct Label<'a> {
     ya: YAlign,
     color: Rgba8,
     font: &'a ft::Face,
+    size: f64,
 }
 
 impl<'a> Label<'a> {
-    pub fn new(txt: &str, x: f64, y: f64, font: &'a ft::Face) -> Self {
-        Self {
-            txt: txt.to_string(), x, y,
-            xa: XAlign::Left,
-            ya: YAlign::Bottom,
-            color: Rgba8::black(),
-            font
-        }
+    pub fn new(txt: &str, x: f64, y: f64, size: f64, font: &'a ft::Face) -> Result<Self,AggFontError> {
+        let resolution = 72;
+        font.set_char_size((size * 64.0) as isize, 0, resolution, 0)?;
+        Ok(
+            Self {
+                txt: txt.to_string(), x, y,
+                xa: XAlign::Left,
+                ya: YAlign::Bottom,
+                color: Rgba8::black(),
+                size,
+                font
+            }
+        )
     }
     pub fn xalign(mut self, xalign: XAlign) -> Self {
         self.xa = xalign;

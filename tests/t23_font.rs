@@ -11,7 +11,8 @@ fn t23_font() {
 
     agg::draw_text("Hello World!!!", 50, 45, &font, &mut ren_base);
 
-    let mut label = agg::Label::new("Hello World!!!", 50., 57., &font)
+    let mut label = agg::Label::new("Hello World!!!", 50., 57., 13.0, &font)
+        .unwrap()
         .xalign(agg::XAlign::Center)
         .yalign(agg::YAlign::Center);
     label.draw(&mut ren_base);
