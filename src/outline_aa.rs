@@ -26,7 +26,7 @@
 //!     let mut ras = RasterizerOutlineAA::with_renderer(&mut ren);
 //!     ras.round_cap(true);
 //!     ras.add_path(&path);
-//!     ren_base.to_file("tests/tmp/outline_aa.png").unwrap();
+//!     ren_base.to_file("outline_aa.png").unwrap();
 //!
 //! The above code will produce:
 //!
@@ -443,11 +443,16 @@ impl<'a,T> RendererOutlineAA<'a,T> where T: Pixel {
     pub fn smoother_width(&mut self, width: f64) {
         self.profile.smoother_width(width);
     }
-    
+
     fn subpixel_width(&self) -> i64 {
         self.profile.subpixel_width
     }
 
+    /// Draw a Line Segment
+    ///
+    /// If line to "too long", divide it by two and draw both segments
+    /// otherwise, interpolate along the line to draw
+    /// 
     fn line0_no_clip(&mut self, lp: &LineParameters) {
         if lp.len > LINE_MAX_LENGTH {
             let (lp1, lp2) = lp.divide();
@@ -727,19 +732,24 @@ impl<T> DrawOutline for RendererOutlineAA<'_, T> where T: Pixel {
         self.pie_hline(xc, yc, x1, y1, x2, y2, x-dx0, y+dy0, x+dx0);
 
     }
+    /// Draw a Line Segment, clipping if necessary
+    ///
     fn line0(&mut self, lp: &LineParameters) {
         if let Some(clip_box) = self.clip_box {
             let (x1,y1,x2,y2,flags) = clip_line_segment(lp.x1,lp.y1,lp.x2,lp.y2,clip_box);
-            if flags & 4 == 0 { // Visible
-                if flags != 0 { // Not Clipped
+            if flags & 4 == 0 { // Line in Visible
+                if flags != 0 { // Line is Clipped
+                    // Create new Line from clipped lines and draw
                     let lp2 = LineParameters::new(x1, y1, x2, y2,
                                                   len_i64_xy(x1,y1,x2,y2));
                     self.line0_no_clip(&lp2);
                 } else {
+                    // Line is not Clipped
                     self.line0_no_clip(&lp)
                 }
             }
         } else {
+            // No clip box defined
             self.line0_no_clip(&lp);
         }
     }

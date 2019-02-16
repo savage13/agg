@@ -446,15 +446,10 @@ pub(crate) trait RenderOutline {
 /// Functions for Drawing Outlines
 //pub trait DrawOutline: Lines + AccurateJoins + SetColor {}
 pub trait DrawOutline {
-/// Set the current Color
-//pub trait SetColor {
+    /// Set the current Color
     fn color<C: Color>(&mut self, color: C);
-//}
-/// If Line Joins are Accurate
-//pub trait AccurateJoins {
+    /// If Line Joins are Accurate
     fn accurate_join_only(&self) -> bool;
-//}
-//pub trait Lines {
     fn line0(&mut self, lp: &LineParameters);
     fn line1(&mut self, lp: &LineParameters, sx: i64, sy: i64);
     fn line2(&mut self, lp: &LineParameters, ex: i64, ey: i64);

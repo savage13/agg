@@ -424,21 +424,35 @@ impl BresehamInterpolator {
 }
 
 /// Line Interpolator using a Digital differential analyzer (DDA)
-/// 
+///
+/// Step through a range from numbers, from `y1` to `y2`, into `count` items
+///
 /// See [https://en.wikipedia.org/wiki/Digital_differential_analyzer_(graphics_algorithm)]()
 ///
-/// This is equivalent to dda2
+/// This is equivalent to dda2 in the original agg
+///
 #[derive(Debug)]
 pub(crate) struct LineInterpolator {
+    /// Number of Segments
     count: i64,
+    /// Minimum Step Size, Constant, (y2-y1)/count
     left: i64,
+    /// Remainder, Constant, (y2-y1) % count
     rem: i64,
+    /// Error term
     xmod: i64,
+    /// Current y value
     pub y: i64,
 }
 
 impl LineInterpolator {
-    // Values should be in Subpixel coordinates
+    /// Create a new Forward Adjust Interpolator
+    ///
+    /// Values should be in Subpixel coordinates
+    ///
+    /// Error term is initialized as: `rem` - `count`
+    ///
+    /// `xmod`, `rem` and `left` are adjusted if `xmod` is negative
     pub fn new(y1: i64, y2: i64, count: i64) -> Self { 
         let cnt = std::cmp::max(1,count);
         let mut left = (y2 - y1) / cnt;
@@ -460,9 +474,17 @@ impl LineInterpolator {
     // pub fn adjust_backward(&mut self) {
     //     self.xmod += self.count;
     // }
+    /// Create a Forward Adjusted Interpolator
     pub fn new_foward_adjusted(y1: i64, y2: i64, count: i64) -> Self {
         Self::new(y1, y2, count)
     }
+    /// Create a Back Adjusted Interpolator
+    ///
+    /// Assumes the First point is 0
+    ///
+    /// Error term is initialied as `rem`
+    ///
+    /// `xmod`, `rem` and `left` are adjusted if `xmod` is negative
     pub fn new_back_adjusted_2(y: i64, count: i64) -> Self {
         let cnt = std::cmp::max(1,count);
         let mut left = y / cnt;
@@ -479,11 +501,11 @@ impl LineInterpolator {
         Self { y: m_y, left, rem, xmod, count: cnt }
     }
     // pub fn new_back_adjusted_1(y1: i64, y2: i64, count: i64) -> Self {
-
     //     let mut back = Self::new(y1, y2, count);
     //     back.count += count;
     //     back
     // }
+    /// Increment the Interpolator
     pub fn inc(&mut self) {
         self.xmod += self.rem;
         self.y += self.left;
@@ -492,6 +514,7 @@ impl LineInterpolator {
             self.y += 1;
         }
     }
+    /// Decement the Interpolator
     pub fn dec(&mut self) {
         if self.xmod <= self.rem {
             self.xmod += self.count;
@@ -500,10 +523,32 @@ impl LineInterpolator {
         self.xmod -= self.rem;
         self.y -= self.left;
     }
+    pub fn xmod(&self)  -> i64 { self.xmod  }
+    pub fn count(&self) -> i64 { self.count }
+    pub fn left(&self)  -> i64 { self.left  }
+    pub fn rem(&self)   -> i64 { self.rem   }
 }
 
 
 
+/// Clip a Line segment to a Rectangle
+///
+/// # Arguments
+///   - x1 - Starting x point of line
+///   - y1 - Starting y point of line
+///   - x2 - Ending x point of line
+///   - y1 - Ending y point of line
+///   - clip_box - Rectangle to clip line to
+///
+/// # Return
+///   - Clipped line segment (x1,y1,x2,y2) and flag descringing the clip
+///   - flag
+///     - 0 - Not Clipped, line is fully within the clip box
+///     - 4 - Line fully outside of the clip box
+///     - 1 - First Point Clipped
+///     - 2 - Second Point Clipped
+///     - 3 - Both Points Clipped
+///
 pub(crate) fn clip_line_segment(x1: i64, y1: i64, x2: i64, y2: i64, clip_box: Rectangle<i64>) -> (i64, i64, i64, i64, u8) {
     let f1 = clip_box.clip_flags(x1,y1);
     let f2 = clip_box.clip_flags(x2,y2);
@@ -1387,4 +1432,65 @@ impl DistanceInterpolator4 {
             self.dist_end   -= self.dy_end;
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::LineInterpolator;
+    #[test]
+    fn line_interpolator() {
+        let mut lp = LineInterpolator::new(0<<8,10<<8,10<<8);
+        for i in 0..=10 {
+            assert_eq!(lp.y, i);
+            lp.inc();
+        }
+        let mut lp = LineInterpolator::new(0,100,2);
+        for &i in [0,50,100,150].iter() {
+            assert_eq!(lp.y, i);
+            lp.inc();
+        }
+        let mut lp = LineInterpolator::new(0,10,3);
+        let y0    = vec![0,3,6,10];
+        let left0 = vec![3,3,3,3];
+        let xmod0 = vec![-2, -1, 0, -2];
+        let rem0  = vec![1,1,1,1];
+        let mut left = vec![];
+        let mut xmod = vec![];
+        let mut rem = vec![];
+        let mut y = vec![];
+        for _ in 0..4 {
+            left.push( lp.left() );
+            y.push( lp.y );
+            xmod.push( lp.xmod() );
+            rem.push( lp.rem() );
+            lp.inc();
+        }
+        assert_eq!(left0, left);
+        assert_eq!(xmod0, xmod);
+        assert_eq!(rem0, rem);
+        assert_eq!(y0, y);
+
+        let mut lp = LineInterpolator::new(0,10,4);
+        let y0    = vec![0,2,5,7,10];
+        let left0 = vec![2,2,2,2,2];
+        let xmod0 = vec![-2, 0, -2, 0, -2];
+        let rem0  = vec![2,2,2,2,2];
+        let mut left = vec![];
+        let mut xmod = vec![];
+        let mut rem = vec![];
+        let mut y = vec![];
+        for _ in 0..5 {
+            left.push( lp.left() );
+            y.push( lp.y );
+            xmod.push( lp.xmod() );
+            rem.push( lp.rem() );
+            lp.inc();
+        }
+        assert_eq!(left0, left);
+        assert_eq!(xmod0, xmod);
+        assert_eq!(rem0, rem);
+        assert_eq!(y0, y);
+
+    }
+
 }

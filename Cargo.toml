@@ -16,6 +16,5 @@ font-loader = "0.7.0"
 [dependencies.image]
 version = "0.20.1"
 default-features = false
-features = ["png_codec", "gif_codec", "gif_codec",
-            "pnm", "bmp", "jpeg"]
+features = ["png_codec", "gif_codec", "pnm", "bmp", "jpeg"]
 
