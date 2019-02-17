@@ -280,6 +280,11 @@ impl<'a> Label<'a> {
             }
         )
     }
+    pub fn size(&self) -> (f64, f64) {
+        let w = string_width(&self.txt, self.font);
+        let h = line_height(self.font);
+        (w, h)
+    }
     pub fn xalign(mut self, xalign: XAlign) -> Self {
         self.xa = xalign;
         self
